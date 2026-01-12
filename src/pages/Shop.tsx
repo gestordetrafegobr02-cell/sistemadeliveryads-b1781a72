@@ -36,11 +36,11 @@ interface Product {
   category_id: string | null;
 }
 
-// Helper to check if image_url is a valid URL (not base64)
-function isValidImageUrl(url: string | null): string | undefined {
+// Helper: returns valid URL or undefined (rejects base64 or long blobs)
+function sanitizeImageUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
-  // Reject base64 data URIs - they crash the UI
   if (url.startsWith('data:')) return undefined;
+  if (url.length > 5000) return undefined;
   return url;
 }
 
@@ -80,22 +80,23 @@ export default function Shop() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!slug) {
+      const trimmedSlug = (slug ?? '').trim().toLowerCase();
+      if (!trimmedSlug) {
         setError('URL inválida');
         setLoading(false);
         return;
       }
 
       try {
-        // Case-insensitive slug lookup
+        // 1) Fetch store by slug (case-insensitive)
         const { data: storeData, error: storeError } = await supabase
           .from('stores')
           .select('*')
-          .ilike('slug', slug)
+          .ilike('slug', trimmedSlug)
           .maybeSingle();
 
         if (storeError) {
-          console.error('Store fetch error:', storeError);
+          console.error('[Shop] Store fetch error:', storeError);
           setError('Erro ao carregar a loja');
           setLoading(false);
           return;
@@ -107,54 +108,55 @@ export default function Shop() {
           return;
         }
 
-        setStore({
+        const mappedStore: Store = {
           ...storeData,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
-        });
+          logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+        };
+        setStore(mappedStore);
 
         // Load Facebook Pixel
         if (storeData.facebook_pixel_id) {
           loadFacebookPixel(storeData.facebook_pixel_id);
           setTimeout(() => {
-            if (window.fbq) {
-              window.fbq('track', 'ViewContent');
-            }
+            if (window.fbq) window.fbq('track', 'ViewContent');
           }, 100);
         }
 
-        // Fetch categories and products in parallel
-        const [catRes, prodRes] = await Promise.all([
-          supabase
-            .from('categories')
-            .select('*')
-            .eq('store_id', storeData.id)
-            .order('sort_order'),
-          supabase
-            .from('products')
-            .select('*')
-            .eq('store_id', storeData.id)
-            .eq('is_available', true)
-            .order('sort_order'),
-        ]);
+        // 2) Fetch categories by store_id
+        const { data: catData, error: catError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('store_id', storeData.id)
+          .order('sort_order');
 
-        if (catRes.error) {
-          console.error('Categories fetch error:', catRes.error);
-        }
-        if (prodRes.error) {
-          console.error('Products fetch error:', prodRes.error);
-        }
+        if (catError) console.error('[Shop] Categories fetch error:', catError);
+        setCategories(catData ?? []);
 
-        setCategories(catRes.data ?? []);
-        // Sanitize product image URLs (remove base64)
-        const sanitizedProducts = (prodRes.data ?? []).map(p => ({
-          ...p,
-          image_url: isValidImageUrl(p.image_url) ?? null,
+        // 3) Fetch products by store_id
+        const { data: prodData, error: prodError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('store_id', storeData.id)
+          .eq('is_available', true)
+          .order('sort_order');
+
+        if (prodError) console.error('[Shop] Products fetch error:', prodError);
+
+        const sanitizedProducts: Product[] = (prodData ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: Number(p.price),
+          image_url: sanitizeImageUrl(p.image_url) ?? null,
+          category_id: p.category_id,
         }));
+
         setProducts(sanitizedProducts);
         console.log('[Shop] Loaded', sanitizedProducts.length, 'products for store:', storeData.id);
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error('[Shop] Unexpected error:', err);
         setError('Erro inesperado ao carregar dados');
       } finally {
         setLoading(false);
@@ -188,6 +190,9 @@ export default function Shop() {
     }
   };
 
+  // ---------------------------
+  // RENDER: Loading skeleton
+  // ---------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
@@ -202,6 +207,9 @@ export default function Shop() {
     );
   }
 
+  // ---------------------------
+  // RENDER: Error / Not found
+  // ---------------------------
   if (error || !store) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -213,14 +221,13 @@ export default function Shop() {
     );
   }
 
+  // Grouped products by category (only when no active filter)
   const productsByCategory = categories.map((cat) => ({
     ...cat,
-    products: filteredProducts.filter((p) => p.category_id === cat.id),
+    products: products.filter((p) => p.category_id === cat.id),
   }));
 
-  const uncategorizedProducts = filteredProducts.filter((p) => !p.category_id);
-
-  // Show all filtered products when a specific category is selected
+  const uncategorizedProducts = products.filter((p) => !p.category_id);
   const showCategorySections = activeCategory === null;
 
   return (
@@ -229,19 +236,21 @@ export default function Shop() {
         {/* Header */}
         <header className="sticky top-0 z-40 glass-card border-b border-border/50">
           <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
-            {isValidImageUrl(store.logo_url) && (
+            {store.logo_url && (
               <img
-                src={isValidImageUrl(store.logo_url)}
+                src={store.logo_url}
                 alt={store.name}
                 className="w-12 h-12 rounded-full object-cover border-2 border-primary"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             )}
             <h1 className="font-display text-3xl text-gradient">{store.name}</h1>
           </div>
         </header>
 
-        {/* Sticky Categories Bar */}
+        {/* Sticky Categories Bar - add margin-top to content to avoid overlap */}
         <CategoriesBar
           categories={categories}
           activeCategory={activeCategory}
@@ -250,64 +259,54 @@ export default function Shop() {
 
         {/* Store Closed Banner */}
         {!storeIsOpen && (
-          <div className="max-w-2xl mx-auto mt-4">
+          <div className="max-w-2xl mx-auto mt-4 px-4">
             <StoreClosedBanner />
           </div>
         )}
 
-        {/* Menu */}
+        {/* Product List */}
         <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
           {showCategorySections ? (
             <>
-              {productsByCategory.map((category) => (
-                category.products.length > 0 && (
-                  <section key={category.id} className="animate-fade-in">
+              {productsByCategory.map((category) =>
+                category.products.length > 0 ? (
+                  <section key={category.id}>
                     <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
                       <span className="w-2 h-6 bg-primary rounded-full" />
                       {category.name}
                     </h2>
                     <div className="space-y-4">
-                      {category.products.map((product, index) => (
-                        <div 
-                          key={product.id} 
-                          className="animate-fade-in"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <ProductCard
-                            id={product.id}
-                            name={product.name}
-                            description={product.description || undefined}
-                            price={Number(product.price)}
-                            image_url={product.image_url || undefined}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )
-              ))}
-
-              {uncategorizedProducts.length > 0 && (
-                <section className="animate-fade-in">
-                  <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
-                    <span className="w-2 h-6 bg-primary rounded-full" />
-                    Outros
-                  </h2>
-                  <div className="space-y-4">
-                    {uncategorizedProducts.map((product, index) => (
-                      <div 
-                        key={product.id} 
-                        className="animate-fade-in"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
+                      {category.products.map((product) => (
                         <ProductCard
+                          key={product.id}
                           id={product.id}
                           name={product.name}
                           description={product.description || undefined}
-                          price={Number(product.price)}
+                          price={product.price}
                           image_url={product.image_url || undefined}
                         />
-                      </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : null
+              )}
+
+              {uncategorizedProducts.length > 0 && (
+                <section>
+                  <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
+                    <span className="w-2 h-6 bg-primary rounded-full" />
+                    Geral
+                  </h2>
+                  <div className="space-y-4">
+                    {uncategorizedProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        id={product.id}
+                        name={product.name}
+                        description={product.description || undefined}
+                        price={product.price}
+                        image_url={product.image_url || undefined}
+                      />
                     ))}
                   </div>
                 </section>
@@ -315,26 +314,21 @@ export default function Shop() {
             </>
           ) : (
             <div className="space-y-4">
-              {filteredProducts.map((product, index) => (
-                <div 
-                  key={product.id} 
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <ProductCard
-                    id={product.id}
-                    name={product.name}
-                    description={product.description || undefined}
-                    price={Number(product.price)}
-                    image_url={product.image_url || undefined}
-                  />
-                </div>
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  description={product.description || undefined}
+                  price={product.price}
+                  image_url={product.image_url || undefined}
+                />
               ))}
             </div>
           )}
 
           {filteredProducts.length === 0 && (
-            <div className="text-center py-16 animate-fade-in">
+            <div className="text-center py-16">
               <p className="text-muted-foreground text-lg">
                 Nenhum produto disponível nesta categoria.
               </p>
@@ -342,9 +336,9 @@ export default function Shop() {
           )}
         </main>
 
-        <CartSheet 
+        <CartSheet
           storeId={store.id}
-          whatsapp={store.whatsapp || ''} 
+          whatsapp={store.whatsapp || ''}
           deliveryFee={store.delivery_fee || 0}
           pixKey={store.pix_key || undefined}
           onPurchase={handlePurchase}

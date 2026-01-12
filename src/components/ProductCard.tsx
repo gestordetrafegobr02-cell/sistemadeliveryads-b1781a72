@@ -1,4 +1,5 @@
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
@@ -13,24 +14,38 @@ interface ProductCardProps {
 
 export function ProductCard({ id, name, description, price, image_url }: ProductCardProps) {
   const { addItem } = useCart();
+  const [imgError, setImgError] = useState(false);
 
   const handleAdd = () => {
     hapticClick();
     addItem({ id, name, price, image_url });
   };
 
+  const showImage = image_url && !imgError;
+
   return (
-    <div className="glass-card p-4 group hover:border-primary/40 transition-all duration-300">
+    <div className="glass-card p-4 group hover:border-primary/40 transition-colors duration-200">
       <div className="flex gap-4">
-        {image_url && (
-          <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-secondary">
+        {/* Image or placeholder */}
+        <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-secondary flex items-center justify-center">
+          {showImage ? (
             <img
               src={image_url}
               alt={name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+              onError={() => setImgError(true)}
             />
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center text-muted-foreground">
+              <ImageOff className="w-6 h-6 mb-1" />
+              <span className="text-[10px] text-center px-1 leading-tight truncate max-w-full">
+                {name.slice(0, 12)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Product info */}
         <div className="flex-1 min-w-0">
           <h3 className="font-display text-xl text-foreground truncate">{name}</h3>
           {description && (

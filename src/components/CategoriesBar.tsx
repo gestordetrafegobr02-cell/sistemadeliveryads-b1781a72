@@ -29,7 +29,7 @@ export function CategoriesBar({ categories, activeCategory, onCategoryClick }: C
   if (categories.length === 0) return null;
 
   return (
-    <div className="sticky top-[73px] z-30 glass-card border-b border-border/50 py-3">
+    <div className="sticky top-[73px] z-30 glass-card border-b border-border/50 py-3 mb-2">
       <div className="max-w-2xl mx-auto px-4">
         <div className="relative flex items-center gap-2">
           {/* Left scroll button */}
