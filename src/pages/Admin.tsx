@@ -555,12 +555,15 @@ export default function Admin() {
               </div>
               <div>
                 <Label>Categoria</Label>
-                <Select value={productCategory} onValueChange={setProductCategory}>
+                <Select 
+                  value={productCategory || "none"} 
+                  onValueChange={(val) => setProductCategory(val === "none" ? "" : val)}
+                >
                   <SelectTrigger className="mt-1 bg-secondary border-border">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem categoria</SelectItem>
+                    <SelectItem value="none">Sem categoria</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
