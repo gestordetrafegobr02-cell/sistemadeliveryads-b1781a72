@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2 } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Switch } from '@/components/ui/switch';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
+import { hapticClick, hapticSuccess } from '@/lib/haptics';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
@@ -31,9 +31,10 @@ interface CartSheetProps {
   pixKey?: string;
   onPurchase?: () => void;
   onOpen?: () => void;
+  isStoreOpen?: boolean;
 }
 
-export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen }: CartSheetProps) {
+export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -208,17 +209,48 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          size="lg"
-          className="fixed bottom-6 right-6 z-50 rounded-full w-16 h-16 btn-glow animate-pulse-glow bg-primary text-primary-foreground shadow-2xl"
-        >
-          <ShoppingCart className="w-6 h-6" />
-          {itemCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground w-6 h-6 rounded-full text-sm font-bold flex items-center justify-center">
-              {itemCount}
-            </span>
-          )}
-        </Button>
+        {/* Mobile: Fixed bottom bar, Desktop: Floating button */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-6 sm:left-auto sm:right-6 sm:w-auto">
+          {/* Mobile bottom bar */}
+          <div className="sm:hidden glass-card border-t border-border/50 p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center relative">
+                <ShoppingCart className="w-5 h-5 text-primary-foreground" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {itemCount > 0 ? `${itemCount} ${itemCount === 1 ? 'item' : 'itens'}` : 'Carrinho vazio'}
+                </p>
+                {itemCount > 0 && (
+                  <p className="text-primary font-semibold">
+                    R$ {total.toFixed(2).replace('.', ',')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button className="btn-glow bg-primary text-primary-foreground px-6">
+              Ver Carrinho
+            </Button>
+          </div>
+
+          {/* Desktop floating button */}
+          <Button
+            size="lg"
+            className="hidden sm:flex rounded-full w-16 h-16 btn-glow animate-pulse-glow bg-primary text-primary-foreground shadow-2xl"
+          >
+            <ShoppingCart className="w-6 h-6" />
+            {itemCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground w-6 h-6 rounded-full text-sm font-bold flex items-center justify-center">
+                {itemCount}
+              </span>
+            )}
+          </Button>
+        </div>
       </SheetTrigger>
       <SheetContent className="bg-card border-border w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
@@ -456,13 +488,25 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
                 </div>
               </div>
 
+              {!isStoreOpen && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg mb-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">
+                    A loja está fechada no momento. Não é possível finalizar pedidos.
+                  </p>
+                </div>
+              )}
+
               <Button
-                onClick={handleCheckout}
-                disabled={submitting}
-                className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display"
+                onClick={() => {
+                  hapticSuccess();
+                  handleCheckout();
+                }}
+                disabled={submitting || !isStoreOpen}
+                className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                Confirmar Pedido via WhatsApp
+                {isStoreOpen ? 'Confirmar Pedido via WhatsApp' : 'Loja Fechada'}
               </Button>
             </div>
           </div>

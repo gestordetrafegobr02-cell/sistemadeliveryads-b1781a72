@@ -177,8 +177,10 @@ export type Database = {
           delivery_fee: number | null
           facebook_pixel_id: string | null
           id: string
+          is_open_manual: boolean | null
           logo_url: string | null
           name: string
+          opening_hours: Json | null
           owner_id: string
           pix_key: string | null
           slug: string
@@ -190,8 +192,10 @@ export type Database = {
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
           id?: string
+          is_open_manual?: boolean | null
           logo_url?: string | null
           name: string
+          opening_hours?: Json | null
           owner_id: string
           pix_key?: string | null
           slug: string
@@ -203,8 +207,10 @@ export type Database = {
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
           id?: string
+          is_open_manual?: boolean | null
           logo_url?: string | null
           name?: string
+          opening_hours?: Json | null
           owner_id?: string
           pix_key?: string | null
           slug?: string
