@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { useCart } from '@/lib/cart';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
@@ -24,6 +25,7 @@ const checkoutSchema = z.object({
 });
 
 interface CartSheetProps {
+  storeId?: string;
   whatsapp?: string;
   deliveryFee?: number;
   pixKey?: string;
@@ -31,9 +33,10 @@ interface CartSheetProps {
   onOpen?: () => void;
 }
 
-export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen }: CartSheetProps) {
+export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   // Form fields
   const [name, setName] = useState('');
@@ -73,7 +76,7 @@ export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpe
     }
   }, [open, onOpen]);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     // Build validation schema dynamically based on order type
     const validationData = {
       name,
@@ -113,6 +116,38 @@ export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpe
     }
 
     setErrors({});
+    setSubmitting(true);
+
+    // Build address string
+    let addressStr = '';
+    if (orderType === 'delivery') {
+      addressStr = `${street}, ${number}`;
+      if (complement) addressStr += ` - ${complement}`;
+      addressStr += `, ${neighborhood}`;
+      if (zipCode) addressStr += ` - CEP: ${zipCode}`;
+      if (referencePoint) addressStr += ` | Ref: ${referencePoint}`;
+    }
+
+    // Save order to database
+    if (storeId) {
+      const orderItems = items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      await supabase.from('orders').insert({
+        store_id: storeId,
+        customer_name: name,
+        customer_phone: phone,
+        items: orderItems,
+        total: grandTotal,
+        address: addressStr || null,
+        payment_method: paymentMethod,
+        status: 'pending',
+      });
+    }
 
     const orderId = generateOrderId();
 
@@ -157,6 +192,7 @@ export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpe
 
     onPurchase?.();
     clearCart();
+    setSubmitting(false);
     setOpen(false);
     window.open(whatsappUrl, '_blank');
   };
@@ -414,8 +450,10 @@ export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpe
 
               <Button
                 onClick={handleCheckout}
+                disabled={submitting}
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display"
               >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                 Confirmar Pedido via WhatsApp
               </Button>
             </div>

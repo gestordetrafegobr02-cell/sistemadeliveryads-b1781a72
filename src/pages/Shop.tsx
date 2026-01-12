@@ -231,6 +231,7 @@ export default function Shop() {
         </main>
 
         <CartSheet 
+          storeId={store.id}
           whatsapp={store.whatsapp || ''} 
           deliveryFee={store.delivery_fee || 0}
           pixKey={store.pix_key || undefined}
