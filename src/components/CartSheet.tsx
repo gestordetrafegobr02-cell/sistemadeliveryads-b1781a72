@@ -1,30 +1,52 @@
-import { useState } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { useCart } from '@/lib/cart';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome muito curto').max(100),
-  address: z.string().min(5, 'Endereço muito curto').max(300),
+  phone: z.string().min(10, 'Telefone inválido').max(20),
+  orderType: z.enum(['delivery', 'pickup']),
+  zipCode: z.string().max(15).optional(),
+  street: z.string().max(200).optional(),
+  number: z.string().max(20).optional(),
+  neighborhood: z.string().max(100).optional(),
+  complement: z.string().max(100).optional(),
+  referencePoint: z.string().max(200).optional(),
   paymentMethod: z.enum(['cash', 'card', 'pix']),
+  changeFor: z.string().max(20).optional(),
 });
 
 interface CartSheetProps {
   whatsapp?: string;
+  deliveryFee?: number;
+  pixKey?: string;
   onPurchase?: () => void;
+  onOpen?: () => void;
 }
 
-export function CartSheet({ whatsapp, onPurchase }: CartSheetProps) {
+export function CartSheet({ whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
+  
+  // Form fields
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
+  const [zipCode, setZipCode] = useState('');
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [complement, setComplement] = useState('');
+  const [referencePoint, setReferencePoint] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
+  const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const paymentLabels = {
@@ -33,8 +55,53 @@ export function CartSheet({ whatsapp, onPurchase }: CartSheetProps) {
     pix: 'PIX',
   };
 
+  // Calculate totals
+  const subtotal = total;
+  const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
+  const grandTotal = subtotal + deliveryAmount;
+
+  // Generate order ID
+  const generateOrderId = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${timestamp}-${random}`;
+  };
+
+  useEffect(() => {
+    if (open && onOpen) {
+      onOpen();
+    }
+  }, [open, onOpen]);
+
   const handleCheckout = () => {
-    const result = checkoutSchema.safeParse({ name, address, paymentMethod });
+    // Build validation schema dynamically based on order type
+    const validationData = {
+      name,
+      phone,
+      orderType,
+      paymentMethod,
+      ...(orderType === 'delivery' && {
+        zipCode,
+        street,
+        number,
+        neighborhood,
+        complement,
+        referencePoint,
+      }),
+      ...(paymentMethod === 'cash' && { changeFor }),
+    };
+
+    // Validate required delivery fields
+    if (orderType === 'delivery') {
+      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
+        setErrors({
+          address: 'Preencha rua, número e bairro para entrega',
+        });
+        return;
+      }
+    }
+
+    const result = checkoutSchema.safeParse(validationData);
     
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -47,16 +114,42 @@ export function CartSheet({ whatsapp, onPurchase }: CartSheetProps) {
 
     setErrors({});
 
+    const orderId = generateOrderId();
+
     const itemsList = items
       .map((item) => `• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}`)
       .join('\n');
 
-    const message = `🍔 *NOVO PEDIDO*\n\n` +
-      `*Cliente:* ${name}\n\n` +
-      `*Itens:*\n${itemsList}\n\n` +
-      `*Total:* R$ ${total.toFixed(2).replace('.', ',')}\n\n` +
-      `*Endereço:* ${address}\n\n` +
-      `*Pagamento:* ${paymentLabels[paymentMethod]}`;
+    let message = `🛵 *PEDIDO #${orderId}*\n\n`;
+    message += `*Cliente:* ${name}\n`;
+    message += `*Telefone:* ${phone}\n\n`;
+    message += `*Tipo:* ${orderType === 'delivery' ? '🚚 Entrega' : '🏪 Retirada na Loja'}\n\n`;
+    message += `*Itens:*\n${itemsList}\n\n`;
+    message += `*Subtotal:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
+    
+    if (orderType === 'delivery') {
+      message += `*Taxa de Entrega:* R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
+    }
+    
+    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
+    message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
+    
+    if (paymentMethod === 'cash' && changeFor) {
+      message += ` (Troco para R$ ${changeFor})`;
+    }
+    
+    if (paymentMethod === 'pix' && pixKey) {
+      message += `\n*Chave PIX:* ${pixKey}`;
+    }
+
+    if (orderType === 'delivery') {
+      message += `\n\n*📍 Endereço de Entrega:*\n`;
+      message += `${street}, ${number}`;
+      if (complement) message += ` - ${complement}`;
+      message += `\n${neighborhood}`;
+      if (zipCode) message += ` - CEP: ${zipCode}`;
+      if (referencePoint) message += `\n*Ponto de Ref:* ${referencePoint}`;
+    }
 
     const encodedMessage = encodeURIComponent(message);
     const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
@@ -149,40 +242,120 @@ export function CartSheet({ whatsapp, onPurchase }: CartSheetProps) {
               ))}
             </div>
 
-            {/* Total */}
-            <div className="flex items-center justify-between py-4 border-t border-border">
-              <span className="text-lg font-medium text-foreground">Total</span>
-              <span className="text-2xl font-display text-primary">
-                R$ {total.toFixed(2).replace('.', ',')}
-              </span>
-            </div>
-
             {/* Checkout Form */}
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="name" className="text-foreground">Nome</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome"
-                  className="mt-1 bg-secondary border-border"
-                />
-                {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+              {/* Customer Info */}
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label htmlFor="name" className="text-foreground">Nome Completo</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome completo"
+                    className="mt-1 bg-secondary border-border"
+                  />
+                  {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                  <Label htmlFor="phone" className="text-foreground">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="mt-1 bg-secondary border-border"
+                  />
+                  {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone}</p>}
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="address" className="text-foreground">Endereço de Entrega</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Rua, número, bairro"
-                  className="mt-1 bg-secondary border-border"
-                />
-                {errors.address && <p className="text-destructive text-sm mt-1">{errors.address}</p>}
+              {/* Order Type Toggle */}
+              <div className="p-4 glass-card rounded-lg">
+                <Label className="text-foreground mb-3 block">Tipo de Pedido</Label>
+                <div className="flex items-center gap-4">
+                  <Button
+                    type="button"
+                    variant={orderType === 'delivery' ? 'default' : 'outline'}
+                    className={`flex-1 gap-2 ${orderType === 'delivery' ? 'bg-primary text-primary-foreground' : ''}`}
+                    onClick={() => setOrderType('delivery')}
+                  >
+                    <Truck className="w-4 h-4" />
+                    Entrega
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={orderType === 'pickup' ? 'default' : 'outline'}
+                    className={`flex-1 gap-2 ${orderType === 'pickup' ? 'bg-primary text-primary-foreground' : ''}`}
+                    onClick={() => setOrderType('pickup')}
+                  >
+                    <Store className="w-4 h-4" />
+                    Retirada
+                  </Button>
+                </div>
               </div>
 
+              {/* Address Fields - Only show for delivery */}
+              {orderType === 'delivery' && (
+                <div className="space-y-3 p-4 glass-card rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <Label className="text-foreground font-medium">Endereço de Entrega</Label>
+                  </div>
+                  
+                  {errors.address && <p className="text-destructive text-sm">{errors.address}</p>}
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <Input
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value)}
+                        placeholder="CEP"
+                        className="bg-secondary border-border"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        value={number}
+                        onChange={(e) => setNumber(e.target.value)}
+                        placeholder="Nº"
+                        className="bg-secondary border-border"
+                      />
+                    </div>
+                  </div>
+
+                  <Input
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    placeholder="Rua / Avenida"
+                    className="bg-secondary border-border"
+                  />
+
+                  <Input
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    placeholder="Bairro"
+                    className="bg-secondary border-border"
+                  />
+
+                  <Input
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                    placeholder="Complemento (apto, bloco...)"
+                    className="bg-secondary border-border"
+                  />
+
+                  <Input
+                    value={referencePoint}
+                    onChange={(e) => setReferencePoint(e.target.value)}
+                    placeholder="Ponto de referência"
+                    className="bg-secondary border-border"
+                  />
+                </div>
+              )}
+
+              {/* Payment Method */}
               <div>
                 <Label className="text-foreground">Forma de Pagamento</Label>
                 <RadioGroup
@@ -192,17 +365,51 @@ export function CartSheet({ whatsapp, onPurchase }: CartSheetProps) {
                 >
                   <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
                     <RadioGroupItem value="pix" id="pix" />
-                    <Label htmlFor="pix" className="cursor-pointer">PIX</Label>
+                    <Label htmlFor="pix" className="cursor-pointer flex-1">PIX</Label>
                   </div>
                   <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
                     <RadioGroupItem value="card" id="card" />
-                    <Label htmlFor="card" className="cursor-pointer">Cartão na Entrega</Label>
+                    <Label htmlFor="card" className="cursor-pointer flex-1">Cartão na Entrega</Label>
                   </div>
                   <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
                     <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="cursor-pointer">Dinheiro</Label>
+                    <Label htmlFor="cash" className="cursor-pointer flex-1">Dinheiro</Label>
                   </div>
                 </RadioGroup>
+
+                {/* Change For - Only show for cash */}
+                {paymentMethod === 'cash' && (
+                  <div className="mt-3">
+                    <Label htmlFor="changeFor" className="text-foreground">Troco para quanto?</Label>
+                    <Input
+                      id="changeFor"
+                      value={changeFor}
+                      onChange={(e) => setChangeFor(e.target.value)}
+                      placeholder="Ex: 50,00"
+                      className="mt-1 bg-secondary border-border"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="py-4 border-t border-border space-y-2">
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+                </div>
+                {orderType === 'delivery' && (
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Taxa de Entrega</span>
+                    <span>R$ {deliveryAmount.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-lg font-medium text-foreground">Total</span>
+                  <span className="text-2xl font-display text-primary">
+                    R$ {grandTotal.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
               </div>
 
               <Button
