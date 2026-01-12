@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/cart';
+import { hapticClick } from '@/lib/haptics';
 
 interface ProductCardProps {
   id: string;
@@ -14,11 +15,12 @@ export function ProductCard({ id, name, description, price, image_url }: Product
   const { addItem } = useCart();
 
   const handleAdd = () => {
+    hapticClick();
     addItem({ id, name, price, image_url });
   };
 
   return (
-    <div className="glass-card p-4 group hover:border-primary/40 transition-all duration-300 animate-fade-in">
+    <div className="glass-card p-4 group hover:border-primary/40 transition-all duration-300">
       <div className="flex gap-4">
         {image_url && (
           <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-secondary">
@@ -41,7 +43,7 @@ export function ProductCard({ id, name, description, price, image_url }: Product
             <Button
               size="sm"
               onClick={handleAdd}
-              className="btn-glow bg-primary text-primary-foreground hover:bg-primary/90"
+              className="btn-glow bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-transform"
             >
               <Plus className="w-4 h-4 mr-1" />
               Adicionar

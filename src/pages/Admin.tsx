@@ -10,9 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 
 interface StoreData {
   id: string;
@@ -22,6 +24,7 @@ interface StoreData {
   pix_key: string | null;
   facebook_pixel_id: string | null;
   delivery_fee: number | null;
+  is_open_manual: boolean;
 }
 
 interface Category {
@@ -398,6 +401,42 @@ export default function Admin() {
                     </p>
                   </div>
                 </div>
+
+                {/* Store Open/Close Toggle */}
+                {store && (
+                  <div className="p-4 glass-card rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Power className={`w-5 h-5 ${store.is_open_manual ? 'text-green-500' : 'text-destructive'}`} />
+                        <div>
+                          <Label className="text-base">Loja {store.is_open_manual ? 'Aberta' : 'Fechada'}</Label>
+                          <p className="text-xs text-muted-foreground">
+                            {store.is_open_manual 
+                              ? 'Clientes podem fazer pedidos' 
+                              : 'Pedidos desabilitados temporariamente'}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={store.is_open_manual}
+                        onCheckedChange={async (checked) => {
+                          const { error } = await supabase
+                            .from('stores')
+                            .update({ is_open_manual: checked })
+                            .eq('id', store.id);
+                          
+                          if (error) {
+                            toast.error('Erro ao atualizar status');
+                          } else {
+                            setStore({ ...store, is_open_manual: checked });
+                            toast.success(checked ? 'Loja aberta!' : 'Loja fechada!');
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   onClick={handleSaveStore}
                   disabled={saving}
@@ -561,59 +600,92 @@ export default function Admin() {
                     Nenhum pedido ainda.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead>Itens</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Pagamento</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{order.customer_name}</p>
-                                <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {Array.isArray(order.items) && (order.items as OrderItem[]).map((item, i, arr) => (
-                                  <span key={i}>{item.quantity}x {item.name}{i < arr.length - 1 ? ', ' : ''}</span>
-                                ))}
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-semibold text-primary">
-                              R$ {Number(order.total).toFixed(2).replace('.', ',')}
-                            </TableCell>
-                            <TableCell className="capitalize">{order.payment_method || '-'}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.id} className="p-4 glass-card space-y-3">
+                        {/* Order Header */}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <p className="font-medium text-foreground">{order.customer_name}</p>
+                            <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <OrderStatusBadge status={order.status} />
+                            <span className="text-xs text-muted-foreground">
                               {new Date(order.created_at).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive"
-                                onClick={async () => {
-                                  await supabase.from('orders').delete().eq('id', order.id);
-                                  toast.success('Pedido excluído');
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Order Items */}
+                        <div className="text-sm text-muted-foreground">
+                          {Array.isArray(order.items) && (order.items as OrderItem[]).map((item, i, arr) => (
+                            <span key={i}>{item.quantity}x {item.name}{i < arr.length - 1 ? ', ' : ''}</span>
+                          ))}
+                        </div>
+
+                        {/* Address if available */}
+                        {order.address && (
+                          <p className="text-xs text-muted-foreground">📍 {order.address}</p>
+                        )}
+
+                        {/* Order Footer */}
+                        <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-border">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-semibold text-primary">
+                              R$ {Number(order.total).toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="text-sm text-muted-foreground capitalize">
+                              {order.payment_method || '-'}
+                            </span>
+                          </div>
+                          
+                          {/* Status Actions */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Select
+                              value={order.status || 'pending'}
+                              onValueChange={async (newStatus) => {
+                                const { error } = await supabase
+                                  .from('orders')
+                                  .update({ status: newStatus })
+                                  .eq('id', order.id);
+                                
+                                if (error) {
+                                  toast.error('Erro ao atualizar status');
+                                } else {
+                                  toast.success('Status atualizado!');
                                   fetchData();
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-[160px] bg-secondary border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAllStatuses().map((status) => (
+                                  <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={async () => {
+                                await supabase.from('orders').delete().eq('id', order.id);
+                                toast.success('Pedido excluído');
+                                fetchData();
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

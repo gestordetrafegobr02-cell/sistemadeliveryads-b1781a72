@@ -150,4 +150,42 @@
     0%, 100% { box-shadow: 0 0 20px hsl(38 92% 50% / 0.3); }
     50% { box-shadow: 0 0 40px hsl(38 92% 50% / 0.6); }
   }
+
+  /* Staggered fade-in animation */
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Hide scrollbar for categories bar */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Bottom cart button styles */
+  .bottom-cart-container {
+    @apply fixed bottom-0 left-0 right-0 z-50 p-4;
+    background: linear-gradient(to top, hsl(var(--background)) 60%, transparent);
+    pointer-events: none;
+  }
+
+  .bottom-cart-container > * {
+    pointer-events: auto;
+  }
 }
