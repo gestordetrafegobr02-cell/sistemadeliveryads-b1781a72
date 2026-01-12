@@ -72,54 +72,79 @@ export default function Shop() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!slug) return;
-
-      const { data: storeData, error: storeError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
-
-      if (storeError || !storeData) {
-        setError('Loja não encontrada');
+      if (!slug) {
+        setError('URL inválida');
         setLoading(false);
         return;
       }
 
-      setStore({
-        ...storeData,
-        opening_hours: storeData.opening_hours as OpeningHours | null,
-        is_open_manual: storeData.is_open_manual ?? true,
-      });
+      try {
+        // Case-insensitive slug lookup
+        const { data: storeData, error: storeError } = await supabase
+          .from('stores')
+          .select('*')
+          .ilike('slug', slug)
+          .maybeSingle();
 
-      // Load Facebook Pixel
-      if (storeData.facebook_pixel_id) {
-        loadFacebookPixel(storeData.facebook_pixel_id);
-        setTimeout(() => {
-          if (window.fbq) {
-            window.fbq('track', 'ViewContent');
-          }
-        }, 100);
+        if (storeError) {
+          console.error('Store fetch error:', storeError);
+          setError('Erro ao carregar a loja');
+          setLoading(false);
+          return;
+        }
+
+        if (!storeData) {
+          setError('Loja não encontrada');
+          setLoading(false);
+          return;
+        }
+
+        setStore({
+          ...storeData,
+          opening_hours: storeData.opening_hours as OpeningHours | null,
+          is_open_manual: storeData.is_open_manual ?? true,
+        });
+
+        // Load Facebook Pixel
+        if (storeData.facebook_pixel_id) {
+          loadFacebookPixel(storeData.facebook_pixel_id);
+          setTimeout(() => {
+            if (window.fbq) {
+              window.fbq('track', 'ViewContent');
+            }
+          }, 100);
+        }
+
+        // Fetch categories and products in parallel
+        const [catRes, prodRes] = await Promise.all([
+          supabase
+            .from('categories')
+            .select('*')
+            .eq('store_id', storeData.id)
+            .order('sort_order'),
+          supabase
+            .from('products')
+            .select('*')
+            .eq('store_id', storeData.id)
+            .eq('is_available', true)
+            .order('sort_order'),
+        ]);
+
+        if (catRes.error) {
+          console.error('Categories fetch error:', catRes.error);
+        }
+        if (prodRes.error) {
+          console.error('Products fetch error:', prodRes.error);
+        }
+
+        setCategories(catRes.data ?? []);
+        setProducts(prodRes.data ?? []);
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        setError('Erro inesperado ao carregar dados');
+      } finally {
+        setLoading(false);
       }
-
-      // Fetch categories and products
-      const [catRes, prodRes] = await Promise.all([
-        supabase
-          .from('categories')
-          .select('*')
-          .eq('store_id', storeData.id)
-          .order('sort_order'),
-        supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', storeData.id)
-          .eq('is_available', true)
-          .order('sort_order'),
-      ]);
-
-      setCategories(catRes.data || []);
-      setProducts(prodRes.data || []);
-      setLoading(false);
     }
 
     fetchData();
