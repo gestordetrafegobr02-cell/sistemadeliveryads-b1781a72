@@ -130,23 +130,31 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
 
     // Save order to database
     if (storeId) {
-      const orderItems = items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      }));
+      try {
+        const orderItems = items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        }));
 
-      await supabase.from('orders').insert({
-        store_id: storeId,
-        customer_name: name,
-        customer_phone: phone,
-        items: orderItems,
-        total: grandTotal,
-        address: addressStr || null,
-        payment_method: paymentMethod,
-        status: 'pending',
-      });
+        const { error: orderError } = await supabase.from('orders').insert({
+          store_id: storeId,
+          customer_name: name,
+          customer_phone: phone,
+          items: orderItems,
+          total: grandTotal,
+          address: addressStr || null,
+          payment_method: paymentMethod,
+          status: 'pending',
+        });
+
+        if (orderError) {
+          console.error('Order insert error:', orderError);
+        }
+      } catch (err) {
+        console.error('Order save error:', err);
+      }
     }
 
     const orderId = generateOrderId();
