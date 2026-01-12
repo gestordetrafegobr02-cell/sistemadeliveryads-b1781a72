@@ -115,49 +115,56 @@ export default function Admin() {
 
     setSaving(true);
 
-    if (store) {
-      const { error } = await supabase
-        .from('stores')
-        .update({
+    try {
+      if (store) {
+        const { error } = await supabase
+          .from('stores')
+          .update({
+            name: storeName,
+            slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
+            whatsapp,
+            pix_key: pixKey,
+            facebook_pixel_id: pixelId,
+            delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
+          })
+          .eq('id', store.id);
+
+        if (error) {
+          console.error('Store update error:', error);
+          toast.error('Erro ao salvar: ' + error.message);
+        } else {
+          toast.success('Loja atualizada!');
+          await fetchData();
+        }
+      } else {
+        const { error } = await supabase.from('stores').insert({
+          owner_id: user!.id,
           name: storeName,
           slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
           whatsapp,
           pix_key: pixKey,
           facebook_pixel_id: pixelId,
           delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
-        })
-        .eq('id', store.id);
+        });
 
-      if (error) {
-        toast.error('Erro ao salvar: ' + error.message);
-      } else {
-        toast.success('Loja atualizada!');
-        fetchData();
-      }
-    } else {
-      const { error } = await supabase.from('stores').insert({
-        owner_id: user!.id,
-        name: storeName,
-        slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
-        whatsapp,
-        pix_key: pixKey,
-        facebook_pixel_id: pixelId,
-        delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
-      });
-
-      if (error) {
-        if (error.message.includes('duplicate')) {
-          toast.error('Esse slug já está em uso');
+        if (error) {
+          console.error('Store insert error:', error);
+          if (error.message.includes('duplicate')) {
+            toast.error('Esse slug já está em uso');
+          } else {
+            toast.error('Erro ao criar loja: ' + error.message);
+          }
         } else {
-          toast.error('Erro ao criar loja: ' + error.message);
+          toast.success('Loja criada!');
+          await fetchData();
         }
-      } else {
-        toast.success('Loja criada!');
-        fetchData();
       }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      toast.error('Erro inesperado ao salvar');
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
   async function handleSaveCategory() {
