@@ -116,48 +116,36 @@ export default function Admin() {
     setSaving(true);
 
     try {
-      if (store) {
-        const { error } = await supabase
-          .from('stores')
-          .update({
-            name: storeName,
-            slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
-            whatsapp,
-            pix_key: pixKey,
-            facebook_pixel_id: pixelId,
-            delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
-          })
-          .eq('id', store.id);
+      const storePayload = {
+        owner_id: user!.id,
+        name: storeName,
+        slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
+        whatsapp: whatsapp || null,
+        pix_key: pixKey || null,
+        facebook_pixel_id: pixelId || null,
+        delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
+      };
 
-        if (error) {
-          console.error('Store update error:', error);
-          toast.error('Erro ao salvar: ' + error.message);
+      // Use upsert - works for both insert and update
+      const { data, error } = await supabase
+        .from('stores')
+        .upsert(
+          store ? { ...storePayload, id: store.id } : storePayload,
+          { onConflict: 'owner_id' }
+        )
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Store upsert error:', error);
+        if (error.message.includes('duplicate') || error.code === '23505') {
+          toast.error('Esse slug já está em uso');
         } else {
-          toast.success('Loja atualizada!');
-          await fetchData();
+          toast.error('Erro ao salvar: ' + error.message);
         }
       } else {
-        const { error } = await supabase.from('stores').insert({
-          owner_id: user!.id,
-          name: storeName,
-          slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
-          whatsapp,
-          pix_key: pixKey,
-          facebook_pixel_id: pixelId,
-          delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
-        });
-
-        if (error) {
-          console.error('Store insert error:', error);
-          if (error.message.includes('duplicate')) {
-            toast.error('Esse slug já está em uso');
-          } else {
-            toast.error('Erro ao criar loja: ' + error.message);
-          }
-        } else {
-          toast.success('Loja criada!');
-          await fetchData();
-        }
+        toast.success(store ? 'Loja atualizada!' : 'Loja criada!');
+        await fetchData();
       }
     } catch (err) {
       console.error('Unexpected error:', err);
