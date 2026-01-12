@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface StoreData {
   id: string;
@@ -39,12 +40,31 @@ interface Product {
   is_available: boolean;
 }
 
+interface Order {
+  id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  items: unknown;
+  total: number;
+  status: string | null;
+  address: string | null;
+  payment_method: string | null;
+  created_at: string;
+}
+
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export default function Admin() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const [store, setStore] = useState<StoreData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -95,13 +115,15 @@ export default function Admin() {
       setPixelId(storeData.facebook_pixel_id || '');
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
 
-      const [catRes, prodRes] = await Promise.all([
+      const [catRes, prodRes, ordersRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
         supabase.from('products').select('*').eq('store_id', storeData.id).order('sort_order'),
+        supabase.from('orders').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
       ]);
 
       setCategories(catRes.data || []);
       setProducts(prodRes.data || []);
+      setOrders(ordersRes.data || []);
     }
 
     setLoading(false);
@@ -300,6 +322,10 @@ export default function Admin() {
             <TabsTrigger value="products" className="gap-2">
               <Package className="w-4 h-4" />
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2">
+              <ClipboardList className="w-4 h-4" />
+              Pedidos
             </TabsTrigger>
           </TabsList>
 
@@ -513,6 +539,81 @@ export default function Admin() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Orders Tab */}
+          <TabsContent value="orders">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display text-xl">Pedidos Recentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!store ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Crie sua loja primeiro para ver pedidos.
+                  </p>
+                ) : orders.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhum pedido ainda.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Itens</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Pagamento</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders.map((order) => (
+                          <TableRow key={order.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{order.customer_name}</p>
+                                <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {Array.isArray(order.items) && (order.items as OrderItem[]).map((item, i, arr) => (
+                                  <span key={i}>{item.quantity}x {item.name}{i < arr.length - 1 ? ', ' : ''}</span>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-semibold text-primary">
+                              R$ {Number(order.total).toFixed(2).replace('.', ',')}
+                            </TableCell>
+                            <TableCell className="capitalize">{order.payment_method || '-'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive"
+                                onClick={async () => {
+                                  await supabase.from('orders').delete().eq('id', order.id);
+                                  toast.success('Pedido excluído');
+                                  fetchData();
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>

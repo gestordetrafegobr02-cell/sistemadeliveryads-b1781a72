@@ -46,6 +46,53 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          items: Json
+          payment_method: string | null
+          status: string | null
+          store_id: string
+          total: number
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          items: Json
+          payment_method?: string | null
+          status?: string | null
+          store_id: string
+          total: number
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          payment_method?: string | null
+          status?: string | null
+          store_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null
