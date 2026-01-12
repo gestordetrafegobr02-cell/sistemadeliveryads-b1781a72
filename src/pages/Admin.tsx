@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power } from 'lucide-react';
 import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
+import { ImageUpload } from '@/components/ImageUpload';
 
 interface StoreData {
   id: string;
@@ -25,6 +25,7 @@ interface StoreData {
   facebook_pixel_id: string | null;
   delivery_fee: number | null;
   is_open_manual: boolean;
+  logo_url: string | null;
 }
 
 interface Category {
@@ -78,6 +79,7 @@ export default function Admin() {
   const [pixKey, setPixKey] = useState('');
   const [pixelId, setPixelId] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
 
   // Product dialog
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -117,6 +119,7 @@ export default function Admin() {
       setPixKey(storeData.pix_key || '');
       setPixelId(storeData.facebook_pixel_id || '');
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
+      setLogoUrl(storeData.logo_url || '');
 
       const [catRes, prodRes, ordersRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
@@ -149,6 +152,7 @@ export default function Admin() {
         pix_key: pixKey || null,
         facebook_pixel_id: pixelId || null,
         delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
+        logo_url: logoUrl || null,
       };
 
       // Use upsert - works for both insert and update
@@ -339,6 +343,14 @@ export default function Admin() {
                 <CardTitle className="font-display text-xl">Configurações da Loja</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Logo Upload */}
+                <ImageUpload
+                  value={logoUrl}
+                  onChange={setLogoUrl}
+                  folder="logos"
+                  label="Logo da Loja"
+                />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Nome da Loja</Label>
@@ -729,15 +741,12 @@ export default function Admin() {
                   className="mt-1 bg-secondary border-border"
                 />
               </div>
-              <div>
-                <Label>URL da Imagem</Label>
-                <Input
-                  value={productImage}
-                  onChange={(e) => setProductImage(e.target.value)}
-                  placeholder="https://..."
-                  className="mt-1 bg-secondary border-border"
-                />
-              </div>
+              <ImageUpload
+                value={productImage}
+                onChange={setProductImage}
+                folder="products"
+                label="Imagem do Produto"
+              />
               <div>
                 <Label>Categoria</Label>
                 <Select 
