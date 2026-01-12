@@ -20,6 +20,7 @@ interface StoreData {
   whatsapp: string | null;
   pix_key: string | null;
   facebook_pixel_id: string | null;
+  delivery_fee: number | null;
 }
 
 interface Category {
@@ -53,6 +54,7 @@ export default function Admin() {
   const [whatsapp, setWhatsapp] = useState('');
   const [pixKey, setPixKey] = useState('');
   const [pixelId, setPixelId] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState('');
 
   // Product dialog
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -91,6 +93,7 @@ export default function Admin() {
       setWhatsapp(storeData.whatsapp || '');
       setPixKey(storeData.pix_key || '');
       setPixelId(storeData.facebook_pixel_id || '');
+      setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
 
       const [catRes, prodRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
@@ -121,6 +124,7 @@ export default function Admin() {
           whatsapp,
           pix_key: pixKey,
           facebook_pixel_id: pixelId,
+          delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
         })
         .eq('id', store.id);
 
@@ -138,6 +142,7 @@ export default function Admin() {
         whatsapp,
         pix_key: pixKey,
         facebook_pixel_id: pixelId,
+        delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
       });
 
       if (error) {
@@ -350,7 +355,7 @@ export default function Admin() {
                       className="mt-1 bg-secondary border-border"
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
                     <Label>Facebook Pixel ID</Label>
                     <Input
                       value={pixelId}
@@ -358,6 +363,18 @@ export default function Admin() {
                       placeholder="123456789"
                       className="mt-1 bg-secondary border-border"
                     />
+                  </div>
+                  <div>
+                    <Label>Taxa de Entrega Padrão (R$)</Label>
+                    <Input
+                      value={deliveryFee}
+                      onChange={(e) => setDeliveryFee(e.target.value)}
+                      placeholder="5,00"
+                      className="mt-1 bg-secondary border-border"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Taxa fixa cobrada para entregas
+                    </p>
                   </div>
                 </div>
                 <Button

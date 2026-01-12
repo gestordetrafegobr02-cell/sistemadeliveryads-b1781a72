@@ -12,6 +12,8 @@ interface Store {
   whatsapp: string | null;
   facebook_pixel_id: string | null;
   logo_url: string | null;
+  delivery_fee: number | null;
+  pix_key: string | null;
 }
 
 interface Category {
@@ -119,6 +121,12 @@ export default function Shop() {
     }
   };
 
+  const handleCartOpen = () => {
+    if (window.fbq && store?.facebook_pixel_id) {
+      window.fbq('track', 'InitiateCheckout');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
@@ -222,7 +230,13 @@ export default function Shop() {
           )}
         </main>
 
-        <CartSheet whatsapp={store.whatsapp || ''} onPurchase={handlePurchase} />
+        <CartSheet 
+          whatsapp={store.whatsapp || ''} 
+          deliveryFee={store.delivery_fee || 0}
+          pixKey={store.pix_key || undefined}
+          onPurchase={handlePurchase}
+          onOpen={handleCartOpen}
+        />
       </div>
     </CartProvider>
   );
