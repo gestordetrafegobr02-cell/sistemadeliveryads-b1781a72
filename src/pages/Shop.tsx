@@ -36,6 +36,14 @@ interface Product {
   category_id: string | null;
 }
 
+// Helper to check if image_url is a valid URL (not base64)
+function isValidImageUrl(url: string | null): string | undefined {
+  if (!url) return undefined;
+  // Reject base64 data URIs - they crash the UI
+  if (url.startsWith('data:')) return undefined;
+  return url;
+}
+
 declare global {
   interface Window {
     fbq: (...args: unknown[]) => void;
@@ -138,7 +146,13 @@ export default function Shop() {
         }
 
         setCategories(catRes.data ?? []);
-        setProducts(prodRes.data ?? []);
+        // Sanitize product image URLs (remove base64)
+        const sanitizedProducts = (prodRes.data ?? []).map(p => ({
+          ...p,
+          image_url: isValidImageUrl(p.image_url) ?? null,
+        }));
+        setProducts(sanitizedProducts);
+        console.log('[Shop] Loaded', sanitizedProducts.length, 'products for store:', storeData.id);
       } catch (err) {
         console.error('Unexpected error:', err);
         setError('Erro inesperado ao carregar dados');
@@ -215,11 +229,12 @@ export default function Shop() {
         {/* Header */}
         <header className="sticky top-0 z-40 glass-card border-b border-border/50">
           <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
-            {store.logo_url && (
+            {isValidImageUrl(store.logo_url) && (
               <img
-                src={store.logo_url}
+                src={isValidImageUrl(store.logo_url)}
                 alt={store.name}
                 className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             )}
             <h1 className="font-display text-3xl text-gradient">{store.name}</h1>
