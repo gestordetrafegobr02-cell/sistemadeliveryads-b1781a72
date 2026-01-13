@@ -5,16 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/errorMapper';
 
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
   folder: string;
+  storeId: string;
   label?: string;
   className?: string;
 }
 
-export function ImageUpload({ value, onChange, folder, label, className }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, folder, storeId, label, className }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,9 +40,9 @@ export function ImageUpload({ value, onChange, folder, label, className }: Image
     setUploading(true);
 
     try {
-      // Generate unique filename
+      // Generate unique filename with store_id prefix for RLS policy validation
       const fileExt = file.name.split('.').pop();
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${storeId}/${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')
@@ -51,7 +53,7 @@ export function ImageUpload({ value, onChange, folder, label, className }: Image
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        toast.error('Erro ao enviar imagem: ' + uploadError.message);
+        toast.error(getErrorMessage(uploadError));
         return;
       }
 
@@ -64,7 +66,7 @@ export function ImageUpload({ value, onChange, folder, label, className }: Image
       toast.success('Imagem enviada com sucesso!');
     } catch (err) {
       console.error('Upload error:', err);
-      toast.error('Erro inesperado ao enviar imagem');
+      toast.error(getErrorMessage(err));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

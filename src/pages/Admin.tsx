@@ -15,6 +15,7 @@ import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLin
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
+import { getErrorMessage } from '@/lib/errorMapper';
 
 interface StoreData {
   id: string;
@@ -170,7 +171,7 @@ export default function Admin() {
         if (error.message.includes('duplicate') || error.code === '23505') {
           toast.error('Esse slug já está em uso');
         } else {
-          toast.error('Erro ao salvar: ' + error.message);
+          toast.error(getErrorMessage(error));
         }
       } else {
         toast.success(store ? 'Loja atualizada!' : 'Loja criada!');
@@ -344,12 +345,15 @@ export default function Admin() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Logo Upload */}
-                <ImageUpload
-                  value={logoUrl}
-                  onChange={setLogoUrl}
-                  folder="logos"
-                  label="Logo da Loja"
-                />
+                {store && (
+                  <ImageUpload
+                    value={logoUrl}
+                    onChange={setLogoUrl}
+                    folder="logos"
+                    storeId={store.id}
+                    label="Logo da Loja"
+                  />
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -741,12 +745,15 @@ export default function Admin() {
                   className="mt-1 bg-secondary border-border"
                 />
               </div>
-              <ImageUpload
-                value={productImage}
-                onChange={setProductImage}
-                folder="products"
-                label="Imagem do Produto"
-              />
+              {store && (
+                <ImageUpload
+                  value={productImage}
+                  onChange={setProductImage}
+                  folder="products"
+                  storeId={store.id}
+                  label="Imagem do Produto"
+                />
+              )}
               <div>
                 <Label>Categoria</Label>
                 <Select 
