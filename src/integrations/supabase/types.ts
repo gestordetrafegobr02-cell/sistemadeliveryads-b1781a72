@@ -288,15 +288,29 @@ export type Database = {
       }
     }
     Functions: {
-      get_payment_info: {
-        Args: { store_id_param: string }
+      get_public_store_by_slug: {
+        Args: { store_slug: string }
         Returns: {
+          created_at: string
+          delivery_fee: number
+          id: string
+          is_open_manual: boolean
+          logo_url: string
           name: string
-          pix_key: string
+          opening_hours: Json
+          slug: string
+          updated_at: string
         }[]
       }
-      get_store_pixel: { Args: { store_id_param: string }; Returns: string }
-      get_store_whatsapp: { Args: { store_id_param: string }; Returns: string }
+      get_store_payment_data: {
+        Args: { store_slug: string }
+        Returns: {
+          pix_key: string
+          store_name: string
+          whatsapp: string
+        }[]
+      }
+      get_store_pixel_by_slug: { Args: { store_slug: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
