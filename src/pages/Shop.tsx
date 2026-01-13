@@ -19,10 +19,10 @@ interface StorePublic {
   is_open_manual: boolean;
 }
 
-// Sensitive checkout data fetched on-demand
-interface CheckoutData {
-  whatsapp: string | null;
+// Payment info from secure RPC
+interface PaymentInfo {
   pix_key: string | null;
+  name: string | null;
 }
 
 interface Category {
@@ -76,7 +76,8 @@ function loadFacebookPixel(pixelId: string) {
 export default function Shop() {
   const { slug } = useParams<{ slug: string }>();
   const [store, setStore] = useState<StorePublic | null>(null);
-  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [facebookPixelId, setFacebookPixelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -124,17 +125,25 @@ export default function Shop() {
         };
         setStore(mappedStore);
 
-        // 2) Fetch sensitive checkout data via secure function
-        const { data: checkoutResult } = await supabase
-          .rpc('get_store_checkout_data', { store_id: storeData.id });
+        // 2) Fetch payment info via secure RPC
+        const { data: paymentResult } = await supabase
+          .rpc('get_payment_info', { store_id_param: storeData.id });
         
-        if (checkoutResult && checkoutResult.length > 0) {
-          setCheckoutData(checkoutResult[0]);
+        if (paymentResult && paymentResult.length > 0) {
+          setPaymentInfo(paymentResult[0]);
         }
 
-        // 3) Fetch Facebook Pixel ID via secure function
+        // 3) Fetch WhatsApp via secure RPC
+        const { data: whatsappResult } = await supabase
+          .rpc('get_store_whatsapp', { store_id_param: storeData.id });
+        
+        if (whatsappResult) {
+          setWhatsapp(whatsappResult);
+        }
+
+        // 4) Fetch Facebook Pixel ID via secure RPC
         const { data: pixelId } = await supabase
-          .rpc('get_store_pixel', { store_id: storeData.id });
+          .rpc('get_store_pixel', { store_id_param: storeData.id });
         
         if (pixelId) {
           setFacebookPixelId(pixelId);
@@ -358,9 +367,9 @@ export default function Shop() {
 
         <CartSheet
           storeId={store.id}
-          whatsapp={checkoutData?.whatsapp || ''}
+          whatsapp={whatsapp || ''}
           deliveryFee={store.delivery_fee || 0}
-          pixKey={checkoutData?.pix_key || undefined}
+          pixKey={paymentInfo?.pix_key || undefined}
           onPurchase={handlePurchase}
           onOpen={handleCartOpen}
           isStoreOpen={storeIsOpen}
