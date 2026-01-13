@@ -19,10 +19,11 @@ interface StorePublic {
   is_open_manual: boolean;
 }
 
-// Payment info from secure RPC
-interface PaymentInfo {
+// Payment data from secure RPC (fetched during checkout flow)
+interface PaymentData {
   pix_key: string | null;
-  name: string | null;
+  whatsapp: string | null;
+  store_name: string | null;
 }
 
 interface Category {
@@ -76,8 +77,7 @@ function loadFacebookPixel(pixelId: string) {
 export default function Shop() {
   const { slug } = useParams<{ slug: string }>();
   const [store, setStore] = useState<StorePublic | null>(null);
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
-  const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [facebookPixelId, setFacebookPixelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -95,12 +95,9 @@ export default function Shop() {
       }
 
       try {
-        // 1) Fetch store from public view (excludes sensitive data)
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores_public')
-          .select('*')
-          .ilike('slug', trimmedSlug)
-          .maybeSingle();
+        // 1) Fetch store via secure RPC function (excludes sensitive data)
+        const { data: storeResult, error: storeError } = await supabase
+          .rpc('get_public_store_by_slug', { store_slug: trimmedSlug });
 
         if (storeError) {
           console.error('[Shop] Store fetch error:', storeError);
@@ -109,12 +106,13 @@ export default function Shop() {
           return;
         }
 
-        if (!storeData) {
+        if (!storeResult || storeResult.length === 0) {
           setError('Loja não encontrada');
           setLoading(false);
           return;
         }
 
+        const storeData = storeResult[0];
         const mappedStore: StorePublic = {
           id: storeData.id,
           name: storeData.name,
@@ -125,25 +123,17 @@ export default function Shop() {
         };
         setStore(mappedStore);
 
-        // 2) Fetch payment info via secure RPC
+        // 2) Fetch payment data via secure RPC (pix_key + whatsapp)
         const { data: paymentResult } = await supabase
-          .rpc('get_payment_info', { store_id_param: storeData.id });
+          .rpc('get_store_payment_data', { store_slug: trimmedSlug });
         
         if (paymentResult && paymentResult.length > 0) {
-          setPaymentInfo(paymentResult[0]);
+          setPaymentData(paymentResult[0]);
         }
 
-        // 3) Fetch WhatsApp via secure RPC
-        const { data: whatsappResult } = await supabase
-          .rpc('get_store_whatsapp', { store_id_param: storeData.id });
-        
-        if (whatsappResult) {
-          setWhatsapp(whatsappResult);
-        }
-
-        // 4) Fetch Facebook Pixel ID via secure RPC
+        // 3) Fetch Facebook Pixel ID via secure RPC
         const { data: pixelId } = await supabase
-          .rpc('get_store_pixel', { store_id_param: storeData.id });
+          .rpc('get_store_pixel_by_slug', { store_slug: trimmedSlug });
         
         if (pixelId) {
           setFacebookPixelId(pixelId);
@@ -153,21 +143,21 @@ export default function Shop() {
           }, 100);
         }
 
-        // 2) Fetch categories by store_id
+        // 4) Fetch categories by store_id
         const { data: catData, error: catError } = await supabase
           .from('categories')
           .select('*')
-          .eq('store_id', storeData.id)
+          .eq('store_id', mappedStore.id)
           .order('sort_order');
 
         if (catError) console.error('[Shop] Categories fetch error:', catError);
         setCategories(catData ?? []);
 
-        // 3) Fetch products by store_id
+        // 5) Fetch products by store_id
         const { data: prodData, error: prodError } = await supabase
           .from('products')
           .select('*')
-          .eq('store_id', storeData.id)
+          .eq('store_id', mappedStore.id)
           .eq('is_available', true)
           .order('sort_order');
 
@@ -183,7 +173,7 @@ export default function Shop() {
         }));
 
         setProducts(sanitizedProducts);
-        console.log('[Shop] Loaded', sanitizedProducts.length, 'products for store:', storeData.id);
+        console.log('[Shop] Loaded', sanitizedProducts.length, 'products for store:', mappedStore.id);
       } catch (err) {
         console.error('[Shop] Unexpected error:', err);
         setError('Erro inesperado ao carregar dados');
@@ -367,9 +357,9 @@ export default function Shop() {
 
         <CartSheet
           storeId={store.id}
-          whatsapp={whatsapp || ''}
+          whatsapp={paymentData?.whatsapp || ''}
           deliveryFee={store.delivery_fee || 0}
-          pixKey={paymentInfo?.pix_key || undefined}
+          pixKey={paymentData?.pix_key || undefined}
           onPurchase={handlePurchase}
           onOpen={handleCartOpen}
           isStoreOpen={storeIsOpen}
