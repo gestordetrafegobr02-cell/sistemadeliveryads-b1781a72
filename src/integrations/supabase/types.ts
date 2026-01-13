@@ -288,6 +288,20 @@ export type Database = {
       }
     }
     Functions: {
+      get_store_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          created_at: string
+          delivery_fee: number
+          id: string
+          is_open_manual: boolean
+          logo_url: string
+          name: string
+          opening_hours: Json
+          slug: string
+          updated_at: string
+        }[]
+      }
       get_store_checkout_data: {
         Args: { store_id: string }
         Returns: {
