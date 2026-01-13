@@ -44,6 +44,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -89,6 +96,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -146,6 +160,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -229,10 +250,52 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stores_public: {
+        Row: {
+          created_at: string | null
+          delivery_fee: number | null
+          id: string | null
+          is_open_manual: boolean | null
+          logo_url: string | null
+          name: string | null
+          opening_hours: Json | null
+          slug: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_fee?: number | null
+          id?: string | null
+          is_open_manual?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          opening_hours?: Json | null
+          slug?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_fee?: number | null
+          id?: string | null
+          is_open_manual?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          opening_hours?: Json | null
+          slug?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_store_checkout_data: {
+        Args: { store_id: string }
+        Returns: {
+          pix_key: string
+          whatsapp: string
+        }[]
+      }
+      get_store_pixel: { Args: { store_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
