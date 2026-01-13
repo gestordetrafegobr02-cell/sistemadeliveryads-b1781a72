@@ -9,16 +9,20 @@ import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, OpeningHours } from '@/lib/storeHours';
 
-interface Store {
+// Public store data from stores_public view (excludes sensitive fields)
+interface StorePublic {
   id: string;
   name: string;
-  whatsapp: string | null;
-  facebook_pixel_id: string | null;
   logo_url: string | null;
   delivery_fee: number | null;
-  pix_key: string | null;
   opening_hours: OpeningHours | null;
   is_open_manual: boolean;
+}
+
+// Sensitive checkout data fetched on-demand
+interface CheckoutData {
+  whatsapp: string | null;
+  pix_key: string | null;
 }
 
 interface Category {
@@ -71,7 +75,9 @@ function loadFacebookPixel(pixelId: string) {
 
 export default function Shop() {
   const { slug } = useParams<{ slug: string }>();
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<StorePublic | null>(null);
+  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
+  const [facebookPixelId, setFacebookPixelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,9 +94,9 @@ export default function Shop() {
       }
 
       try {
-        // 1) Fetch store by slug (case-insensitive)
+        // 1) Fetch store from public view (excludes sensitive data)
         const { data: storeData, error: storeError } = await supabase
-          .from('stores')
+          .from('stores_public')
           .select('*')
           .ilike('slug', trimmedSlug)
           .maybeSingle();
@@ -108,17 +114,31 @@ export default function Shop() {
           return;
         }
 
-        const mappedStore: Store = {
-          ...storeData,
+        const mappedStore: StorePublic = {
+          id: storeData.id,
+          name: storeData.name,
+          logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+          delivery_fee: storeData.delivery_fee,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
-          logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
         };
         setStore(mappedStore);
 
-        // Load Facebook Pixel
-        if (storeData.facebook_pixel_id) {
-          loadFacebookPixel(storeData.facebook_pixel_id);
+        // 2) Fetch sensitive checkout data via secure function
+        const { data: checkoutResult } = await supabase
+          .rpc('get_store_checkout_data', { store_id: storeData.id });
+        
+        if (checkoutResult && checkoutResult.length > 0) {
+          setCheckoutData(checkoutResult[0]);
+        }
+
+        // 3) Fetch Facebook Pixel ID via secure function
+        const { data: pixelId } = await supabase
+          .rpc('get_store_pixel', { store_id: storeData.id });
+        
+        if (pixelId) {
+          setFacebookPixelId(pixelId);
+          loadFacebookPixel(pixelId);
           setTimeout(() => {
             if (window.fbq) window.fbq('track', 'ViewContent');
           }, 100);
@@ -179,13 +199,13 @@ export default function Shop() {
   }, [products, activeCategory]);
 
   const handlePurchase = () => {
-    if (window.fbq && store?.facebook_pixel_id) {
+    if (window.fbq && facebookPixelId) {
       window.fbq('track', 'Purchase');
     }
   };
 
   const handleCartOpen = () => {
-    if (window.fbq && store?.facebook_pixel_id) {
+    if (window.fbq && facebookPixelId) {
       window.fbq('track', 'InitiateCheckout');
     }
   };
@@ -338,9 +358,9 @@ export default function Shop() {
 
         <CartSheet
           storeId={store.id}
-          whatsapp={store.whatsapp || ''}
+          whatsapp={checkoutData?.whatsapp || ''}
           deliveryFee={store.delivery_fee || 0}
-          pixKey={store.pix_key || undefined}
+          pixKey={checkoutData?.pix_key || undefined}
           onPurchase={handlePurchase}
           onOpen={handleCartOpen}
           isStoreOpen={storeIsOpen}
