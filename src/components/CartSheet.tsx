@@ -151,10 +151,12 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
         });
 
         if (orderError) {
-          console.error('Order insert error:', orderError);
+          // Log error without exposing customer data
+          console.error('Order insert error:', orderError.code, orderError.hint);
         }
       } catch (err) {
-        console.error('Order save error:', err);
+        // Avoid logging sensitive customer data
+        console.error('Order save failed');
       }
     }
 

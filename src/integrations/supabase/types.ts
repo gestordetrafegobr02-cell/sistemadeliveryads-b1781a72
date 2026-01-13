@@ -59,6 +59,7 @@ export type Database = {
           created_at: string | null
           customer_name: string
           customer_phone: string | null
+          customer_session_token: string | null
           id: string
           items: Json
           payment_method: string | null
@@ -71,6 +72,7 @@ export type Database = {
           created_at?: string | null
           customer_name: string
           customer_phone?: string | null
+          customer_session_token?: string | null
           id?: string
           items: Json
           payment_method?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           created_at?: string | null
           customer_name?: string
           customer_phone?: string | null
+          customer_session_token?: string | null
           id?: string
           items?: Json
           payment_method?: string | null
@@ -288,6 +291,16 @@ export type Database = {
       }
     }
     Functions: {
+      get_order_status: {
+        Args: { order_id_param: string; session_token_param: string }
+        Returns: {
+          created_at: string
+          id: string
+          status: string
+          store_name: string
+          total: number
+        }[]
+      }
       get_public_store_by_slug: {
         Args: { store_slug: string }
         Returns: {
