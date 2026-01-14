@@ -136,9 +136,21 @@ export default function Admin() {
     setLoading(false);
   }
 
+  // Validate Facebook Pixel ID format (15-20 digits only)
+  function isValidPixelId(id: string): boolean {
+    if (!id) return true; // Empty is allowed
+    return /^[0-9]{15,20}$/.test(id);
+  }
+
   async function handleSaveStore() {
     if (!storeName.trim() || !storeSlug.trim()) {
       toast.error('Nome e slug são obrigatórios');
+      return;
+    }
+
+    // Validate Facebook Pixel ID to prevent XSS
+    if (pixelId && !isValidPixelId(pixelId)) {
+      toast.error('Facebook Pixel ID inválido. Deve conter apenas 15-20 dígitos numéricos.');
       return;
     }
 

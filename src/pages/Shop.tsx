@@ -55,8 +55,19 @@ declare global {
   }
 }
 
+// Validate Facebook Pixel ID format (15-20 digits only)
+function isValidPixelId(pixelId: string): boolean {
+  return /^[0-9]{15,20}$/.test(pixelId);
+}
+
 function loadFacebookPixel(pixelId: string) {
   if (window.fbq) return;
+  
+  // Validate pixel ID to prevent XSS attacks
+  if (!isValidPixelId(pixelId)) {
+    console.warn('[Shop] Invalid Facebook Pixel ID format');
+    return;
+  }
 
   const script = document.createElement('script');
   script.innerHTML = `
