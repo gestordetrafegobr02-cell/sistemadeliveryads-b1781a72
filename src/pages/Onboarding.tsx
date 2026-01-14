@@ -101,13 +101,19 @@ export default function Onboarding() {
 
   function handleNameChange(value: string) {
     setStoreName(value);
-    const slug = value
+    // Generate base slug from name
+    let baseSlug = value
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
-    setStoreSlug(slug);
+    
+    // Add a unique suffix (timestamp-based) to avoid collisions
+    const uniqueSuffix = Date.now().toString(36).slice(-4);
+    const uniqueSlug = baseSlug ? `${baseSlug}-${uniqueSuffix}` : '';
+    
+    setStoreSlug(uniqueSlug);
     setErrors({});
   }
 
