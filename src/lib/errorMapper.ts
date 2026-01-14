@@ -1,11 +1,8 @@
 /**
  * Maps internal database and storage errors to user-friendly messages.
- * Logs the original error for debugging while displaying safe messages to users.
+ * Logs only error codes for debugging - never sensitive data.
  */
 export function getErrorMessage(error: unknown): string {
-  // Log the full error for debugging purposes
-  console.error('Internal error:', error);
-
   // Handle null/undefined
   if (!error) {
     return 'Erro ao processar solicitação';

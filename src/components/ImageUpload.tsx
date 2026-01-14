@@ -52,7 +52,6 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
         toast.error(getErrorMessage(uploadError));
         return;
       }
@@ -65,7 +64,6 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
       onChange(publicUrl);
       toast.success('Imagem enviada com sucesso!');
     } catch (err) {
-      console.error('Upload error:', err);
       toast.error(getErrorMessage(err));
     } finally {
       setUploading(false);
