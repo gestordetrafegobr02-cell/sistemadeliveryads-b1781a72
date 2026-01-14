@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,10 +22,29 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [checkingStore, setCheckingStore] = useState(false);
 
   useEffect(() => {
-    if (user) navigate('/admin');
-  }, [user, navigate]);
+    if (user) {
+      checkUserStore();
+    }
+  }, [user]);
+
+  async function checkUserStore() {
+    setCheckingStore(true);
+    const { data } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('owner_id', user!.id)
+      .maybeSingle();
+
+    if (data) {
+      navigate('/admin');
+    } else {
+      navigate('/onboarding');
+    }
+    setCheckingStore(false);
+  }
 
   const handleSubmit = async (type: 'login' | 'signup') => {
     setError('');
@@ -60,7 +80,7 @@ export default function Auth() {
     setSubmitting(false);
   };
 
-  if (loading) {
+  if (loading || checkingStore) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

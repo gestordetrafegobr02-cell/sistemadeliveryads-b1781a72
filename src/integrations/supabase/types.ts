@@ -354,6 +354,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_user_store_with_template: {
+        Args: {
+          p_store_name: string
+          p_store_slug: string
+          p_template_slug?: string
+        }
+        Returns: string
+      }
       delete_store_master: { Args: { p_store_id: string }; Returns: boolean }
       get_all_orders_admin: {
         Args: never
