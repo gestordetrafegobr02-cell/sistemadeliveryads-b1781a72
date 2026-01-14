@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Store, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, Store, ArrowRight, ArrowLeft, Check, Sparkles, Settings, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -24,15 +24,16 @@ interface Template {
 }
 
 const TEMPLATES: Template[] = [
-  { slug: 'burger-shop', name: 'Hamburgueria', description: 'Combos, Burgers, Acompanhamentos', icon: '🍔' },
-  { slug: 'acai-shop', name: 'Açaiteria', description: 'Tigelas, Toppings, Cremes', icon: '🍧' },
-  { slug: 'restaurant', name: 'Restaurante', description: 'Pratos do Dia, Executivos', icon: '🍽️' },
-  { slug: 'grocery', name: 'Hortifruti', description: 'Frutas, Legumes, Laticínios', icon: '🍎' },
+  { slug: 'burger-shop', name: 'Hamburgueria', description: 'Combos, Artesanais, Bebidas', icon: '🍔' },
+  { slug: 'acai-shop', name: 'Açaiteria', description: 'Copos, Adicionais, Cremes', icon: '🍧' },
+  { slug: 'restaurant', name: 'Restaurante', description: 'Pratos Feitos, Guarnições, Bebidas', icon: '🍽️' },
+  { slug: 'grocery', name: 'Hortifruti', description: 'Frutas, Verduras, Mercearia', icon: '🍎' },
   { slug: 'empty', name: 'Cardápio Vazio', description: 'Comece do zero', icon: '📝' },
 ];
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [storeName, setStoreName] = useState('');
@@ -40,7 +41,12 @@ export default function Onboarding() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [hasStore, setHasStore] = useState<boolean | null>(null);
+  const [isEmptyStore, setIsEmptyStore] = useState(false);
+  const [createdNiche, setCreatedNiche] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
+
+  // Check if we're in quick-setup mode (existing empty store)
+  const quickSetup = searchParams.get('quick-setup') === 'true';
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,14 +61,39 @@ export default function Onboarding() {
   }, [user]);
 
   async function checkExistingStore() {
-    const { data } = await supabase
+    const { data: storeData } = await supabase
       .from('stores')
-      .select('id')
+      .select('id, name, slug')
       .eq('owner_id', user!.id)
       .maybeSingle();
 
-    if (data) {
-      navigate('/admin');
+    if (storeData) {
+      // User has a store - check if it's empty
+      const { count: categoriesCount } = await supabase
+        .from('categories')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeData.id);
+
+      const { count: productsCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('store_id', storeData.id);
+
+      if ((categoriesCount === 0 || categoriesCount === null) && 
+          (productsCount === 0 || productsCount === null)) {
+        // Empty store - show quick setup
+        setIsEmptyStore(true);
+        setHasStore(true);
+        setStoreName(storeData.name);
+        setStoreSlug(storeData.slug);
+        setStep(2); // Skip to template selection
+      } else if (quickSetup) {
+        // Already has products, redirect to admin
+        navigate('/admin');
+      } else {
+        // Store has products, go to admin
+        navigate('/admin');
+      }
     } else {
       setHasStore(false);
     }
@@ -70,7 +101,6 @@ export default function Onboarding() {
 
   function handleNameChange(value: string) {
     setStoreName(value);
-    // Auto-generate slug from name
     const slug = value
       .toLowerCase()
       .normalize('NFD')
@@ -105,26 +135,83 @@ export default function Onboarding() {
     setCreating(true);
 
     try {
-      const { data, error } = await supabase.rpc('create_user_store_with_template', {
-        p_store_name: storeName.trim(),
-        p_store_slug: storeSlug.trim().toLowerCase(),
-        p_template_slug: selectedTemplate,
-      });
+      if (isEmptyStore) {
+        // Existing empty store - just add template data
+        const { data: storeData } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('owner_id', user!.id)
+          .single();
 
-      if (error) {
-        if (error.message.includes('already in use') || error.message.includes('Slug')) {
-          toast.error('Este slug já está em uso. Escolha outro.');
-        } else if (error.message.includes('already has a store')) {
-          toast.error('Você já possui uma loja.');
-          navigate('/admin');
-        } else {
-          toast.error('Erro ao criar loja: ' + error.message);
+        if (!storeData) {
+          toast.error('Loja não encontrada');
+          return;
         }
-        return;
-      }
 
-      toast.success('Loja criada com sucesso! 🎉');
-      navigate('/admin');
+        if (selectedTemplate !== 'empty') {
+          // Get template data
+          const { data: template } = await supabase
+            .from('store_templates')
+            .select('categories, products')
+            .eq('slug', selectedTemplate)
+            .single();
+
+          if (template) {
+            const categoryMap: Record<string, string> = {};
+            const categories = template.categories as Array<{ name: string; sort_order: number }>;
+            const products = template.products as Array<{ name: string; description: string; price: number; category: string }>;
+
+            // Create categories
+            for (const cat of categories) {
+              const { data: newCat } = await supabase
+                .from('categories')
+                .insert({ store_id: storeData.id, name: cat.name, sort_order: cat.sort_order })
+                .select('id')
+                .single();
+              if (newCat) {
+                categoryMap[cat.name] = newCat.id;
+              }
+            }
+
+            // Create products
+            for (const prod of products) {
+              await supabase.from('products').insert({
+                store_id: storeData.id,
+                name: prod.name,
+                description: prod.description,
+                price: prod.price,
+                category_id: categoryMap[prod.category] || null,
+                is_available: true,
+              });
+            }
+          }
+        }
+
+        setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
+        setStep(3);
+      } else {
+        // Create new store with template
+        const { error } = await supabase.rpc('create_user_store_with_template', {
+          p_store_name: storeName.trim(),
+          p_store_slug: storeSlug.trim().toLowerCase(),
+          p_template_slug: selectedTemplate,
+        });
+
+        if (error) {
+          if (error.message.includes('already in use') || error.message.includes('Slug')) {
+            toast.error('Este slug já está em uso. Escolha outro.');
+          } else if (error.message.includes('already has a store')) {
+            toast.error('Você já possui uma loja.');
+            navigate('/admin');
+          } else {
+            toast.error('Erro ao criar loja: ' + error.message);
+          }
+          return;
+        }
+
+        setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
+        setStep(3);
+      }
     } catch (err) {
       toast.error('Erro inesperado ao criar loja');
     } finally {
@@ -132,7 +219,7 @@ export default function Onboarding() {
     }
   }
 
-  if (authLoading || hasStore === null) {
+  if (authLoading || (hasStore === null && !quickSetup)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -145,16 +232,22 @@ export default function Onboarding() {
       <div className="w-full max-w-2xl">
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-            {step > 1 ? <Check className="w-5 h-5" /> : '1'}
-          </div>
-          <div className={`w-16 h-1 rounded ${step >= 2 ? 'bg-primary' : 'bg-secondary'}`} />
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
-            2
-          </div>
+          {[1, 2, 3].map((s, i) => (
+            <div key={s} className="flex items-center">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors ${
+                step >= s ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+              }`}>
+                {step > s ? <Check className="w-5 h-5" /> : s}
+              </div>
+              {i < 2 && (
+                <div className={`w-12 h-1 rounded mx-2 ${step > s ? 'bg-primary' : 'bg-secondary'}`} />
+              )}
+            </div>
+          ))}
         </div>
 
-        {step === 1 && (
+        {/* Step 1: Store Info (skip if quick-setup) */}
+        {step === 1 && !isEmptyStore && (
           <Card className="bg-card border-border animate-fade-in">
             <CardHeader className="text-center">
               <Store className="w-12 h-12 mx-auto text-primary mb-2" />
@@ -205,11 +298,19 @@ export default function Onboarding() {
           </Card>
         )}
 
+        {/* Step 2: Template Selection */}
         {step === 2 && (
           <Card className="bg-card border-border animate-fade-in">
             <CardHeader className="text-center">
-              <CardTitle className="font-display text-2xl">Escolha seu Tipo de Negócio</CardTitle>
-              <CardDescription>Começaremos com um cardápio pronto para você personalizar</CardDescription>
+              <Sparkles className="w-12 h-12 mx-auto text-primary mb-2" />
+              <CardTitle className="font-display text-2xl">
+                {isEmptyStore ? 'Configuração Rápida' : 'Escolha seu Tipo de Negócio'}
+              </CardTitle>
+              <CardDescription>
+                {isEmptyStore 
+                  ? 'Sua loja está vazia! Escolha um modelo para começar rapidamente'
+                  : 'Começaremos com um cardápio pronto para você personalizar'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -234,14 +335,16 @@ export default function Onboarding() {
               </div>
 
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
+                {!isEmptyStore && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(1)}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Voltar
+                  </Button>
+                )}
                 <Button
                   onClick={handleCreateStore}
                   disabled={!selectedTemplate || creating}
@@ -250,16 +353,81 @@ export default function Onboarding() {
                   {creating ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Criando...
+                      {isEmptyStore ? 'Aplicando...' : 'Criando...'}
                     </>
                   ) : (
                     <>
-                      Criar Loja
+                      {isEmptyStore ? 'Aplicar Template' : 'Criar Loja'}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Success Tutorial */}
+        {step === 3 && (
+          <Card className="bg-card border-border animate-fade-in">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-green-500" />
+              </div>
+              <CardTitle className="font-display text-2xl">
+                🎉 Seu cardápio de {createdNiche} está pronto!
+              </CardTitle>
+              <CardDescription>
+                Siga os próximos passos para começar a vender
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Tutorial Steps */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <span className="font-bold text-primary">1</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Cardápio pronto!</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Seu cardápio de {createdNiche} já está configurado com produtos de exemplo.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <Settings className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Altere os preços</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Acesse a aba "Produtos" para ajustar nomes, descrições e preços.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">Configure seu PIX</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Adicione sua chave PIX e WhatsApp na aba "Loja" para receber pagamentos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => navigate('/admin')}
+                className="w-full btn-glow bg-primary text-primary-foreground gap-2"
+              >
+                Ir para o Painel
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </CardContent>
           </Card>
         )}
