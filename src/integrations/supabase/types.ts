@@ -251,6 +251,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       stores_public: {
@@ -291,6 +309,47 @@ export type Database = {
       }
     }
     Functions: {
+      get_all_orders_admin: {
+        Args: never
+        Returns: {
+          address: string
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          payment_method: string
+          status: string
+          store_id: string
+          store_name: string
+          total: number
+        }[]
+      }
+      get_all_stores_admin: {
+        Args: never
+        Returns: {
+          created_at: string
+          delivery_fee: number
+          id: string
+          is_open_manual: boolean
+          name: string
+          owner_email: string
+          owner_id: string
+          pix_key: string
+          slug: string
+          whatsapp: string
+        }[]
+      }
+      get_all_users_admin: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          has_store: boolean
+          id: string
+          store_name: string
+        }[]
+      }
       get_order_details: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
@@ -345,9 +404,17 @@ export type Database = {
         }[]
       }
       get_store_pixel_by_slug: { Args: { store_slug: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -474,6 +541,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
