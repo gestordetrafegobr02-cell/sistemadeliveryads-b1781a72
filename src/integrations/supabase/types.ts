@@ -291,6 +291,18 @@ export type Database = {
       }
     }
     Functions: {
+      get_order_details: {
+        Args: { order_id_param: string; session_token_param: string }
+        Returns: {
+          created_at: string
+          id: string
+          items: Json
+          payment_method: string
+          status: string
+          store_name: string
+          total: number
+        }[]
+      }
       get_order_status: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
@@ -313,6 +325,15 @@ export type Database = {
           opening_hours: Json
           slug: string
           updated_at: string
+        }[]
+      }
+      get_store_checkout_info: {
+        Args: { store_slug_param: string }
+        Returns: {
+          delivery_fee: number
+          pix_key: string
+          store_name: string
+          whatsapp: string
         }[]
       }
       get_store_payment_data: {
