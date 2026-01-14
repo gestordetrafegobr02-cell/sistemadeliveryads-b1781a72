@@ -195,12 +195,43 @@ export type Database = {
         }
         Relationships: []
       }
+      store_templates: {
+        Row: {
+          categories: Json
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          products: Json
+          slug: string
+        }
+        Insert: {
+          categories?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          products?: Json
+          slug: string
+        }
+        Update: {
+          categories?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          products?: Json
+          slug?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           created_at: string
           delivery_fee: number | null
           facebook_pixel_id: string | null
           id: string
+          is_active: boolean | null
           is_open_manual: boolean | null
           logo_url: string | null
           name: string
@@ -216,6 +247,7 @@ export type Database = {
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
           id?: string
+          is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
           name: string
@@ -231,6 +263,7 @@ export type Database = {
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
           id?: string
+          is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
           name?: string
@@ -276,6 +309,7 @@ export type Database = {
           created_at: string | null
           delivery_fee: number | null
           id: string | null
+          is_active: boolean | null
           is_open_manual: boolean | null
           logo_url: string | null
           name: string | null
@@ -287,6 +321,7 @@ export type Database = {
           created_at?: string | null
           delivery_fee?: number | null
           id?: string | null
+          is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
           name?: string | null
@@ -298,6 +333,7 @@ export type Database = {
           created_at?: string | null
           delivery_fee?: number | null
           id?: string | null
+          is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
           name?: string | null
@@ -309,6 +345,16 @@ export type Database = {
       }
     }
     Functions: {
+      create_store_from_template: {
+        Args: {
+          p_owner_id: string
+          p_store_name: string
+          p_store_slug: string
+          p_template_slug: string
+        }
+        Returns: string
+      }
+      delete_store_master: { Args: { p_store_id: string }; Returns: boolean }
       get_all_orders_admin: {
         Args: never
         Returns: {
@@ -412,6 +458,8 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_master_admin: { Args: never; Returns: boolean }
+      toggle_store_active: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
