@@ -10,6 +10,7 @@ import Shop from "./pages/Shop";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import SuperAdmin from "./pages/SuperAdmin";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <InstallPWA />
