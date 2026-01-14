@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -66,6 +67,7 @@ interface OrderItem {
 export default function Admin() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const [store, setStore] = useState<StoreData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -179,7 +181,6 @@ export default function Admin() {
         .single();
 
       if (error) {
-        console.error('Store upsert error:', error);
         if (error.message.includes('duplicate') || error.code === '23505') {
           toast.error('Esse slug já está em uso');
         } else {
@@ -189,8 +190,7 @@ export default function Admin() {
         toast.success(store ? 'Loja atualizada!' : 'Loja criada!');
         await fetchData();
       }
-    } catch (err) {
-      console.error('Unexpected error:', err);
+    } catch {
       toast.error('Erro inesperado ao salvar');
     } finally {
       setSaving(false);
@@ -310,6 +310,17 @@ export default function Admin() {
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-display text-2xl text-gradient">Painel Admin</h1>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/super-admin')}
+                className="gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                Super Admin
+              </Button>
+            )}
             {store && (
               <Button
                 variant="outline"

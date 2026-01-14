@@ -65,7 +65,6 @@ function loadFacebookPixel(pixelId: string) {
   
   // Validate pixel ID to prevent XSS attacks
   if (!isValidPixelId(pixelId)) {
-    console.warn('[Shop] Invalid Facebook Pixel ID format');
     return;
   }
 
@@ -111,7 +110,6 @@ export default function Shop() {
           .rpc('get_public_store_by_slug', { store_slug: trimmedSlug });
 
         if (storeError) {
-          console.error('[Shop] Store fetch error:', storeError);
           setError('Erro ao carregar a loja');
           setLoading(false);
           return;
@@ -161,18 +159,15 @@ export default function Shop() {
           .eq('store_id', mappedStore.id)
           .order('sort_order');
 
-        if (catError) console.error('[Shop] Categories fetch error:', catError);
         setCategories(catData ?? []);
 
         // 5) Fetch products by store_id
-        const { data: prodData, error: prodError } = await supabase
+        const { data: prodData } = await supabase
           .from('products')
           .select('*')
           .eq('store_id', mappedStore.id)
           .eq('is_available', true)
           .order('sort_order');
-
-        if (prodError) console.error('[Shop] Products fetch error:', prodError);
 
         const sanitizedProducts: Product[] = (prodData ?? []).map((p) => ({
           id: p.id,
@@ -184,9 +179,7 @@ export default function Shop() {
         }));
 
         setProducts(sanitizedProducts);
-        console.log('[Shop] Loaded', sanitizedProducts.length, 'products for store:', mappedStore.id);
-      } catch (err) {
-        console.error('[Shop] Unexpected error:', err);
+      } catch {
         setError('Erro inesperado ao carregar dados');
       } finally {
         setLoading(false);
