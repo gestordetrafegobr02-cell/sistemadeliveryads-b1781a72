@@ -151,22 +151,8 @@
     50% { box-shadow: 0 0 40px hsl(38 92% 50% / 0.6); }
   }
 
-  /* Staggered fade-in animation */
-  .animate-fade-in {
-    animation: fade-in 0.4s ease-out forwards;
-    opacity: 0;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  /* Staggered fade-in animation is provided via Tailwind (tailwind.config.ts).
+     (Removed duplicate .animate-fade-in + opacity:0 to avoid elements staying invisible.) */
 
   /* Hide scrollbar for categories bar */
   .scrollbar-hide::-webkit-scrollbar {
