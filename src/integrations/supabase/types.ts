@@ -416,6 +416,21 @@ export type Database = {
           total: number
         }[]
       }
+      get_order_details_owner: {
+        Args: { order_id_param: string }
+        Returns: {
+          address: string
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          payment_method: string
+          status: string
+          store_id: string
+          total: number
+        }[]
+      }
       get_order_status: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
