@@ -12,11 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
 import { getErrorMessage } from '@/lib/errorMapper';
+import { CategoryReorder } from '@/components/CategoryReorder';
 
 interface StoreData {
   id: string;
@@ -44,6 +45,7 @@ interface Product {
   image_url: string | null;
   category_id: string | null;
   is_available: boolean;
+  is_featured: boolean;
 }
 
 interface Order {
@@ -491,35 +493,40 @@ export default function Admin() {
           {/* Categories Tab */}
           <TabsContent value="categories">
             <Card className="bg-card border-border">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                 <CardTitle className="font-display text-xl">Categorias</CardTitle>
-                <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="gap-2 bg-primary text-primary-foreground" disabled={!store}>
-                      <Plus className="w-4 h-4" />
-                      Nova Categoria
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-card border-border">
-                    <DialogHeader>
-                      <DialogTitle className="font-display">Nova Categoria</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Nome</Label>
-                        <Input
-                          value={categoryName}
-                          onChange={(e) => setCategoryName(e.target.value)}
-                          placeholder="Hambúrgueres"
-                          className="mt-1 bg-secondary border-border"
-                        />
-                      </div>
-                      <Button onClick={handleSaveCategory} className="w-full bg-primary text-primary-foreground">
-                        Criar Categoria
+                <div className="flex items-center gap-2">
+                  {categories.length > 1 && (
+                    <CategoryReorder categories={categories} onReorder={fetchData} />
+                  )}
+                  <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-2 bg-primary text-primary-foreground" disabled={!store}>
+                        <Plus className="w-4 h-4" />
+                        Nova Categoria
                       </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-border">
+                      <DialogHeader>
+                        <DialogTitle className="font-display">Nova Categoria</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Nome</Label>
+                          <Input
+                            value={categoryName}
+                            onChange={(e) => setCategoryName(e.target.value)}
+                            placeholder="Hambúrgueres"
+                            className="mt-1 bg-secondary border-border"
+                          />
+                        </div>
+                        <Button onClick={handleSaveCategory} className="w-full bg-primary text-primary-foreground">
+                          Criar Categoria
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {!store ? (
@@ -532,12 +539,17 @@ export default function Admin() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {categories.map((cat) => (
+                    {categories.map((cat, index) => (
                       <div
                         key={cat.id}
                         className="flex items-center justify-between p-3 glass-card"
                       >
-                        <span className="font-medium">{cat.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                            {index + 1}
+                          </span>
+                          <span className="font-medium">{cat.name}</span>
+                        </div>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -593,27 +605,54 @@ export default function Admin() {
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium truncate">{product.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium truncate">{product.name}</h4>
+                            {product.is_featured && (
+                              <Flame className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                            )}
+                          </div>
                           <p className="text-primary font-semibold">
                             R$ {Number(product.price).toFixed(2).replace('.', ',')}
                           </p>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => openProductDialog(product)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        <div className="flex items-center gap-3">
+                          {/* Featured toggle */}
+                          <div className="flex items-center gap-2" title="Destacar produto">
+                            <Switch
+                              checked={product.is_featured}
+                              onCheckedChange={async (checked) => {
+                                const { error } = await supabase
+                                  .from('products')
+                                  .update({ is_featured: checked })
+                                  .eq('id', product.id);
+                                
+                                if (error) {
+                                  toast.error('Erro ao atualizar destaque');
+                                } else {
+                                  toast.success(checked ? 'Produto destacado!' : 'Destaque removido');
+                                  fetchData();
+                                }
+                              }}
+                            />
+                            <Flame className={`w-4 h-4 ${product.is_featured ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openProductDialog(product)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}

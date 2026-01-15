@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { CartSheet } from '@/components/CartSheet';
 import { CategoriesBar } from '@/components/CategoriesBar';
 import { StoreClosedBanner } from '@/components/StoreClosedBanner';
+import { FeaturedProducts } from '@/components/FeaturedProducts';
 import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, OpeningHours } from '@/lib/storeHours';
@@ -40,6 +41,7 @@ interface Product {
   price: number;
   image_url: string | null;
   category_id: string | null;
+  is_featured: boolean;
 }
 
 // Helper: returns valid URL or undefined (rejects base64 or long blobs)
@@ -177,6 +179,7 @@ export default function Shop() {
           price: Number(p.price),
           image_url: sanitizeImageUrl(p.image_url) ?? null,
           category_id: p.category_id,
+          is_featured: p.is_featured ?? false,
         }));
 
         setProducts(sanitizedProducts);
@@ -201,6 +204,11 @@ export default function Shop() {
     if (!activeCategory) return products;
     return products.filter((p) => p.category_id === activeCategory);
   }, [products, activeCategory]);
+
+  // Featured products
+  const featuredProducts = useMemo(() => {
+    return products.filter((p) => p.is_featured);
+  }, [products]);
 
   const handlePurchase = () => {
     if (window.fbq && facebookPixelId) {
@@ -311,6 +319,11 @@ export default function Shop() {
 
         {/* Product List */}
         <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+          {/* Featured Products Section */}
+          {showCategorySections && featuredProducts.length > 0 && (
+            <FeaturedProducts products={featuredProducts} />
+          )}
+
           {showCategorySections ? (
             <>
               {productsByCategory.map((category) =>
