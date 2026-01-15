@@ -5,10 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock, Sparkles } from 'lucide-react';
 
 const authSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -82,96 +81,215 @@ export default function Auth() {
 
   if (loading || checkingStore) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent blur-xl opacity-50 animate-pulse" />
+          <Loader2 className="w-10 h-10 animate-spin text-primary relative z-10" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-card border-border">
-        <CardHeader className="text-center">
-          <CardTitle className="font-display text-4xl text-gradient">MenuDigital</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Gerencie seu cardápio digital
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+      {/* Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a]" />
+      
+      {/* Abstract Decorative Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Large blurred sphere - top right */}
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/30 to-accent/20 blur-3xl animate-pulse" />
+        
+        {/* Medium sphere - bottom left */}
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-accent/25 to-primary/15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        
+        {/* Small floating orbs */}
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-primary/20 blur-2xl animate-float" />
+        <div className="absolute bottom-1/3 right-1/4 w-24 h-24 rounded-full bg-accent/25 blur-2xl animate-float" style={{ animationDelay: '1.5s' }} />
+        
+        {/* Geometric lines */}
+        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="hsl(25, 95%, 53%)" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="100%" x2="100%" y2="0" stroke="url(#lineGradient)" strokeWidth="1" />
+          <line x1="20%" y1="100%" x2="100%" y2="20%" stroke="url(#lineGradient)" strokeWidth="0.5" />
+          <line x1="0" y1="80%" x2="80%" y2="0" stroke="url(#lineGradient)" strokeWidth="0.5" />
+        </svg>
+
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(38, 92%, 50%) 1px, transparent 1px), linear-gradient(90deg, hsl(38, 92%, 50%) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}
+        />
+      </div>
+
+      {/* Glassmorphism Card */}
+      <div className="relative z-10 w-full max-w-md">
+        <div 
+          className="rounded-2xl border border-white/10 p-8 shadow-2xl"
+          style={{
+            background: 'rgba(30, 41, 59, 0.7)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
+          }}
+        >
+          {/* Logo & Welcome */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4 shadow-lg shadow-primary/25">
+              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h1 className="font-display text-4xl tracking-wide bg-gradient-to-r from-primary via-amber-400 to-accent bg-clip-text text-transparent">
+              MenuDigital
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Transforme seu negócio com cardápios inteligentes
+            </p>
+          </div>
+
+          {/* Tabs */}
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-secondary">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1 mb-6">
+              <TabsTrigger 
+                value="login" 
+                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-300"
+              >
+                Entrar
+              </TabsTrigger>
+              <TabsTrigger 
+                value="signup"
+                className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-300"
+              >
+                Criar Conta
+              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="login" className="space-y-4 mt-6">
+            <TabsContent value="login" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  className="bg-secondary border-border"
-                />
+                <Label htmlFor="login-email" className="text-foreground/80 text-sm font-medium">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Senha</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••"
-                  className="bg-secondary border-border"
-                />
+                <Label htmlFor="login-password" className="text-foreground/80 text-sm font-medium">
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                  />
+                </div>
               </div>
-              {error && <p className="text-destructive text-sm">{error}</p>}
+              
+              {error && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+                  {error}
+                </div>
+              )}
+
               <Button
                 onClick={() => handleSubmit('login')}
                 disabled={submitting}
-                className="w-full btn-glow bg-primary text-primary-foreground h-12"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:hover:scale-100"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Entrar'}
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Acessar Painel'
+                )}
               </Button>
             </TabsContent>
+            
+            <TabsContent value="signup" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label htmlFor="signup-email" className="text-foreground/80 text-sm font-medium">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password" className="text-foreground/80 text-sm font-medium">
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                  />
+                </div>
+              </div>
+              
+              {error && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+                  {error}
+                </div>
+              )}
 
-            <TabsContent value="signup" className="space-y-4 mt-6">
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Senha</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  className="bg-secondary border-border"
-                />
-              </div>
-              {error && <p className="text-destructive text-sm">{error}</p>}
               <Button
                 onClick={() => handleSubmit('signup')}
                 disabled={submitting}
-                className="w-full btn-glow bg-primary text-primary-foreground h-12"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:hover:scale-100"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Conta'}
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Criar Minha Conta'
+                )}
               </Button>
+
+              <p className="text-xs text-center text-muted-foreground mt-4">
+                Ao criar sua conta, você concorda com nossos Termos de Uso
+              </p>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Bottom decorative line */}
+        <div className="mt-8 flex items-center justify-center gap-2 text-muted-foreground/50 text-xs">
+          <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          <span>Sistema de Delivery Inteligente</span>
+          <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        </div>
+      </div>
     </div>
   );
 }
