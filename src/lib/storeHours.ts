@@ -24,30 +24,53 @@ const dayMap: Record<number, keyof OpeningHours> = {
 };
 
 /**
+ * Get current time in São Paulo timezone
+ */
+function getNowInSaoPaulo(): Date {
+  // Create a date string in São Paulo timezone and parse it
+  const saoPauloTime = new Date().toLocaleString('en-US', { 
+    timeZone: 'America/Sao_Paulo' 
+  });
+  return new Date(saoPauloTime);
+}
+
+/**
  * Check if the store is currently open based on hours and manual toggle
+ * 
+ * IMPORTANT: If is_open_manual is TRUE, store is ALWAYS open (overrides schedule)
+ * If is_open_manual is FALSE, store is ALWAYS closed (overrides schedule)
  */
 export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boolean): boolean {
-  // If manually closed, return false
+  // Manual toggle takes precedence:
+  // - TRUE = store is open regardless of schedule
+  // - FALSE = store is closed regardless of schedule
   if (!isOpenManual) {
     return false;
   }
 
-  // If no opening hours defined, assume open
+  // If is_open_manual is TRUE, store is open
+  // Opening hours are informational only - they don't close the store automatically
+  return true;
+}
+
+/**
+ * Check if store is within scheduled hours (informational only)
+ * Used to show "open until X" or "opens at X" messages
+ */
+export function isWithinScheduledHours(openingHours: OpeningHours | null): boolean {
   if (!openingHours) {
     return true;
   }
 
-  const now = new Date();
+  const now = getNowInSaoPaulo();
   const dayOfWeek = now.getDay();
   const dayKey = dayMap[dayOfWeek];
   const todayHours = openingHours[dayKey];
 
-  // If no hours for today, assume closed
   if (!todayHours || !todayHours.open || !todayHours.close) {
     return false;
   }
 
-  // Parse time strings
   const [openHour, openMin] = todayHours.open.split(':').map(Number);
   const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
 
@@ -69,7 +92,7 @@ export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boo
 export function getTodayHours(openingHours: OpeningHours | null): string | null {
   if (!openingHours) return null;
 
-  const now = new Date();
+  const now = getNowInSaoPaulo();
   const dayOfWeek = now.getDay();
   const dayKey = dayMap[dayOfWeek];
   const todayHours = openingHours[dayKey];

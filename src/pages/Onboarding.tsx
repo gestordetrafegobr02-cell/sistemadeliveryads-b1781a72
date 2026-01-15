@@ -341,16 +341,20 @@ export default function Onboarding() {
               </div>
 
               <div className="flex gap-3">
-                {!isEmptyStore && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="gap-2"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (isEmptyStore) {
+                      navigate('/admin');
+                    } else {
+                      setStep(1);
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar
+                </Button>
                 <Button
                   onClick={handleCreateStore}
                   disabled={!selectedTemplate || creating}
