@@ -1,7 +1,7 @@
 {
-  "name": "Empório Burger - Cardápio Digital",
+  "name": "Empório Burger - Delivery",
   "short_name": "Empório Burger",
-  "description": "Cardápio digital da Empório Burger. Faça seu pedido online!",
+  "description": "Empório Burger - Faça seu pedido online e receba em casa!",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
