@@ -6,9 +6,10 @@ import { CartSheet } from '@/components/CartSheet';
 import { CategoriesBar } from '@/components/CategoriesBar';
 import { StoreClosedBanner } from '@/components/StoreClosedBanner';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
+import { StoreStatusBadge } from '@/components/StoreStatusBadge';
 import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isStoreOpen, OpeningHours } from '@/lib/storeHours';
+import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
 
 // Public store data from stores_public view (excludes sensitive fields)
 interface StorePublic {
@@ -288,18 +289,28 @@ export default function Shop() {
       <div className="min-h-screen bg-background pb-28">
         {/* Header */}
         <header className="sticky top-0 z-40 glass-card border-b border-border/50">
-          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
-            {store.logo_url && (
-              <img
-                src={store.logo_url}
-                alt={store.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-primary"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            )}
-            <h1 className="font-display text-3xl text-gradient">{store.name}</h1>
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              {store.logo_url && (
+                <img
+                  src={store.logo_url}
+                  alt={store.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
+              <div className="flex-1">
+                <h1 className="font-display text-3xl text-gradient">{store.name}</h1>
+                {store.opening_hours && getTodayHours(store.opening_hours) && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Hoje: {getTodayHours(store.opening_hours)}
+                  </p>
+                )}
+              </div>
+              <StoreStatusBadge isOpen={storeIsOpen} />
+            </div>
           </div>
         </header>
 

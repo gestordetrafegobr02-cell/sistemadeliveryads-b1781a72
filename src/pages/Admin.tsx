@@ -18,6 +18,9 @@ import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge'
 import { ImageUpload } from '@/components/ImageUpload';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
+import { StoreHoursEditor } from '@/components/StoreHoursEditor';
+import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
+import { OpeningHours } from '@/lib/storeHours';
 
 interface StoreData {
   id: string;
@@ -29,6 +32,7 @@ interface StoreData {
   delivery_fee: number | null;
   is_open_manual: boolean;
   logo_url: string | null;
+  opening_hours: OpeningHours | null;
 }
 
 interface Category {
@@ -117,7 +121,19 @@ export default function Admin() {
       .maybeSingle();
 
     if (storeData) {
-      setStore(storeData);
+      const mappedStore: StoreData = {
+        id: storeData.id,
+        name: storeData.name,
+        slug: storeData.slug,
+        whatsapp: storeData.whatsapp,
+        pix_key: storeData.pix_key,
+        facebook_pixel_id: storeData.facebook_pixel_id,
+        delivery_fee: storeData.delivery_fee,
+        is_open_manual: storeData.is_open_manual ?? true,
+        logo_url: storeData.logo_url,
+        opening_hours: storeData.opening_hours as OpeningHours | null,
+      };
+      setStore(mappedStore);
       setStoreName(storeData.name);
       setStoreSlug(storeData.slug);
       setWhatsapp(storeData.whatsapp || '');
@@ -478,6 +494,25 @@ export default function Admin() {
                   </div>
                 )}
 
+                {/* Store Hours Editor */}
+                {store && (
+                  <div className="p-4 glass-card rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base">Horários de Funcionamento</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Configure os horários de abertura e fechamento
+                        </p>
+                      </div>
+                      <StoreHoursEditor
+                        storeId={store.id}
+                        currentHours={store.opening_hours}
+                        onSave={fetchData}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   onClick={handleSaveStore}
                   disabled={saving}
@@ -747,6 +782,14 @@ export default function Admin() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            
+                            <WhatsAppNotifyButton
+                              orderId={order.id}
+                              customerName={order.customer_name}
+                              customerPhone={order.customer_phone}
+                              status={order.status}
+                              storeName={store?.name || 'Loja'}
+                            />
                             
                             <Button
                               size="icon"
