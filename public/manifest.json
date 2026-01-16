@@ -1,7 +1,7 @@
 {
-  "name": "Empório Burger - Delivery",
-  "short_name": "Empório Burger",
-  "description": "Empório Burger - Faça seu pedido online e receba em casa!",
+  "name": "Sistema Delivery ADS",
+  "short_name": "Delivery ADS",
+  "description": "Plataforma completa de gestão para delivery",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

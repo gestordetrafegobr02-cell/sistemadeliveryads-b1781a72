@@ -143,14 +143,23 @@ export default function Auth() {
         >
           {/* Logo & Welcome */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4 shadow-lg shadow-primary/25">
-              <Sparkles className="w-8 h-8 text-primary-foreground" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4 shadow-lg shadow-primary/25 overflow-hidden">
+              <img 
+                src="/logo.png" 
+                alt="Sistema Delivery ADS" 
+                className="w-16 h-16 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <Sparkles className="w-8 h-8 text-primary-foreground hidden" />
             </div>
-            <h1 className="font-display text-4xl tracking-wide bg-gradient-to-r from-primary via-amber-400 to-accent bg-clip-text text-transparent">
-              MenuDigital
+            <h1 className="font-display text-3xl tracking-wide bg-gradient-to-r from-primary via-amber-400 to-accent bg-clip-text text-transparent">
+              Sistema Delivery ADS
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Transforme seu negócio com cardápios inteligentes
+              Gestão inteligente para seu delivery
             </p>
           </div>
 

@@ -113,6 +113,32 @@ export default function Admin() {
     if (user) fetchData();
   }, [user]);
 
+  // Realtime subscription for orders
+  useEffect(() => {
+    if (!store) return;
+
+    const channel = supabase
+      .channel('orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `store_id=eq.${store.id}`,
+        },
+        () => {
+          // Refresh orders when any change happens
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [store?.id]);
+
   async function fetchData() {
     const { data: storeData } = await supabase
       .from('stores')
