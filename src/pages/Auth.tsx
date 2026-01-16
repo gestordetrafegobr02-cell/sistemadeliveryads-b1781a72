@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { z } from 'zod';
-import { Loader2, Mail, Lock, Sparkles } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react';
+import logoImage from '@/assets/logo.png';
 
 const authSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -143,23 +144,18 @@ export default function Auth() {
         >
           {/* Logo & Welcome */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4 shadow-lg shadow-primary/25 overflow-hidden">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/10 mb-4 shadow-lg overflow-hidden p-2">
               <img 
-                src="/logo.png" 
+                src={logoImage} 
                 alt="Sistema Delivery ADS" 
-                className="w-16 h-16 object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                }}
+                className="w-full h-full object-contain"
               />
-              <Sparkles className="w-8 h-8 text-primary-foreground hidden" />
             </div>
-            <h1 className="font-display text-3xl tracking-wide bg-gradient-to-r from-primary via-amber-400 to-accent bg-clip-text text-transparent">
+            <h1 className="font-display text-2xl tracking-wide bg-gradient-to-r from-cyan-400 via-teal-400 to-green-400 bg-clip-text text-transparent">
               Sistema Delivery ADS
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Gestão inteligente para seu delivery
+              Conecte. Promova. Entregue.
             </p>
           </div>
 
