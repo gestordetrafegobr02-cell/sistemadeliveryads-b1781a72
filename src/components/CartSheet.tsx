@@ -137,18 +137,20 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           name: item.name,
           quantity: item.quantity,
           price: item.price,
+          modifiers: item.modifiers || [],
+          observation: item.observation || null,
         }));
 
-        const { error: orderError } = await supabase.from('orders').insert({
+        const { error: orderError } = await supabase.from('orders').insert([{
           store_id: storeId,
           customer_name: name,
           customer_phone: phone,
-          items: orderItems,
+          items: orderItems as unknown as import('@/integrations/supabase/types').Json,
           total: grandTotal,
           address: addressStr || null,
           payment_method: paymentMethod,
           status: 'pending',
-        });
+        }]);
 
         if (orderError) {
           // Silent fail - order saved to WhatsApp anyway
@@ -160,8 +162,25 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
 
     const orderId = generateOrderId();
 
+    // Build items list with modifiers and observations
     const itemsList = items
-      .map((item) => `• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}`)
+      .map((item) => {
+        const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
+        const itemTotal = (item.price + modifiersTotal) * item.quantity;
+        
+        let itemText = `• ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+        
+        if (item.modifiers && item.modifiers.length > 0) {
+          const modifiersList = item.modifiers.map((m) => `  ↳ ${m.name} (+R$ ${m.price.toFixed(2).replace('.', ',')})`).join('\n');
+          itemText += `\n${modifiersList}`;
+        }
+        
+        if (item.observation) {
+          itemText += `\n  📝 ${item.observation}`;
+        }
+        
+        return itemText;
+      })
       .join('\n');
 
     let message = `🛵 *PEDIDO #${orderId}*\n\n`;
@@ -269,53 +288,74 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           <div className="mt-6 space-y-6">
             {/* Cart Items */}
             <div className="space-y-4">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 p-3 glass-card animate-fade-in"
-                >
-                  {item.image_url && (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-14 h-14 rounded-lg object-cover"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-foreground truncate">{item.name}</h4>
-                    <p className="text-primary font-semibold">
-                      R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
-                    </p>
+              {items.map((item) => {
+                const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
+                const itemTotal = (item.price + modifiersTotal) * item.quantity;
+                
+                return (
+                  <div
+                    key={item.cartKey}
+                    className="flex items-start gap-3 p-3 glass-card animate-fade-in"
+                  >
+                    {item.image_url && (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-foreground truncate">{item.name}</h4>
+                      {/* Show modifiers */}
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {item.modifiers.map((m) => (
+                            <span key={m.id} className="block">
+                              + {m.name} (R$ {m.price.toFixed(2).replace('.', ',')})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Show observation */}
+                      {item.observation && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          Obs: {item.observation}
+                        </p>
+                      )}
+                      <p className="text-primary font-semibold mt-1">
+                        R$ {itemTotal.toFixed(2).replace('.', ',')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="w-8 h-8"
+                        onClick={() => updateQuantity(item.cartKey, item.quantity - 1)}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <span className="w-6 text-center font-medium">{item.quantity}</span>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="w-8 h-8"
+                        onClick={() => updateQuantity(item.cartKey, item.quantity + 1)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-8 h-8 text-destructive hover:text-destructive"
+                        onClick={() => removeItem(item.cartKey)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="w-8 h-8"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <span className="w-6 text-center font-medium">{item.quantity}</span>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="w-8 h-8"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="w-8 h-8 text-destructive hover:text-destructive"
-                      onClick={() => removeItem(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Checkout Form */}

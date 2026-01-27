@@ -20,6 +20,7 @@ import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
 import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
+import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
 
 interface StoreData {
@@ -698,6 +699,10 @@ export default function Admin() {
                             <Flame className={`w-4 h-4 ${product.is_featured ? 'text-orange-500' : 'text-muted-foreground'}`} />
                           </div>
                           <div className="flex gap-2">
+                            <ProductModifiersEditor
+                              productId={product.id}
+                              productName={product.name}
+                            />
                             <Button
                               size="icon"
                               variant="ghost"
