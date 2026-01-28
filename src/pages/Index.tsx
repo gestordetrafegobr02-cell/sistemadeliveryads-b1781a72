@@ -231,8 +231,15 @@ export default function Index() {
       {/* Signup Form */}
       <section ref={formRef} className="py-24 px-4 md:px-6 bg-neutral-50">
         <div className="max-w-md mx-auto">
-          <div className="bg-white rounded-2xl p-8 md:p-10 shadow-sm border border-neutral-200">
-            <div className="text-center mb-8">
+          <div className="bg-white rounded-2xl p-8 md:p-10 pb-12 shadow-sm border border-neutral-200 relative overflow-visible">
+            {/* Badge "7 dias grátis" */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+              <span className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold shadow-lg whitespace-nowrap">
+                🎁 7 DIAS GRÁTIS
+              </span>
+            </div>
+
+            <div className="text-center mb-8 pt-4">
               <h3 className="text-2xl font-semibold text-neutral-900 mb-2">
                 Crie sua loja agora
               </h3>
@@ -252,7 +259,8 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    style={{ color: '#1a1a1a' }}
                     maxLength={100}
                   />
                 </div>
@@ -268,7 +276,8 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    style={{ color: '#1a1a1a' }}
                     maxLength={255}
                   />
                 </div>
@@ -284,7 +293,8 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    style={{ color: '#1a1a1a' }}
                     minLength={6}
                   />
                 </div>
@@ -297,18 +307,27 @@ export default function Index() {
               >
                 {loading ? 'Criando sua loja...' : 'Começar meu Teste Grátis'}
               </Button>
-              <p className="text-xs text-neutral-400 text-center mt-3">
-                Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
-              </p>
             </form>
 
-            <p className="text-xs text-neutral-400 text-center mt-6">
+            <p className="text-xs text-neutral-400 text-center mt-4 px-2">
+              Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
+            </p>
+
+            <p className="text-xs text-neutral-400 text-center mt-4">
               Ao criar sua conta, você concorda com nossos Termos de Uso e Política de Privacidade.
             </p>
           </div>
 
+          {/* Value Proposition Banner - ZERO TAXA */}
+          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 text-center">
+            <p className="text-green-800 font-medium text-sm">
+              💰 Diferente do iFood: <strong className="text-green-700">ZERO TAXA por pedido!</strong><br />
+              <span className="text-green-600 font-normal">Lucro 100% seu.</span>
+            </p>
+          </div>
+
           {/* Trust Signals */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 text-sm text-neutral-500">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-6 text-sm text-neutral-500">
             {['Setup em 2 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
               <div key={idx} className="flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
