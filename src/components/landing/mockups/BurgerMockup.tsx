@@ -1,4 +1,5 @@
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import burgerImage from '@/assets/demo-burger.jpg';
 
 export function BurgerMockup() {
   return (
@@ -10,8 +11,13 @@ export function BurgerMockup() {
       </div>
 
       {/* Product Image */}
-      <div className="relative h-24 bg-gradient-to-b from-amber-900/30 to-transparent flex items-center justify-center">
-        <span className="text-4xl">🍔</span>
+      <div className="relative h-24 overflow-hidden">
+        <img 
+          src={burgerImage} 
+          alt="Smash Burger" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 to-transparent" />
         <div className="absolute bottom-2 right-2 bg-amber-500 text-neutral-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
           R$ 24,90
         </div>
@@ -47,14 +53,19 @@ export function BurgerMockup() {
           </div>
         </div>
 
-        {/* Extras */}
+        {/* Extras - Adicionais com preços */}
         <div>
-          <p className="text-[9px] text-neutral-500 uppercase tracking-wider mb-1">Adicionais</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[9px] text-neutral-500 uppercase tracking-wider">Adicionais</p>
+            <span className="text-[8px] text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded-full">Extras</span>
+          </div>
           <div className="space-y-1">
             {[
-              { name: 'Bacon Extra', price: '+4,00', selected: true },
-              { name: 'Cheddar', price: '+3,00', selected: false },
-              { name: 'Ovo', price: '+2,50', selected: true },
+              { name: 'Bacon Extra', price: '+R$ 4,00', selected: true },
+              { name: 'Queijo Cheddar', price: '+R$ 3,00', selected: false },
+              { name: 'Ovo Frito', price: '+R$ 2,50', selected: true },
+              { name: 'Cebola Caramelizada', price: '+R$ 2,00', selected: false },
+              { name: 'Molho Especial', price: '+R$ 1,50', selected: false },
             ].map((extra) => (
               <div key={extra.name} className="flex items-center justify-between p-1.5 rounded-lg bg-neutral-900">
                 <div className="flex items-center gap-2">
@@ -63,7 +74,7 @@ export function BurgerMockup() {
                   </div>
                   <span className="text-[10px]">{extra.name}</span>
                 </div>
-                <span className="text-[9px] text-amber-400">{extra.price}</span>
+                <span className="text-[9px] text-amber-400 font-medium">{extra.price}</span>
               </div>
             ))}
           </div>

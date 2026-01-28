@@ -1,15 +1,24 @@
-import { Plus, ShoppingCart, Scale, Package } from 'lucide-react';
+import { ShoppingCart, Scale, Package } from 'lucide-react';
+import hortifrutiImage from '@/assets/demo-hortifruti.jpg';
 
 export function HortifrutiMockup() {
   return (
     <div className="h-full bg-gradient-to-b from-green-950 to-neutral-950 text-white flex flex-col">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-green-900/50 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] text-green-300">🥬 Hortifruti</p>
-          <h3 className="text-sm font-semibold text-green-400">Produtos Frescos</h3>
+      {/* Header with image */}
+      <div className="relative h-16 overflow-hidden">
+        <img 
+          src={hortifrutiImage} 
+          alt="Hortifruti Frescos" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-green-950 to-transparent" />
+        <div className="absolute bottom-1 left-3 right-3 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-green-300">🥬 Hortifruti</p>
+            <h3 className="text-sm font-semibold text-green-400">Produtos Frescos</h3>
+          </div>
+          <span className="text-[8px] bg-green-600 px-2 py-0.5 rounded-full">Frescos Hoje</span>
         </div>
-        <span className="text-[8px] bg-green-600 px-2 py-0.5 rounded-full">Frescos Hoje</span>
       </div>
 
       {/* Product List */}
@@ -17,8 +26,8 @@ export function HortifrutiMockup() {
         {/* By Weight Item */}
         <div className="p-2 rounded-xl bg-green-900/30 border border-green-800/50">
           <div className="flex gap-2">
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-green-600/30 to-green-900/30 flex items-center justify-center text-2xl">
-              🥬
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-green-600/30 to-green-900/30 flex items-center justify-center overflow-hidden">
+              <span className="text-2xl">🥬</span>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-1 mb-0.5">
@@ -42,8 +51,8 @@ export function HortifrutiMockup() {
         {/* By Unit Item */}
         <div className="p-2 rounded-xl bg-green-900/30 border border-green-800/50">
           <div className="flex gap-2">
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-red-600/30 to-green-900/30 flex items-center justify-center text-2xl">
-              🍅
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-red-600/30 to-green-900/30 flex items-center justify-center overflow-hidden">
+              <span className="text-2xl">🍅</span>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-1 mb-0.5">
@@ -64,17 +73,17 @@ export function HortifrutiMockup() {
           </div>
         </div>
 
-        {/* Fruit Item */}
+        {/* Fruit Item with Offer */}
         <div className="p-2 rounded-xl bg-green-900/30 border border-green-800/50">
           <div className="flex gap-2">
-            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-600/30 to-green-900/30 flex items-center justify-center text-2xl">
-              🍌
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-600/30 to-green-900/30 flex items-center justify-center overflow-hidden">
+              <span className="text-2xl">🍌</span>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-1 mb-0.5">
                 <Scale className="w-2.5 h-2.5 text-green-400" />
                 <span className="text-[8px] text-green-400">Por Kg</span>
-                <span className="text-[7px] bg-yellow-600/80 px-1 rounded">OFERTA</span>
+                <span className="text-[7px] bg-yellow-600/80 px-1 rounded font-bold">OFERTA</span>
               </div>
               <p className="text-[11px] font-medium">Banana Prata</p>
               <div className="flex items-center gap-1">
