@@ -7,23 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,15 +37,15 @@ import {
   Trash2,
   Eye,
   Plus,
-  Utensils,
-  Leaf,
-  Building2,
-  ShoppingBasket,
   RefreshCw,
+  Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PlatformMetricsCard from '@/components/PlatformMetricsCard';
 import TrialEditor from '@/components/TrialEditor';
+import { TrialStatusBadge } from '@/components/TrialStatusBadge';
+import { CreateStoreManualDialog } from '@/components/CreateStoreManualDialog';
+import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -110,20 +93,6 @@ interface StoreTemplate {
   description: string | null;
 }
 
-const TEMPLATE_ICONS: Record<string, React.ReactNode> = {
-  'burger-shop': <Utensils className="w-8 h-8" />,
-  'acai-shop': <Leaf className="w-8 h-8" />,
-  'restaurant': <Building2 className="w-8 h-8" />,
-  'grocery': <ShoppingBasket className="w-8 h-8" />,
-};
-
-const TEMPLATE_COLORS: Record<string, string> = {
-  'burger-shop': 'from-orange-500 to-red-600',
-  'acai-shop': 'from-purple-500 to-pink-600',
-  'restaurant': 'from-emerald-500 to-teal-600',
-  'grocery': 'from-green-500 to-lime-600',
-};
-
 export default function SuperAdmin() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -140,11 +109,6 @@ export default function SuperAdmin() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<AdminStore | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [newStoreName, setNewStoreName] = useState('');
-  const [newStoreSlug, setNewStoreSlug] = useState('');
-  const [selectedOwnerId, setSelectedOwnerId] = useState('');
-  const [creatingStore, setCreatingStore] = useState(false);
   const [togglingStore, setTogglingStore] = useState<string | null>(null);
   const [deletingStore, setDeletingStore] = useState(false);
 
@@ -184,7 +148,6 @@ export default function SuperAdmin() {
       if (activeTab === 'stores') {
         const { data } = await supabase.rpc('get_all_stores_admin');
         
-        // Data now includes is_active and trial_expires_at from RPC
         if (data) {
           setStores(data as AdminStore[]);
         } else {
@@ -260,60 +223,8 @@ export default function SuperAdmin() {
     }
   }
 
-  async function handleCreateStore() {
-    if (!selectedTemplate || !newStoreName.trim() || !newStoreSlug.trim() || !selectedOwnerId) {
-      toast.error('Preencha todos os campos');
-      return;
-    }
-
-    // Validate slug format
-    const slugRegex = /^[a-z0-9-]+$/;
-    if (!slugRegex.test(newStoreSlug)) {
-      toast.error('Slug deve conter apenas letras minúsculas, números e hífens');
-      return;
-    }
-
-    setCreatingStore(true);
-    try {
-      const { data, error } = await supabase.rpc('create_store_from_template', {
-        p_template_slug: selectedTemplate,
-        p_store_name: newStoreName.trim(),
-        p_store_slug: newStoreSlug.trim().toLowerCase(),
-        p_owner_id: selectedOwnerId,
-      });
-
-      if (error) throw error;
-
-      toast.success('Loja criada com sucesso!');
-      setCreateDialogOpen(false);
-      setSelectedTemplate('');
-      setNewStoreName('');
-      setNewStoreSlug('');
-      setSelectedOwnerId('');
-      
-      // Refresh stores list
-      fetchData();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar loja';
-      toast.error(errorMessage);
-    } finally {
-      setCreatingStore(false);
-    }
-  }
-
   function handleImpersonate(store: AdminStore) {
-    // Open store admin in new tab with store context
     window.open(`/shop/${store.slug}`, '_blank');
-  }
-
-  // Generate slug from store name
-  function generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
   }
 
   if (authLoading || adminLoading) {
@@ -347,19 +258,11 @@ export default function SuperAdmin() {
           <div className="flex items-center gap-3">
             {isMasterAdmin && (
               <Button
-                onClick={() => {
-                  // Fetch users if not loaded
-                  if (users.length === 0) {
-                    supabase.rpc('get_all_users_admin').then(({ data }) => {
-                      setUsers((data as AdminUser[]) ?? []);
-                    });
-                  }
-                  setCreateDialogOpen(true);
-                }}
+                onClick={() => setCreateDialogOpen(true)}
                 className="gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Nova Loja
+                Criar Loja Manual
               </Button>
             )}
             <Button
@@ -377,9 +280,12 @@ export default function SuperAdmin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Platform Metrics - Only for Master Admin */}
         {isMasterAdmin && <PlatformMetricsCard />}
+
+        {/* Default Trial Settings - Only for Master Admin */}
+        {isMasterAdmin && <DefaultTrialSettings />}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex items-center justify-between">
@@ -415,7 +321,7 @@ export default function SuperAdmin() {
                 <CardTitle className="font-display text-xl">Gerenciamento de Lojas</CardTitle>
                 <CardDescription>
                   {isMasterAdmin
-                    ? 'Controle total: bloquear, excluir ou visualizar qualquer loja.'
+                    ? 'Controle total: bloquear, excluir, editar trial ou visualizar qualquer loja.'
                     : 'Visualize todas as lojas cadastradas na plataforma.'}
                 </CardDescription>
               </CardHeader>
@@ -436,6 +342,7 @@ export default function SuperAdmin() {
                           <TableHead>WhatsApp</TableHead>
                           <TableHead>Status</TableHead>
                           {isMasterAdmin && <TableHead>Trial</TableHead>}
+                          {isMasterAdmin && <TableHead>Editar Trial</TableHead>}
                           <TableHead>Criada em</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -470,6 +377,11 @@ export default function SuperAdmin() {
                                 )}
                               </div>
                             </TableCell>
+                            {isMasterAdmin && (
+                              <TableCell>
+                                <TrialStatusBadge trialExpiresAt={store.trial_expires_at} />
+                              </TableCell>
+                            )}
                             {isMasterAdmin && (
                               <TableCell>
                                 <TrialEditor
@@ -690,118 +602,13 @@ export default function SuperAdmin() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Store from Template Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">Criar Nova Loja</DialogTitle>
-            <DialogDescription>
-              Selecione um template e configure os dados da nova loja.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Template Selection */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Escolha o Template</Label>
-              <div className="grid grid-cols-2 gap-4">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => setSelectedTemplate(template.slug)}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      selectedTemplate === template.slug
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-lg bg-gradient-to-br ${
-                        TEMPLATE_COLORS[template.slug] || 'from-gray-500 to-gray-600'
-                      } flex items-center justify-center text-white mb-3`}
-                    >
-                      {TEMPLATE_ICONS[template.slug] || <Store className="w-6 h-6" />}
-                    </div>
-                    <h3 className="font-medium">{template.name}</h3>
-                    <p className="text-sm text-muted-foreground">{template.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Store Details */}
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="storeName">Nome da Loja</Label>
-                <Input
-                  id="storeName"
-                  placeholder="Ex: Burger House"
-                  value={newStoreName}
-                  onChange={(e) => {
-                    setNewStoreName(e.target.value);
-                    setNewStoreSlug(generateSlug(e.target.value));
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="storeSlug">Slug (URL)</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">/shop/</span>
-                  <Input
-                    id="storeSlug"
-                    placeholder="burger-house"
-                    value={newStoreSlug}
-                    onChange={(e) => setNewStoreSlug(e.target.value.toLowerCase())}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Apenas letras minúsculas, números e hífens.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Proprietário da Loja</Label>
-                <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o proprietário..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.email || 'Sem email'} {u.has_store && '(já tem loja)'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleCreateStore}
-              disabled={creatingStore || !selectedTemplate || !newStoreName || !selectedOwnerId}
-            >
-              {creatingStore ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Criando...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Loja
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Store Manual Dialog */}
+      <CreateStoreManualDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        templates={templates}
+        onStoreCreated={fetchData}
+      />
     </div>
   );
 }

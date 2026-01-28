@@ -7,6 +7,7 @@ import { CategoriesBar } from '@/components/CategoriesBar';
 import { StoreClosedBanner } from '@/components/StoreClosedBanner';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
 import { StoreStatusBadge } from '@/components/StoreStatusBadge';
+import { TrialExpiredBanner } from '@/components/TrialExpiredBanner';
 import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
@@ -20,6 +21,7 @@ interface StorePublic {
   opening_hours: OpeningHours | null;
   is_open_manual: boolean;
   is_active?: boolean;
+  is_trial_expired?: boolean;
 }
 
 // Payment data from secure RPC (fetched during checkout flow)
@@ -133,6 +135,7 @@ export default function Shop() {
           delivery_fee: storeData.delivery_fee,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
+          is_trial_expired: storeData.is_trial_expired ?? false,
         };
         setStore(mappedStore);
 
@@ -273,6 +276,13 @@ export default function Shop() {
         </div>
       </div>
     );
+  }
+
+  // ---------------------------
+  // RENDER: Trial expired
+  // ---------------------------
+  if (store.is_trial_expired) {
+    return <TrialExpiredBanner storeName={store.name} />;
   }
 
   // Grouped products by category (only when no active filter)

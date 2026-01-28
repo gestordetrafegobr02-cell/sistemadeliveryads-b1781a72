@@ -652,6 +652,7 @@ export type Database = {
           delivery_fee: number
           id: string
           is_open_manual: boolean
+          is_trial_expired: boolean
           logo_url: string
           name: string
           opening_hours: Json
