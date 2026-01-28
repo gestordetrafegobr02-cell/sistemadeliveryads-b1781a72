@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -23,6 +23,7 @@ import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
+import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
 
 interface StoreData {
   id: string;
@@ -35,6 +36,7 @@ interface StoreData {
   is_open_manual: boolean;
   logo_url: string | null;
   opening_hours: OpeningHours | null;
+  recovery_message_template: string | null;
 }
 
 interface Category {
@@ -82,6 +84,7 @@ export default function Admin() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [abandonedCount, setAbandonedCount] = useState(0);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -160,6 +163,7 @@ export default function Admin() {
         is_open_manual: storeData.is_open_manual ?? true,
         logo_url: storeData.logo_url,
         opening_hours: storeData.opening_hours as OpeningHours | null,
+        recovery_message_template: storeData.recovery_message_template,
       };
       setStore(mappedStore);
       setStoreName(storeData.name);
@@ -403,6 +407,15 @@ export default function Admin() {
             <TabsTrigger value="orders" className="gap-2">
               <ClipboardList className="w-4 h-4" />
               Pedidos
+            </TabsTrigger>
+            <TabsTrigger value="recovery" className="gap-2 relative">
+              <ShoppingCart className="w-4 h-4" />
+              Recuperação
+              {abandonedCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                  {abandonedCount > 9 ? '9+' : abandonedCount}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -848,6 +861,26 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Recovery Tab */}
+          <TabsContent value="recovery">
+            {store ? (
+              <AbandonedCartsTab
+                storeId={store.id}
+                storeName={store.name}
+                recoveryTemplate={store.recovery_message_template}
+                onAbandonedCountChange={setAbandonedCount}
+              />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">
+                    Crie sua loja primeiro para ver carrinhos abandonados.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 

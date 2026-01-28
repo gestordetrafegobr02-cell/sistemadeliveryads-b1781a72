@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          converted_to_order_id: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          items: Json
+          recovered_at: string | null
+          store_id: string
+          total: number
+        }
+        Insert: {
+          converted_to_order_id?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          recovered_at?: string | null
+          store_id: string
+          total?: number
+        }
+        Update: {
+          converted_to_order_id?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          recovered_at?: string | null
+          store_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_carts_converted_to_order_id_fkey"
+            columns: ["converted_to_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abandoned_carts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abandoned_carts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
