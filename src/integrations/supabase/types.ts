@@ -111,6 +111,30 @@ export type Database = {
           },
         ]
       }
+      global_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string | null
@@ -591,6 +615,7 @@ export type Database = {
           store_name: string
         }[]
       }
+      get_global_setting: { Args: { setting_key: string }; Returns: string }
       get_order_details: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
@@ -699,6 +724,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
       toggle_store_active: { Args: { p_store_id: string }; Returns: boolean }
+      update_global_setting: {
+        Args: { setting_key: string; setting_value: string }
+        Returns: boolean
+      }
       update_store_trial: {
         Args: { p_store_id: string; p_trial_date: string }
         Returns: boolean

@@ -92,12 +92,12 @@ export default function Index() {
         description: 'Você tem 7 dias grátis para testar.' 
       });
 
-      // Send WhatsApp notification to owner
+      // Send WhatsApp notification to owner (fire and forget)
       sendLeadNotification({
         storeName: storeName.trim(),
         email: email.trim(),
         segment: 'Hamburgueria',
-      });
+      }).catch(console.error);
 
       navigate('/admin');
     } catch (error: any) {

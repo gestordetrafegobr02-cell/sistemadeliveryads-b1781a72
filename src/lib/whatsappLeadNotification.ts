@@ -1,6 +1,5 @@
 // WhatsApp Lead Notification Helper
-// Number should be in format: 5511999999999 (country code + area code + number)
-const OWNER_WHATSAPP = '5511999999999'; // TODO: Replace with your actual WhatsApp number
+import { getOwnerWhatsApp } from '@/hooks/useGlobalSettings';
 
 interface LeadData {
   storeName: string;
@@ -9,7 +8,10 @@ interface LeadData {
   segment?: string;
 }
 
-export function sendLeadNotification(data: LeadData) {
+export async function sendLeadNotification(data: LeadData) {
+  // Fetch the owner WhatsApp from global settings
+  const ownerWhatsApp = await getOwnerWhatsApp();
+  
   const message = `Olá Igor! Novo lojista cadastrado:
 - Loja: ${data.storeName}
 - Dono: ${data.ownerName || 'Não informado'}
@@ -17,7 +19,7 @@ export function sendLeadNotification(data: LeadData) {
 - Segmento: ${data.segment || 'Hamburgueria'}`;
 
   const encodedMessage = encodeURIComponent(message);
-  const whatsappUrl = `https://wa.me/${OWNER_WHATSAPP}?text=${encodedMessage}`;
+  const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodedMessage}`;
   
   // Open WhatsApp in a new tab
   window.open(whatsappUrl, '_blank');
