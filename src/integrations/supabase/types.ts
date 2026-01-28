@@ -337,6 +337,7 @@ export type Database = {
           opening_hours: Json | null
           owner_id: string
           pix_key: string | null
+          recovery_delay_minutes: number
           recovery_message_template: string | null
           slug: string
           updated_at: string
@@ -354,6 +355,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id: string
           pix_key?: string | null
+          recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug: string
           updated_at?: string
@@ -371,6 +373,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id?: string
           pix_key?: string | null
+          recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug?: string
           updated_at?: string
