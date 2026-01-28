@@ -8,9 +8,13 @@ import { StoreClosedBanner } from '@/components/StoreClosedBanner';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
 import { StoreStatusBadge } from '@/components/StoreStatusBadge';
 import { TrialExpiredBanner } from '@/components/TrialExpiredBanner';
+import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
+
+// Demo store slugs
+const DEMO_SLUGS = ['demo-hamburgueria', 'demo-pizzaria', 'demo-acaiteria', 'demo-hortifruti'];
 
 // Public store data from stores_public view (excludes sensitive fields)
 interface StorePublic {
@@ -203,6 +207,12 @@ export default function Shop() {
     return isStoreOpen(store.opening_hours, store.is_open_manual);
   }, [store]);
 
+  // Check if this is a demo store
+  const isDemoStore = useMemo(() => {
+    const trimmedSlug = (slug ?? '').trim().toLowerCase();
+    return DEMO_SLUGS.includes(trimmedSlug);
+  }, [slug]);
+
   // Filter products by category
   const filteredProducts = useMemo(() => {
     if (!activeCategory) return products;
@@ -297,6 +307,9 @@ export default function Shop() {
   return (
     <CartProvider>
       <div className="min-h-screen bg-background pb-28">
+        {/* Demo Mode Banner */}
+        {isDemoStore && <DemoModeBanner storeName={store.name} />}
+        
         {/* Header */}
         <header className="sticky top-0 z-40 glass-card border-b border-border/50">
           <div className="max-w-2xl mx-auto px-4 py-4">
