@@ -345,6 +345,7 @@ export type Database = {
           upsell_default_message: string | null
           upsell_enabled: boolean
           upsell_exception_products: string[] | null
+          upsell_products: string[] | null
           whatsapp: string | null
         }
         Insert: {
@@ -367,6 +368,7 @@ export type Database = {
           upsell_default_message?: string | null
           upsell_enabled?: boolean
           upsell_exception_products?: string[] | null
+          upsell_products?: string[] | null
           whatsapp?: string | null
         }
         Update: {
@@ -389,6 +391,7 @@ export type Database = {
           upsell_default_message?: string | null
           upsell_enabled?: boolean
           upsell_exception_products?: string[] | null
+          upsell_products?: string[] | null
           whatsapp?: string | null
         }
         Relationships: [
