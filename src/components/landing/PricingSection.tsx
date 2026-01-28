@@ -1,11 +1,14 @@
-import { Check, ArrowRight, Shield, CreditCard, Sparkles } from 'lucide-react';
+import { Check, ArrowRight, Shield, CreditCard, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useGlobalSettings } from '@/hooks/useGlobalSettings';
 
 interface PricingSectionProps {
   onCtaClick: () => void;
 }
 
 export function PricingSection({ onCtaClick }: PricingSectionProps) {
+  const { settings, loading } = useGlobalSettings();
+  
   const benefits = [
     'Sem fidelidade - cancele quando quiser',
     'ZERO comissão por pedido',
@@ -32,7 +35,13 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
             Plano Profissional Liberado
           </h2>
           <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
-            Teste por 7 dias sem compromisso. Se gostar, assine por apenas <strong className="text-neutral-800">R$ 97/mês</strong>.
+            Teste por {settings.default_trial_days} dias sem compromisso. Se gostar, assine por apenas{' '}
+            {loading ? (
+              <Loader2 className="inline w-4 h-4 animate-spin" />
+            ) : (
+              <strong className="text-neutral-800">R$ {settings.subscription_price}/mês</strong>
+            )}
+            .
           </p>
         </div>
 
@@ -45,15 +54,21 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
             {/* Badge */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
               <span className="inline-flex items-center px-5 py-2 rounded-full bg-gradient-to-r from-primary to-primary/80 text-white text-sm font-bold shadow-lg">
-                🎁 7 DIAS GRÁTIS
+                🎁 {settings.default_trial_days} DIAS GRÁTIS
               </span>
             </div>
 
             <div className="text-center mb-8 pt-6 relative">
               <p className="text-sm text-neutral-500 mb-2">Após o teste, apenas</p>
               <div className="flex items-baseline justify-center gap-2">
-                <span className="text-5xl md:text-6xl font-bold text-neutral-900">R$ 97</span>
-                <span className="text-xl text-neutral-500">/mês</span>
+                {loading ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+                ) : (
+                  <>
+                    <span className="text-5xl md:text-6xl font-bold text-neutral-900">R$ {Math.floor(settings.subscription_price)}</span>
+                    <span className="text-xl text-neutral-500">/mês</span>
+                  </>
+                )}
               </div>
               <p className="text-green-600 font-medium mt-2">
                 ZERO taxa por pedido • Lucro 100% seu
@@ -99,7 +114,7 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
           {/* Trust box below */}
           <div className="mt-8 p-5 rounded-2xl bg-green-50 border border-green-200 text-center">
             <p className="text-green-800 font-medium">
-              💡 Após os 7 dias, seu painel será apenas pausado.<br />
+              💡 Após os {settings.default_trial_days} dias, seu painel será apenas pausado.<br />
               <span className="text-green-600 font-normal">Você só paga se o sistema realmente trouxer resultados.</span>
             </p>
           </div>

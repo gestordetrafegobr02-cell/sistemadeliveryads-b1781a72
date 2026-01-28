@@ -39,6 +39,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Cog,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PlatformMetricsCard from '@/components/PlatformMetricsCard';
@@ -46,6 +47,7 @@ import TrialEditor from '@/components/TrialEditor';
 import { TrialStatusBadge } from '@/components/TrialStatusBadge';
 import { CreateStoreManualDialog } from '@/components/CreateStoreManualDialog';
 import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
+import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -302,6 +304,12 @@ export default function SuperAdmin() {
                 <Users className="w-4 h-4" />
                 Usuários
               </TabsTrigger>
+              {isMasterAdmin && (
+                <TabsTrigger value="settings" className="gap-2">
+                  <Cog className="w-4 h-4" />
+                  Configurações
+                </TabsTrigger>
+              )}
             </TabsList>
             <Button
               variant="ghost"
@@ -568,6 +576,13 @@ export default function SuperAdmin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Settings Tab - Master Admin Only */}
+          {isMasterAdmin && (
+            <TabsContent value="settings">
+              <GlobalSettingsTab />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 

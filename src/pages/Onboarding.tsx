@@ -197,12 +197,12 @@ export default function Onboarding() {
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
         
-        // Send WhatsApp notification for existing store template setup
+        // Send WhatsApp notification for existing store template setup (fire and forget)
         sendLeadNotification({
           storeName: storeName,
           email: user?.email || 'Não informado',
           segment: TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'Não informado',
-        });
+        }).catch(console.error);
       } else {
         // Create new store with template
         const { error } = await supabase.rpc('create_user_store_with_template', {
@@ -226,12 +226,12 @@ export default function Onboarding() {
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
         
-        // Send WhatsApp notification for new store creation
+        // Send WhatsApp notification for new store creation (fire and forget)
         sendLeadNotification({
           storeName: storeName.trim(),
           email: user?.email || 'Não informado',
           segment: TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'Não informado',
-        });
+        }).catch(console.error);
       }
     } catch (err) {
       toast.error('Erro inesperado ao criar loja');
