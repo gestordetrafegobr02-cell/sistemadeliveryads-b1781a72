@@ -61,6 +61,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import PlatformMetricsCard from '@/components/PlatformMetricsCard';
+import TrialEditor from '@/components/TrialEditor';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -75,6 +77,7 @@ interface AdminStore {
   delivery_fee: number | null;
   is_open_manual: boolean;
   is_active?: boolean;
+  trial_expires_at: string | null;
   created_at: string;
 }
 
@@ -178,22 +181,11 @@ export default function SuperAdmin() {
       if (activeTab === 'stores') {
         const { data } = await supabase.rpc('get_all_stores_admin');
         
-        // Also fetch is_active status directly from stores table for master admin
-        if (isMasterAdmin && data) {
-          const storeIds = data.map((s: AdminStore) => s.id);
-          const { data: storesData } = await supabase
-            .from('stores')
-            .select('id, is_active')
-            .in('id', storeIds);
-          
-          const activeMap = new Map(storesData?.map(s => [s.id, s.is_active]) || []);
-          const enrichedStores = data.map((s: AdminStore) => ({
-            ...s,
-            is_active: activeMap.get(s.id) ?? true,
-          }));
-          setStores(enrichedStores);
+        // Data now includes is_active and trial_expires_at from RPC
+        if (data) {
+          setStores(data as AdminStore[]);
         } else {
-          setStores((data as AdminStore[]) ?? []);
+          setStores([]);
         }
       } else if (activeTab === 'orders') {
         const { data } = await supabase.rpc('get_all_orders_admin');
@@ -383,6 +375,9 @@ export default function SuperAdmin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Platform Metrics - Only for Master Admin */}
+        {isMasterAdmin && <PlatformMetricsCard />}
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex items-center justify-between">
             <TabsList className="bg-secondary">
@@ -437,6 +432,7 @@ export default function SuperAdmin() {
                           <TableHead>Dono</TableHead>
                           <TableHead>WhatsApp</TableHead>
                           <TableHead>Status</TableHead>
+                          {isMasterAdmin && <TableHead>Trial</TableHead>}
                           <TableHead>Criada em</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -471,6 +467,23 @@ export default function SuperAdmin() {
                                 )}
                               </div>
                             </TableCell>
+                            {isMasterAdmin && (
+                              <TableCell>
+                                <TrialEditor
+                                  storeId={store.id}
+                                  currentTrialDate={store.trial_expires_at}
+                                  onUpdate={(newDate) => {
+                                    setStores(prev =>
+                                      prev.map(s =>
+                                        s.id === store.id
+                                          ? { ...s, trial_expires_at: newDate }
+                                          : s
+                                      )
+                                    );
+                                  }}
+                                />
+                              </TableCell>
+                            )}
                             <TableCell className="text-sm text-muted-foreground">
                               {new Date(store.created_at).toLocaleDateString('pt-BR')}
                             </TableCell>

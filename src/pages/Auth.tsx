@@ -26,12 +26,22 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      checkUserStore();
+      checkUserAccess();
     }
   }, [user]);
 
-  async function checkUserStore() {
+  async function checkUserAccess() {
     setCheckingStore(true);
+    
+    // Check if user is master admin - redirect directly to super-admin
+    const isMasterAdmin = user!.email === 'igormoises.ads@gmail.com';
+    if (isMasterAdmin) {
+      navigate('/super-admin');
+      setCheckingStore(false);
+      return;
+    }
+    
+    // For regular users, check if they have a store
     const { data } = await supabase
       .from('stores')
       .select('id')
