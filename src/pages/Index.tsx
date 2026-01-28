@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SystemShowcase } from '@/components/landing/SystemShowcase';
+import { PricingSection } from '@/components/landing/PricingSection';
+import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
   ShoppingCart, 
@@ -88,6 +90,13 @@ export default function Index() {
         description: 'Você tem 7 dias grátis para testar.' 
       });
 
+      // Send WhatsApp notification to owner
+      sendLeadNotification({
+        storeName: storeName.trim(),
+        email: email.trim(),
+        segment: 'Hamburgueria',
+      });
+
       navigate('/admin');
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -157,6 +166,9 @@ export default function Index() {
           Começar Teste Grátis
           <ArrowRight className="w-5 h-5" />
         </Button>
+        <p className="text-sm text-neutral-400 mt-3">
+          Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
+        </p>
       </header>
 
       {/* System Showcase Section */}
@@ -204,6 +216,9 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {/* Pricing Section */}
+      <PricingSection onCtaClick={scrollToForm} />
 
       {/* Signup Form */}
       <section ref={formRef} className="py-24 px-4 md:px-6 bg-neutral-50">
@@ -274,6 +289,9 @@ export default function Index() {
               >
                 {loading ? 'Criando sua loja...' : 'Começar meu Teste Grátis'}
               </Button>
+              <p className="text-xs text-neutral-400 text-center mt-3">
+                Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
+              </p>
             </form>
 
             <p className="text-xs text-neutral-400 text-center mt-6">

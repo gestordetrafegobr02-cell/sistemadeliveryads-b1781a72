@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Store, ArrowRight, ArrowLeft, Check, Sparkles, Settings, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 
 const storeSchema = z.object({
   name: z.string().trim().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100, 'Nome muito longo'),
@@ -195,6 +196,13 @@ export default function Onboarding() {
 
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
+        
+        // Send WhatsApp notification for existing store template setup
+        sendLeadNotification({
+          storeName: storeName,
+          email: user?.email || 'Não informado',
+          segment: TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'Não informado',
+        });
       } else {
         // Create new store with template
         const { error } = await supabase.rpc('create_user_store_with_template', {
@@ -217,6 +225,13 @@ export default function Onboarding() {
 
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
+        
+        // Send WhatsApp notification for new store creation
+        sendLeadNotification({
+          storeName: storeName.trim(),
+          email: user?.email || 'Não informado',
+          segment: TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'Não informado',
+        });
       }
     } catch (err) {
       toast.error('Erro inesperado ao criar loja');
