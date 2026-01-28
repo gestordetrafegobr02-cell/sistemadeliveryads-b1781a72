@@ -578,6 +578,17 @@ export type Database = {
         }[]
       }
       get_store_pixel_by_slug: { Args: { store_slug: string }; Returns: string }
+      get_store_stats: { Args: { p_store_id: string }; Returns: Json }
+      get_upsell_products: {
+        Args: { p_limit?: number; p_store_id: string }
+        Returns: {
+          category_name: string
+          id: string
+          image_url: string
+          name: string
+          price: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

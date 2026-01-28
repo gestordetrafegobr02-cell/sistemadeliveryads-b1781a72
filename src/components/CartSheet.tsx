@@ -9,6 +9,7 @@ import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticClick, hapticSuccess } from '@/lib/haptics';
 import { z } from 'zod';
+import { UpsellModal } from './UpsellModal';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome muito curto').max(100),
@@ -38,6 +39,8 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [upsellCategories, setUpsellCategories] = useState<string[]>([]);
   
   // Form fields
   const [name, setName] = useState('');
@@ -52,6 +55,61 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch upsell category names when store loads
+  useEffect(() => {
+    async function fetchUpsellCategories() {
+      if (!storeId) return;
+      const { data } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('store_id', storeId);
+      
+      if (data) {
+        const drinkCategories = data
+          .filter((c) => 
+            ['bebidas', 'bebida', 'sucos', 'suco', 'refrigerantes', 'refrigerante', 'sobremesas', 'sobremesa', 'drinks', 'desserts']
+              .includes(c.name.toLowerCase())
+          )
+          .map((c) => c.name.toLowerCase());
+        setUpsellCategories(drinkCategories);
+      }
+    }
+    fetchUpsellCategories();
+  }, [storeId]);
+
+  // Check if cart has any drink/dessert items
+  async function checkNeedsUpsell(): Promise<boolean> {
+    if (!storeId || upsellCategories.length === 0) return false;
+    
+    // Get product IDs from cart
+    const productIds = items.map((item) => item.id);
+    if (productIds.length === 0) return false;
+
+    // Check if any cart item belongs to upsell categories
+    const { data } = await supabase
+      .from('products')
+      .select('id, categories!inner(name)')
+      .in('id', productIds)
+      .eq('store_id', storeId);
+
+    if (!data) return true; // If can't verify, show upsell
+
+    const cartCategoryNames = data.map((p: any) => p.categories?.name?.toLowerCase()).filter(Boolean);
+    const hasUpsellItem = cartCategoryNames.some((cat: string) => upsellCategories.includes(cat));
+    
+    return !hasUpsellItem;
+  }
+
+  async function handleProceedToCheckout() {
+    // Check if upsell is needed
+    const needsUpsell = await checkNeedsUpsell();
+    if (needsUpsell) {
+      setUpsellOpen(true);
+    } else {
+      handleCheckout();
+    }
+  }
 
   const paymentLabels = {
     cash: 'Dinheiro',
@@ -543,7 +601,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
               <Button
                 onClick={() => {
                   hapticSuccess();
-                  handleCheckout();
+                  handleProceedToCheckout();
                 }}
                 disabled={submitting || !isStoreOpen}
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
@@ -553,6 +611,16 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Upsell Modal */}
+        {storeId && (
+          <UpsellModal
+            open={upsellOpen}
+            onOpenChange={setUpsellOpen}
+            storeId={storeId}
+            onContinue={handleCheckout}
+          />
         )}
       </SheetContent>
     </Sheet>
