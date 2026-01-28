@@ -1,4 +1,5 @@
 import { ShoppingCart } from 'lucide-react';
+import pizzaImage from '@/assets/demo-pizza.jpg';
 
 export function PizzaMockup() {
   return (
@@ -9,19 +10,18 @@ export function PizzaMockup() {
         <h3 className="text-sm font-semibold text-orange-400">Meio a Meio</h3>
       </div>
 
-      {/* Pizza Visual */}
-      <div className="relative h-28 flex items-center justify-center bg-gradient-to-b from-orange-900/20 to-transparent">
-        <div className="relative w-24 h-24 rounded-full bg-amber-100 border-4 border-amber-700 overflow-hidden">
-          {/* Half 1 */}
-          <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-red-600 to-red-500 flex items-center justify-center">
-            <span className="text-2xl rotate-[-20deg]">🍕</span>
-          </div>
-          {/* Half 2 */}
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-600 to-amber-500 flex items-center justify-center">
-            <span className="text-2xl rotate-[20deg]">🧀</span>
-          </div>
-          {/* Divider */}
-          <div className="absolute top-0 left-1/2 w-0.5 h-full bg-amber-800 -translate-x-1/2" />
+      {/* Pizza Image */}
+      <div className="relative h-24 overflow-hidden">
+        <img 
+          src={pizzaImage} 
+          alt="Pizza Meio a Meio" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-orange-950/90 to-transparent" />
+        {/* Half indicators */}
+        <div className="absolute bottom-2 left-2 flex gap-1">
+          <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">Calabresa</span>
+          <span className="bg-amber-500 text-neutral-900 text-[8px] px-1.5 py-0.5 rounded-full">4 Queijos</span>
         </div>
       </div>
 
@@ -51,22 +51,25 @@ export function PizzaMockup() {
           </div>
         </div>
 
-        {/* Crust */}
+        {/* Crust - Adicionais com preços */}
         <div>
-          <p className="text-[9px] text-orange-400 uppercase tracking-wider mb-1">Borda Recheada</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[9px] text-orange-400 uppercase tracking-wider">Borda Recheada</p>
+            <span className="text-[8px] text-orange-300 bg-orange-500/20 px-1.5 py-0.5 rounded-full">Adicional</span>
+          </div>
           <div className="grid grid-cols-2 gap-1">
             {[
-              { name: 'Catupiry', price: '+8', selected: true },
-              { name: 'Cheddar', price: '+8', selected: false },
-              { name: 'Chocolate', price: '+10', selected: false },
-              { name: 'Sem Borda', price: '', selected: false },
+              { name: 'Catupiry', price: '+R$ 8,00', selected: true },
+              { name: 'Cheddar', price: '+R$ 8,00', selected: false },
+              { name: 'Chocolate', price: '+R$ 10,00', selected: false },
+              { name: 'Sem Borda', price: 'Grátis', selected: false },
             ].map((crust) => (
               <button 
                 key={crust.name} 
                 className={`p-1.5 rounded-lg text-center ${crust.selected ? 'bg-orange-600 ring-1 ring-orange-400' : 'bg-orange-900/30'}`}
               >
-                <span className="text-[9px] block">{crust.name}</span>
-                {crust.price && <span className="text-[8px] text-orange-300">{crust.price}</span>}
+                <span className="text-[9px] block font-medium">{crust.name}</span>
+                <span className={`text-[8px] ${crust.selected ? 'text-orange-200' : 'text-orange-400'}`}>{crust.price}</span>
               </button>
             ))}
           </div>
