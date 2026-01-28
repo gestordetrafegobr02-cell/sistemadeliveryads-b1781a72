@@ -7,6 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SystemShowcase } from '@/components/landing/SystemShowcase';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
@@ -187,8 +189,11 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Savings Comparison Section - Anti-iFood */}
+      <SavingsComparisonSection onCtaClick={scrollToForm} />
+
       {/* Features Grid */}
-      <section className="py-24 px-4 md:px-6">
+      <section className="py-24 px-4 md:px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-4">
@@ -219,6 +224,9 @@ export default function Index() {
 
       {/* Pricing Section */}
       <PricingSection onCtaClick={scrollToForm} />
+
+      {/* FAQ Section */}
+      <FAQSection />
 
       {/* Signup Form */}
       <section ref={formRef} className="py-24 px-4 md:px-6 bg-neutral-50">
