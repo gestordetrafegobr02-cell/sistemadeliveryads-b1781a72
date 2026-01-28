@@ -279,6 +279,7 @@ export type Database = {
           opening_hours: Json | null
           owner_id: string
           pix_key: string | null
+          recovery_message_template: string | null
           slug: string
           updated_at: string
           whatsapp: string | null
@@ -295,6 +296,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id: string
           pix_key?: string | null
+          recovery_message_template?: string | null
           slug: string
           updated_at?: string
           whatsapp?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id?: string
           pix_key?: string | null
+          recovery_message_template?: string | null
           slug?: string
           updated_at?: string
           whatsapp?: string | null
