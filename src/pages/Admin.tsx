@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -25,6 +25,7 @@ import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
 import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
 import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
+import { ReportsTab } from '@/components/ReportsTab';
 
 interface StoreData {
   id: string;
@@ -418,6 +419,10 @@ export default function Admin() {
                   {abandonedCount > 9 ? '9+' : abandonedCount}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Relatórios
             </TabsTrigger>
           </TabsList>
 
@@ -886,6 +891,21 @@ export default function Admin() {
                 <CardContent className="py-8">
                   <p className="text-muted-foreground text-center">
                     Crie sua loja primeiro para ver carrinhos abandonados.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports">
+            {store ? (
+              <ReportsTab storeId={store.id} />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">
+                    Crie sua loja primeiro para ver relatórios.
                   </p>
                 </CardContent>
               </Card>
