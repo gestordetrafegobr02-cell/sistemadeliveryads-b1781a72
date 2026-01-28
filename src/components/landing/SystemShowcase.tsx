@@ -14,7 +14,7 @@ const segments = [
     title: 'Hamburgueria',
     description: 'Aumente seu ticket médio com combos e adicionais.',
     mockup: BurgerMockup,
-    demoUrl: '/shop/demo-burger',
+    demoUrl: '/shop/demo-hamburgueria',
     gradient: 'from-amber-500 to-orange-600',
   },
   {
@@ -22,7 +22,7 @@ const segments = [
     title: 'Açaiteria',
     description: 'Facilite a montagem e evite erros nos pedidos.',
     mockup: AcaiMockup,
-    demoUrl: '/shop/demo-acai',
+    demoUrl: '/shop/demo-acaiteria',
     gradient: 'from-purple-500 to-pink-600',
   },
   {
@@ -30,9 +30,9 @@ const segments = [
     title: 'Pizzaria',
     description: 'Pizza meio a meio, bordas recheadas e adicionais por sabor.',
     mockup: PizzaMockup,
-    demoUrl: '/shop/demo-pizza',
+    demoUrl: '/shop/demo-pizzaria',
     gradient: 'from-orange-500 to-red-600',
-    highlight: true, // Highlight this segment
+    highlight: true,
   },
   {
     id: 'hortifruti',
