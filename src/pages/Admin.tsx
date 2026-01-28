@@ -23,6 +23,7 @@ import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
+import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
 import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
 
 interface StoreData {
@@ -85,6 +86,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
+  const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -565,7 +567,13 @@ export default function Admin() {
 
                 {/* Recovery Message Editor */}
                 {store && (
-                  <RecoveryMessageEditor storeId={store.id} storeName={store.name} />
+                  <div className="space-y-4">
+                    <RecoveryDelayEditor 
+                      storeId={store.id} 
+                      onDelayChange={setRecoveryDelayMinutes}
+                    />
+                    <RecoveryMessageEditor storeId={store.id} storeName={store.name} />
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -870,6 +878,7 @@ export default function Admin() {
                 storeId={store.id}
                 storeName={store.name}
                 recoveryTemplate={store.recovery_message_template}
+                recoveryDelayMinutes={recoveryDelayMinutes}
                 onAbandonedCountChange={setAbandonedCount}
               />
             ) : (

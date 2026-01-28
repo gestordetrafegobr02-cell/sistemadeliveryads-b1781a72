@@ -24,6 +24,7 @@ interface AbandonedCartsTabProps {
   storeId: string;
   storeName: string;
   recoveryTemplate: string | null;
+  recoveryDelayMinutes: number;
   onAbandonedCountChange?: (count: number) => void;
 }
 
@@ -33,6 +34,7 @@ export function AbandonedCartsTab({
   storeId, 
   storeName, 
   recoveryTemplate,
+  recoveryDelayMinutes,
   onAbandonedCountChange 
 }: AbandonedCartsTabProps) {
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
@@ -61,7 +63,7 @@ export function AbandonedCartsTab({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [storeId]);
+  }, [storeId, recoveryDelayMinutes]);
 
   async function fetchAbandonedCarts() {
     // Fetch abandoned carts that haven't been converted to orders
@@ -102,13 +104,16 @@ export function AbandonedCartsTab({
       return !orderedPhones.has(cleanPhone);
     });
 
-    setCarts(filteredCarts);
+    // Filter carts based on recovery delay - only show carts older than the configured delay
+    const delayThreshold = new Date(Date.now() - recoveryDelayMinutes * 60 * 1000);
+    const filteredByDelay = filteredCarts.filter(
+      cart => new Date(cart.created_at) < delayThreshold
+    );
+
+    setCarts(filteredByDelay);
     
-    // Calculate carts from last 60 minutes for badge
-    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentCount = filteredCarts.filter(
-      cart => new Date(cart.created_at) > sixtyMinutesAgo
-    ).length;
+    // Calculate carts from last 60 minutes for badge (those that recently crossed the threshold)
+    const recentCount = filteredByDelay.length;
     
     onAbandonedCountChange?.(recentCount);
     setLoading(false);
