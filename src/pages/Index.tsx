@@ -21,13 +21,49 @@ import {
   CheckCircle2,
   Zap,
   Users,
-  Clock
+  Clock,
+  Pizza,
+  Leaf,
+  IceCream,
+  UtensilsCrossed
 } from 'lucide-react';
+
+const NICHE_OPTIONS = [
+  { 
+    slug: 'burger', 
+    name: 'Hamburgueria', 
+    icon: UtensilsCrossed, 
+    color: 'from-orange-500 to-red-500',
+    description: 'Lanchonetes e fast-food'
+  },
+  { 
+    slug: 'pizza', 
+    name: 'Pizzaria', 
+    icon: Pizza, 
+    color: 'from-red-500 to-yellow-500',
+    description: 'Pizzas e massas'
+  },
+  { 
+    slug: 'acai-shop', 
+    name: 'Açaiteria', 
+    icon: IceCream, 
+    color: 'from-purple-500 to-pink-500',
+    description: 'Açaí e sorvetes'
+  },
+  { 
+    slug: 'hortifruti', 
+    name: 'Hortifruti', 
+    icon: Leaf, 
+    color: 'from-green-500 to-emerald-500',
+    description: 'Frutas e verduras'
+  },
+];
 
 export default function Index() {
   const [storeName, setStoreName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedNiche, setSelectedNiche] = useState('burger');
   const [loading, setLoading] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -61,6 +97,11 @@ export default function Index() {
       return;
     }
 
+    if (!selectedNiche) {
+      toast({ title: 'Selecione o tipo do seu negócio', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -77,7 +118,7 @@ export default function Index() {
       const { data: storeId, error: storeError } = await supabase.rpc('create_user_store_with_template', {
         p_store_name: storeName.trim(),
         p_store_slug: slug,
-        p_template_slug: 'burger'
+        p_template_slug: selectedNiche
       });
 
       if (storeError) throw storeError;
@@ -90,6 +131,8 @@ export default function Index() {
         .update({ trial_expires_at: sevenDaysFromNow.toISOString() })
         .eq('id', storeId);
 
+      const nicheLabel = NICHE_OPTIONS.find(n => n.slug === selectedNiche)?.name || 'Outro';
+      
       toast({ 
         title: '🎉 Loja criada com sucesso!', 
         description: 'Você tem 7 dias grátis para testar.' 
@@ -98,7 +141,7 @@ export default function Index() {
       sendLeadNotification({
         storeName: storeName.trim(),
         email: email.trim(),
-        segment: 'Hamburgueria',
+        segment: nicheLabel,
       }).catch(console.error);
 
       navigate('/admin');
@@ -282,7 +325,7 @@ export default function Index() {
 
       {/* Signup Form */}
       <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-lg mx-auto">
           <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-neutral-200">
             <div className="text-center mb-8">
               <span className="inline-block px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-4">
@@ -297,6 +340,42 @@ export default function Index() {
             </div>
 
             <form onSubmit={handleSignup} className="space-y-5">
+              {/* Niche Selection */}
+              <div className="space-y-3">
+                <Label className="text-neutral-700 font-medium">Tipo do seu negócio</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {NICHE_OPTIONS.map((niche) => {
+                    const IconComponent = niche.icon;
+                    const isSelected = selectedNiche === niche.slug;
+                    return (
+                      <button
+                        key={niche.slug}
+                        type="button"
+                        onClick={() => setSelectedNiche(niche.slug)}
+                        className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                          isSelected 
+                            ? 'border-primary bg-primary/5 shadow-md' 
+                            : 'border-neutral-200 hover:border-primary/50 bg-white'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${niche.color} flex items-center justify-center mb-2`}>
+                          <IconComponent className="w-5 h-5 text-white" />
+                        </div>
+                        <p className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
+                          {niche.name}
+                        </p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{niche.description}</p>
+                        {isSelected && (
+                          <div className="absolute top-2 right-2">
+                            <CheckCircle2 className="w-5 h-5 text-primary" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="storeName" className="text-neutral-700 font-medium">Nome da sua Loja</Label>
                 <div className="relative">
@@ -307,7 +386,7 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
                     maxLength={100}
                   />
                 </div>
@@ -323,7 +402,7 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
                     maxLength={255}
                   />
                 </div>
@@ -339,7 +418,7 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
                     minLength={6}
                   />
                 </div>
