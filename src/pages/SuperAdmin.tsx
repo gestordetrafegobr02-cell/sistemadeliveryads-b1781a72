@@ -40,6 +40,7 @@ import {
   RefreshCw,
   Settings,
   Cog,
+  KeyRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PlatformMetricsCard from '@/components/PlatformMetricsCard';
@@ -48,6 +49,7 @@ import { TrialStatusBadge } from '@/components/TrialStatusBadge';
 import { CreateStoreManualDialog } from '@/components/CreateStoreManualDialog';
 import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -113,6 +115,8 @@ export default function SuperAdmin() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [togglingStore, setTogglingStore] = useState<string | null>(null);
   const [deletingStore, setDeletingStore] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<{ id: string; email: string | null } | null>(null);
 
   // Check if current user is master admin
   const isMasterAdmin = user?.email === MASTER_EMAIL;
@@ -423,6 +427,17 @@ export default function SuperAdmin() {
                                 {isMasterAdmin && (
                                   <>
                                     <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => {
+                                        setSelectedUserForPassword({ id: store.owner_id, email: store.owner_email });
+                                        setPasswordDialogOpen(true);
+                                      }}
+                                      title="Alterar Senha"
+                                    >
+                                      <KeyRound className="w-4 h-4" />
+                                    </Button>
+                                    <Button
                                       variant={store.is_active !== false ? 'outline' : 'default'}
                                       size="icon"
                                       onClick={() => handleToggleActive(store)}
@@ -624,6 +639,16 @@ export default function SuperAdmin() {
         templates={templates}
         onStoreCreated={fetchData}
       />
+
+      {/* Change Password Dialog */}
+      {selectedUserForPassword && (
+        <ChangePasswordDialog
+          open={passwordDialogOpen}
+          onOpenChange={setPasswordDialogOpen}
+          userId={selectedUserForPassword.id}
+          userEmail={selectedUserForPassword.email}
+        />
+      )}
     </div>
   );
 }
