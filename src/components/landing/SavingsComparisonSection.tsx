@@ -100,21 +100,28 @@ export function SavingsComparisonSection({ onCtaClick }: SavingsComparisonSectio
           </div>
         </div>
 
-        {/* Bottom Highlight Box */}
+        {/* Bottom Highlight Box - ZERO TAXA emphasis */}
         <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 rounded-2xl md:rounded-3xl p-6 md:p-8 border-2 border-amber-200 text-center">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
               <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </div>
           </div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-bold mb-4">
+            <TrendingUp className="w-4 h-4" />
+            DIFERENTE DO IFOOD
+          </div>
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-neutral-900 mb-3 px-2">
-            Em uma venda de R$ 100,00, você coloca<br />
-            <span className="text-green-600">os R$ 100,00 no bolso.</span>
+            <span className="text-red-500 line-through">ZERO TAXA</span> por venda.<br />
+            <span className="text-green-600">Todo o lucro é SEU!</span>
           </h3>
-          <p className="text-neutral-600 max-w-xl mx-auto text-sm md:text-base px-2">
+          <p className="text-neutral-600 max-w-xl mx-auto text-sm md:text-base px-2 mb-4">
+            Em uma venda de R$ 100,00, você coloca <strong className="text-green-700">os R$ 100,00 no bolso.</strong><br />
             Sem letras miúdas, sem comissões escondidas, sem surpresas no final do mês.
-            <strong className="text-neutral-800"> O lucro é 100% seu!</strong>
           </p>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500 text-white font-bold text-lg">
+            💰 O LUCRO É 100% SEU!
+          </div>
         </div>
       </div>
     </section>

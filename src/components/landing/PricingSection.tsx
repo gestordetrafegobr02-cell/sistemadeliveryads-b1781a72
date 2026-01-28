@@ -24,7 +24,7 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
   ];
 
   return (
-    <section className="py-20 md:py-24 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
+    <section className="py-20 md:py-24 pb-32 md:pb-40 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10 md:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6">
