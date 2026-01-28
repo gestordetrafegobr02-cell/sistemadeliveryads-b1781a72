@@ -281,7 +281,7 @@ export default function Index() {
       <FAQSection />
 
       {/* Signup Form */}
-      <section ref={formRef} className="py-20 md:py-24 pb-32 md:pb-40 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
+      <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-neutral-200">
             <div className="text-center mb-8">
@@ -307,7 +307,7 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
                     maxLength={100}
                   />
                 </div>
@@ -323,7 +323,7 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
                     maxLength={255}
                   />
                 </div>
@@ -339,7 +339,7 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-black placeholder:text-neutral-400"
                     minLength={6}
                   />
                 </div>
