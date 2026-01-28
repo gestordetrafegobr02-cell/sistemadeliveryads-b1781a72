@@ -24,17 +24,17 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
   ];
 
   return (
-    <section className="py-24 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
+    <section className="py-20 md:py-24 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 md:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
             Acesso Completo Liberado
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
             Plano Profissional Liberado
           </h2>
-          <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
+          <p className="text-neutral-500 text-base md:text-lg max-w-2xl mx-auto px-2">
             Teste por {settings.default_trial_days} dias sem compromisso. Se gostar, assine por apenas{' '}
             {loading ? (
               <Loader2 className="inline w-4 h-4 animate-spin" />
@@ -45,9 +45,9 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
           </p>
         </div>
 
-        <div className="relative max-w-lg mx-auto">
+        <div className="relative max-w-lg mx-auto px-4 sm:px-0">
           {/* Pricing Card */}
-          <div className="bg-white rounded-3xl border-2 border-primary/30 p-8 md:p-10 shadow-2xl relative overflow-hidden">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border-2 border-primary/30 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden">
             {/* Decorative gradient */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl" />
             
@@ -58,19 +58,19 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
               </span>
             </div>
 
-            <div className="text-center mb-8 pt-6 relative">
+            <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-6 relative">
               <p className="text-sm text-neutral-500 mb-2">Após o teste, apenas</p>
-              <div className="flex items-baseline justify-center gap-2">
+              <div className="flex items-baseline justify-center gap-1 sm:gap-2">
                 {loading ? (
                   <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
                 ) : (
                   <>
-                    <span className="text-5xl md:text-6xl font-bold text-neutral-900">R$ {Math.floor(settings.subscription_price)}</span>
-                    <span className="text-xl text-neutral-500">/mês</span>
+                    <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-neutral-900">R$ {Math.floor(settings.subscription_price)}</span>
+                    <span className="text-lg sm:text-xl text-neutral-500">/mês</span>
                   </>
                 )}
               </div>
-              <p className="text-green-600 font-medium mt-2">
+              <p className="text-green-600 font-medium mt-2 text-sm sm:text-base">
                 ZERO taxa por pedido • Lucro 100% seu
               </p>
             </div>
