@@ -12,6 +12,8 @@ interface UpsellProduct {
   price: number;
   image_url: string | null;
   category_name: string;
+  custom_message: string | null;
+  is_rule_based: boolean;
 }
 
 interface UpsellModalProps {
@@ -25,22 +27,43 @@ export function UpsellModal({ open, onOpenChange, storeId, onContinue }: UpsellM
   const [products, setProducts] = useState<UpsellProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [addedProducts, setAddedProducts] = useState<Set<string>>(new Set());
-  const { addItem } = useCart();
+  const [defaultMessage, setDefaultMessage] = useState('Que tal adicionar isso ao seu pedido?');
+  const { items, addItem } = useCart();
 
   useEffect(() => {
     if (open && storeId) {
-      fetchUpsellProducts();
+      fetchPersonalizedUpsell();
       setAddedProducts(new Set());
     }
-  }, [open, storeId]);
+  }, [open, storeId, items]);
 
-  async function fetchUpsellProducts() {
+  async function fetchPersonalizedUpsell() {
     setLoading(true);
     try {
+      // Get cart product IDs
+      const cartProductIds = items.map(item => item.id);
+      
+      // Fetch personalized upsell using new function
       const { data, error } = await supabase
-        .rpc('get_upsell_products', { p_store_id: storeId, p_limit: 3 });
+        .rpc('get_personalized_upsell', { 
+          p_store_id: storeId, 
+          p_cart_product_ids: cartProductIds,
+          p_limit: 3 
+        });
 
       if (error) throw error;
+      
+      // Also fetch default message
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('upsell_default_message')
+        .eq('id', storeId)
+        .single();
+      
+      if (storeData?.upsell_default_message) {
+        setDefaultMessage(storeData.upsell_default_message);
+      }
+      
       setProducts(data || []);
     } catch (err) {
       console.error('Error fetching upsell products:', err);
@@ -68,6 +91,10 @@ export function UpsellModal({ open, onOpenChange, storeId, onContinue }: UpsellM
     onContinue();
   }
 
+  // Get the most relevant custom message (first rule-based product's message)
+  const customHeaderMessage = products.find(p => p.is_rule_based && p.custom_message)?.custom_message;
+  const headerMessage = customHeaderMessage || defaultMessage;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-gradient-to-br from-card to-secondary/30 border-primary/20 overflow-hidden">
@@ -87,7 +114,7 @@ export function UpsellModal({ open, onOpenChange, storeId, onContinue }: UpsellM
             Complete sua experiência! 🎉
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground">
-            Que tal adicionar uma bebida geladinha ao seu pedido?
+            {headerMessage}
           </DialogDescription>
         </DialogHeader>
 
@@ -131,6 +158,11 @@ export function UpsellModal({ open, onOpenChange, storeId, onContinue }: UpsellM
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground truncate">{product.name}</h4>
                       <p className="text-xs text-muted-foreground">{product.category_name}</p>
+                      {product.is_rule_based && product.custom_message && (
+                        <p className="text-xs text-primary/80 italic mt-0.5 truncate">
+                          {product.custom_message}
+                        </p>
+                      )}
                       <p className="text-primary font-bold text-lg">
                         R$ {product.price.toFixed(2).replace('.', ',')}
                       </p>

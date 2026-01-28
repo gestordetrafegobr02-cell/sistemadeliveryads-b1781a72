@@ -587,6 +587,7 @@ export default function Admin() {
                   <UpsellSettingsCard 
                     storeId={store.id} 
                     categories={categories}
+                    products={products}
                   />
                 )}
               </CardContent>

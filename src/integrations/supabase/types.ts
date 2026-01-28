@@ -342,7 +342,9 @@ export type Database = {
           slug: string
           updated_at: string
           upsell_blocking_categories: string[] | null
+          upsell_default_message: string | null
           upsell_enabled: boolean
+          upsell_exception_products: string[] | null
           whatsapp: string | null
         }
         Insert: {
@@ -362,7 +364,9 @@ export type Database = {
           slug: string
           updated_at?: string
           upsell_blocking_categories?: string[] | null
+          upsell_default_message?: string | null
           upsell_enabled?: boolean
+          upsell_exception_products?: string[] | null
           whatsapp?: string | null
         }
         Update: {
@@ -382,7 +386,9 @@ export type Database = {
           slug?: string
           updated_at?: string
           upsell_blocking_categories?: string[] | null
+          upsell_default_message?: string | null
           upsell_enabled?: boolean
+          upsell_exception_products?: string[] | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -391,6 +397,68 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upsell_rules: {
+        Row: {
+          created_at: string
+          custom_message: string | null
+          id: string
+          is_active: boolean
+          offer_product_id: string
+          sort_order: number | null
+          store_id: string
+          trigger_product_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_message?: string | null
+          id?: string
+          is_active?: boolean
+          offer_product_id: string
+          sort_order?: number | null
+          store_id: string
+          trigger_product_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_message?: string | null
+          id?: string
+          is_active?: boolean
+          offer_product_id?: string
+          sort_order?: number | null
+          store_id?: string
+          trigger_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upsell_rules_offer_product_id_fkey"
+            columns: ["offer_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_rules_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_rules_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upsell_rules_trigger_product_id_fkey"
+            columns: ["trigger_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -550,6 +618,22 @@ export type Database = {
           status: string
           store_name: string
           total: number
+        }[]
+      }
+      get_personalized_upsell: {
+        Args: {
+          p_cart_product_ids: string[]
+          p_limit?: number
+          p_store_id: string
+        }
+        Returns: {
+          category_name: string
+          custom_message: string
+          id: string
+          image_url: string
+          is_rule_based: boolean
+          name: string
+          price: number
         }[]
       }
       get_public_store_by_slug: {
