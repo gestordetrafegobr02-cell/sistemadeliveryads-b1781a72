@@ -8,6 +8,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { UpsellRulesEditor } from './UpsellRulesEditor';
 import { UpsellExceptionsEditor } from './UpsellExceptionsEditor';
+import { UpsellProductSelector } from './UpsellProductSelector';
 
 interface Category {
   id: string;
@@ -17,6 +18,8 @@ interface Category {
 interface Product {
   id: string;
   name: string;
+  price: number;
+  image_url: string | null;
   category_id: string | null;
 }
 
@@ -190,6 +193,15 @@ export function UpsellSettingsCard({ storeId, categories, products = [] }: Upsel
           categories={categories}
           products={products}
           blockingCategories={blockingCategories}
+        />
+      )}
+
+      {/* Product Selector - Show if upsell enabled */}
+      {upsellEnabled && products.length > 0 && (
+        <UpsellProductSelector
+          storeId={storeId}
+          products={products}
+          categories={categories}
         />
       )}
 
