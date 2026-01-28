@@ -27,7 +27,7 @@ interface Template {
 const TEMPLATES: Template[] = [
   { slug: 'burger-shop', name: 'Hamburgueria', description: 'Combos, Artesanais, Bebidas', icon: '🍔' },
   { slug: 'acai-shop', name: 'Açaiteria', description: 'Copos, Adicionais, Cremes', icon: '🍧' },
-  { slug: 'restaurant', name: 'Restaurante', description: 'Pratos Feitos, Guarnições, Bebidas', icon: '🍽️' },
+  { slug: 'pizza', name: 'Pizzaria', description: 'Tradicionais, Premium, Bebidas', icon: '🍕' },
   { slug: 'grocery', name: 'Hortifruti', description: 'Frutas, Verduras, Mercearia', icon: '🍎' },
   { slug: 'empty', name: 'Cardápio Vazio', description: 'Comece do zero', icon: '📝' },
 ];

@@ -30,7 +30,7 @@ import {
 
 const NICHE_OPTIONS = [
   { 
-    slug: 'burger', 
+    slug: 'burger-shop', 
     name: 'Hamburgueria', 
     icon: UtensilsCrossed, 
     color: 'from-orange-500 to-red-500',
@@ -51,7 +51,7 @@ const NICHE_OPTIONS = [
     description: 'Açaí e sorvetes'
   },
   { 
-    slug: 'hortifruti', 
+    slug: 'grocery', 
     name: 'Hortifruti', 
     icon: Leaf, 
     color: 'from-green-500 to-emerald-500',
@@ -63,7 +63,7 @@ export default function Index() {
   const [storeName, setStoreName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedNiche, setSelectedNiche] = useState('burger');
+  const [selectedNiche, setSelectedNiche] = useState('burger-shop');
   const [loading, setLoading] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();

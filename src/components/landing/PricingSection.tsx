@@ -38,7 +38,7 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
         <div className="relative max-w-lg mx-auto px-4 sm:px-0">
           {/* Pricing Card */}
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-neutral-200 p-6 sm:p-8 md:p-10 shadow-xl relative overflow-hidden">
-            <div className="text-center mb-6 sm:mb-8 relative">
+            <div className="text-center mb-6 sm:mb-8">
               <div className="flex items-baseline justify-center gap-1 sm:gap-2">
                 {loading ? (
                   <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
