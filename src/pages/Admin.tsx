@@ -22,6 +22,7 @@ import { StoreHoursEditor } from '@/components/StoreHoursEditor';
 import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
+import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
 
 interface StoreData {
   id: string;
@@ -548,6 +549,11 @@ export default function Admin() {
                   {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   {store ? 'Salvar Alterações' : 'Criar Loja'}
                 </Button>
+
+                {/* Recovery Message Editor */}
+                {store && (
+                  <RecoveryMessageEditor storeId={store.id} storeName={store.name} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
