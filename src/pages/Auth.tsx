@@ -210,7 +210,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
                   />
                 </div>
               </div>
@@ -226,7 +226,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
                   />
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
                   />
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12"
+                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
                   />
                 </div>
               </div>
