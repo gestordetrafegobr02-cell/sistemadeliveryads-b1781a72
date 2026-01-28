@@ -35,12 +35,18 @@ interface CartSheetProps {
   isStoreOpen?: boolean;
 }
 
+interface StoreUpsellConfig {
+  upsell_enabled: boolean;
+  upsell_blocking_categories: string[];
+}
+
 export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [upsellOpen, setUpsellOpen] = useState(false);
-  const [upsellCategories, setUpsellCategories] = useState<string[]>([]);
+  const [upsellConfig, setUpsellConfig] = useState<StoreUpsellConfig | null>(null);
+  const [drinkCategoryIds, setDrinkCategoryIds] = useState<string[]>([]);
   
   // Form fields
   const [name, setName] = useState('');
@@ -56,55 +62,97 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch upsell category names when store loads
+  // Fetch upsell config and drink category IDs when store loads
   useEffect(() => {
-    async function fetchUpsellCategories() {
+    async function fetchUpsellConfig() {
       if (!storeId) return;
-      const { data } = await supabase
+      
+      // Fetch store upsell settings
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('upsell_enabled, upsell_blocking_categories')
+        .eq('id', storeId)
+        .single();
+      
+      if (storeData) {
+        setUpsellConfig({
+          upsell_enabled: storeData.upsell_enabled ?? false,
+          upsell_blocking_categories: (storeData.upsell_blocking_categories as string[]) || [],
+        });
+      }
+
+      // Fetch drink/dessert category IDs for detection
+      const { data: categoriesData } = await supabase
         .from('categories')
-        .select('name')
+        .select('id, name')
         .eq('store_id', storeId);
       
-      if (data) {
-        const drinkCategories = data
+      if (categoriesData) {
+        const drinkIds = categoriesData
           .filter((c) => 
             ['bebidas', 'bebida', 'sucos', 'suco', 'refrigerantes', 'refrigerante', 'sobremesas', 'sobremesa', 'drinks', 'desserts']
               .includes(c.name.toLowerCase())
           )
-          .map((c) => c.name.toLowerCase());
-        setUpsellCategories(drinkCategories);
+          .map((c) => c.id);
+        setDrinkCategoryIds(drinkIds);
       }
     }
-    fetchUpsellCategories();
+    fetchUpsellConfig();
   }, [storeId]);
 
-  // Check if cart has any drink/dessert items
-  async function checkNeedsUpsell(): Promise<boolean> {
-    if (!storeId || upsellCategories.length === 0) return false;
-    
-    // Get product IDs from cart
-    const productIds = items.map((item) => item.id);
-    if (productIds.length === 0) return false;
+  // Smart upsell check: returns true if upsell should be shown
+  async function shouldShowUpsell(): Promise<boolean> {
+    // 1. Check if upsell is enabled
+    if (!upsellConfig?.upsell_enabled) {
+      return false;
+    }
 
-    // Check if any cart item belongs to upsell categories
-    const { data } = await supabase
+    if (!storeId || items.length === 0) return false;
+
+    const productIds = items.map((item) => item.id);
+
+    // Fetch product categories for cart items
+    const { data: productData } = await supabase
       .from('products')
-      .select('id, categories!inner(name)')
+      .select('id, category_id')
       .in('id', productIds)
       .eq('store_id', storeId);
 
-    if (!data) return true; // If can't verify, show upsell
+    if (!productData) return true; // If can't verify, show upsell
 
-    const cartCategoryNames = data.map((p: any) => p.categories?.name?.toLowerCase()).filter(Boolean);
-    const hasUpsellItem = cartCategoryNames.some((cat: string) => upsellCategories.includes(cat));
+    const cartCategoryIds = productData.map((p) => p.category_id).filter(Boolean) as string[];
+
+    // 2. Check if cart contains blocking categories
+    const blockingCategories = upsellConfig.upsell_blocking_categories || [];
+    const hasBlockingCategory = cartCategoryIds.some((catId) => blockingCategories.includes(catId));
+    if (hasBlockingCategory) {
+      return false;
+    }
+
+    // 3. Check if cart already contains drinks/desserts
+    const hasUpsellCategory = cartCategoryIds.some((catId) => drinkCategoryIds.includes(catId));
+    if (hasUpsellCategory) {
+      return false;
+    }
+
+    // 4. Check if cart already contains a product that would be offered as upsell
+    const { data: upsellProducts } = await supabase
+      .rpc('get_upsell_products', { p_store_id: storeId, p_limit: 10 });
     
-    return !hasUpsellItem;
+    if (upsellProducts) {
+      const upsellProductIds = upsellProducts.map((p: { id: string }) => p.id);
+      const cartHasUpsellProduct = productIds.some((id) => upsellProductIds.includes(id));
+      if (cartHasUpsellProduct) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   async function handleProceedToCheckout() {
-    // Check if upsell is needed
-    const needsUpsell = await checkNeedsUpsell();
-    if (needsUpsell) {
+    const showUpsell = await shouldShowUpsell();
+    if (showUpsell) {
       setUpsellOpen(true);
     } else {
       handleCheckout();

@@ -25,6 +25,7 @@ import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
 import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
 import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
+import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
 
 interface StoreData {
@@ -579,6 +580,14 @@ export default function Admin() {
                     />
                     <RecoveryMessageEditor storeId={store.id} storeName={store.name} />
                   </div>
+                )}
+
+                {/* Upsell Settings */}
+                {store && (
+                  <UpsellSettingsCard 
+                    storeId={store.id} 
+                    categories={categories}
+                  />
                 )}
               </CardContent>
             </Card>
