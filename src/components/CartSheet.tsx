@@ -149,14 +149,17 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           total: grandTotal,
           address: addressStr || null,
           payment_method: paymentMethod,
-          status: 'pending',
         }]);
 
         if (orderError) {
-          // Silent fail - order saved to WhatsApp anyway
+          console.error('Order save error:', orderError.message);
+          // Continue to WhatsApp even if DB fails
+        } else {
+          console.log('Order saved successfully');
         }
-      } catch {
-        // Silent fail - order saved to WhatsApp anyway
+      } catch (err) {
+        console.error('Order save exception:', err);
+        // Continue to WhatsApp even if DB fails
       }
     }
 
