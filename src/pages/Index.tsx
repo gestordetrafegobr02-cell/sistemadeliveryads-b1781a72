@@ -5,10 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { SystemShowcase } from '@/components/landing/SystemShowcase';
-import { PricingSection } from '@/components/landing/PricingSection';
-import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
-import { FAQSection } from '@/components/landing/FAQSection';
+import { MenuShowcase } from '@/components/landing/MenuShowcase';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
@@ -92,7 +89,6 @@ export default function Index() {
         description: 'Você tem 7 dias grátis para testar.' 
       });
 
-      // Send WhatsApp notification to owner (fire and forget)
       sendLeadNotification({
         storeName: storeName.trim(),
         email: email.trim(),
@@ -146,11 +142,6 @@ export default function Index() {
 
       {/* Hero Section */}
       <header className="max-w-4xl mx-auto px-4 md:px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 text-neutral-600 text-sm mb-8">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          7 dias grátis • Sem cartão de crédito
-        </div>
-        
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold text-neutral-900 tracking-tight mb-6 leading-[1.1]">
           O cardápio digital que<br />
           <span className="text-primary">entende o seu negócio</span>
@@ -163,34 +154,29 @@ export default function Index() {
         <Button 
           size="lg"
           onClick={scrollToForm}
-          className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white gap-2"
+          className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white gap-2 rounded-full"
         >
           Começar Teste Grátis
           <ArrowRight className="w-5 h-5" />
         </Button>
-        <p className="text-sm text-neutral-400 mt-3">
-          Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
+        <p className="text-sm text-neutral-400 mt-4">
+          7 dias grátis • Sem cartão de crédito
         </p>
       </header>
 
-      {/* System Showcase Section */}
-      <section className="py-20 bg-neutral-50">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 mb-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-4">
-            Veja o sistema em ação
+      {/* Menu Showcase - Infinite Scroll */}
+      <section className="py-16 bg-[#F9FAFB]">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 mb-10 text-center">
+          <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-3">
+            Modelos de Cardápio
           </h2>
-          <p className="text-neutral-500 text-lg max-w-xl mx-auto">
-            Interface real do seu cardápio digital, pronta para cada tipo de negócio
+          <p className="text-neutral-500 text-lg">
+            Pronto para qualquer tipo de negócio
           </p>
         </div>
         
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <SystemShowcase onCtaClick={scrollToForm} />
-        </div>
+        <MenuShowcase />
       </section>
-
-      {/* Savings Comparison Section - Anti-iFood */}
-      <SavingsComparisonSection onCtaClick={scrollToForm} />
 
       {/* Features Grid */}
       <section className="py-24 px-4 md:px-6 bg-white">
@@ -200,11 +186,11 @@ export default function Index() {
               Tudo que você precisa
             </h2>
             <p className="text-neutral-500 text-lg">
-              Funcionalidades simples e poderosas para seu delivery
+              Funcionalidades simples e poderosas
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid md:grid-cols-3 gap-12">
             {features.map((feature, index) => (
               <div key={index} className="text-center">
                 <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-5">
@@ -222,29 +208,19 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <PricingSection onCtaClick={scrollToForm} />
-
-      {/* FAQ Section */}
-      <FAQSection />
-
       {/* Signup Form */}
-      <section ref={formRef} className="py-24 px-4 md:px-6 bg-neutral-50">
+      <section ref={formRef} className="py-24 px-4 md:px-6 bg-[#F9FAFB]">
         <div className="max-w-md mx-auto">
-          <div className="bg-white rounded-2xl p-8 md:p-10 pb-12 shadow-sm border border-neutral-200 relative overflow-visible">
-            {/* Badge "7 dias grátis" */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-              <span className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold shadow-lg whitespace-nowrap">
-                🎁 7 DIAS GRÁTIS
+          <div className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-neutral-200">
+            <div className="text-center mb-8">
+              <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium mb-4">
+                7 dias grátis
               </span>
-            </div>
-
-            <div className="text-center mb-8 pt-4">
               <h3 className="text-2xl font-semibold text-neutral-900 mb-2">
                 Crie sua loja agora
               </h3>
               <p className="text-neutral-500">
-                <span className="text-green-600 font-medium">7 dias grátis</span> • Sem compromisso
+                Setup em menos de 2 minutos
               </p>
             </div>
 
@@ -259,8 +235,7 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
-                    style={{ color: '#1a1a1a' }}
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
                     maxLength={100}
                   />
                 </div>
@@ -276,8 +251,7 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
-                    style={{ color: '#1a1a1a' }}
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
                     maxLength={255}
                   />
                 </div>
@@ -293,8 +267,7 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
-                    style={{ color: '#1a1a1a' }}
+                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
                     minLength={6}
                   />
                 </div>
@@ -309,28 +282,16 @@ export default function Index() {
               </Button>
             </form>
 
-            <p className="text-xs text-neutral-400 text-center mt-4 px-2">
-              Teste por 7 dias. Depois, apenas R$ 97/mês. Cancele quando quiser.
-            </p>
-
-            <p className="text-xs text-neutral-400 text-center mt-4">
-              Ao criar sua conta, você concorda com nossos Termos de Uso e Política de Privacidade.
-            </p>
-          </div>
-
-          {/* Value Proposition Banner - ZERO TAXA */}
-          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 text-center">
-            <p className="text-green-800 font-medium text-sm">
-              💰 Diferente do iFood: <strong className="text-green-700">ZERO TAXA por pedido!</strong><br />
-              <span className="text-green-600 font-normal">Lucro 100% seu.</span>
+            <p className="text-xs text-neutral-400 text-center mt-6">
+              Após 7 dias, apenas R$ 97/mês. Cancele quando quiser.
             </p>
           </div>
 
           {/* Trust Signals */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-6 text-sm text-neutral-500">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 text-sm text-neutral-500">
             {['Setup em 2 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
               <div key={idx} className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>{item}</span>
               </div>
             ))}
@@ -339,7 +300,7 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 md:px-6 border-t border-neutral-100">
+      <footer className="py-12 px-4 md:px-6 border-t border-neutral-100 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="font-semibold text-lg text-neutral-900">
             Menu<span className="text-primary">Digital</span>
