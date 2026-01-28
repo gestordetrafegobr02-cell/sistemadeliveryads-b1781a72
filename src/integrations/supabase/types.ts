@@ -341,6 +341,8 @@ export type Database = {
           recovery_message_template: string | null
           slug: string
           updated_at: string
+          upsell_blocking_categories: string[] | null
+          upsell_enabled: boolean
           whatsapp: string | null
         }
         Insert: {
@@ -359,6 +361,8 @@ export type Database = {
           recovery_message_template?: string | null
           slug: string
           updated_at?: string
+          upsell_blocking_categories?: string[] | null
+          upsell_enabled?: boolean
           whatsapp?: string | null
         }
         Update: {
@@ -377,6 +381,8 @@ export type Database = {
           recovery_message_template?: string | null
           slug?: string
           updated_at?: string
+          upsell_blocking_categories?: string[] | null
+          upsell_enabled?: boolean
           whatsapp?: string | null
         }
         Relationships: [
