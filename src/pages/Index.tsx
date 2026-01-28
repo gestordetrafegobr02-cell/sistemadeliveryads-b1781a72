@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { MenuShowcase } from '@/components/landing/MenuShowcase';
+import { SystemShowcase } from '@/components/landing/SystemShowcase';
 import { 
   TrendingUp, 
   ShoppingCart, 
@@ -159,18 +159,20 @@ export default function Index() {
         </Button>
       </header>
 
-      {/* Menu Showcase Section */}
+      {/* System Showcase Section */}
       <section className="py-20 bg-neutral-50">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 mb-12 text-center">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 mb-8 text-center">
           <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-4">
-            Modelos prontos para seu segmento
+            Veja o sistema em ação
           </h2>
           <p className="text-neutral-500 text-lg max-w-xl mx-auto">
-            Templates profissionais que você personaliza em minutos
+            Interface real do seu cardápio digital, pronta para cada tipo de negócio
           </p>
         </div>
         
-        <MenuShowcase />
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <SystemShowcase onCtaClick={scrollToForm} />
+        </div>
       </section>
 
       {/* Features Grid */}
