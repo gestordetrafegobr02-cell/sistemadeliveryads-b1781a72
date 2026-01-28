@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import InstallPWA from "@/components/InstallPWA";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import Demo from "./pages/Demo";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import SuperAdmin from "./pages/SuperAdmin";
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/shop/:slug" element={<Shop />} />
+            <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
