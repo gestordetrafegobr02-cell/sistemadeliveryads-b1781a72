@@ -1,4 +1,4 @@
-import { Check, ArrowRight, Shield, CreditCard, Sparkles, Loader2 } from 'lucide-react';
+import { Check, ArrowRight, Shield, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useGlobalSettings } from '@/hooks/useGlobalSettings';
 
@@ -27,39 +27,18 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
     <section className="py-20 md:py-24 pb-32 md:pb-40 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10 md:mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            Acesso Completo Liberado
-          </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
-            Plano Profissional Liberado
+            Plano Profissional
           </h2>
           <p className="text-neutral-500 text-base md:text-lg max-w-2xl mx-auto px-2">
-            Teste por {settings.default_trial_days} dias sem compromisso. Se gostar, assine por apenas{' '}
-            {loading ? (
-              <Loader2 className="inline w-4 h-4 animate-spin" />
-            ) : (
-              <strong className="text-neutral-800">R$ {settings.subscription_price}/mês</strong>
-            )}
-            .
+            Tudo o que você precisa para vender mais e fidelizar seus clientes.
           </p>
         </div>
 
         <div className="relative max-w-lg mx-auto px-4 sm:px-0">
           {/* Pricing Card */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl border-2 border-primary/30 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden">
-            {/* Decorative gradient */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl" />
-            
-            {/* Badge */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <span className="inline-flex items-center px-5 py-2 rounded-full bg-gradient-to-r from-primary to-primary/80 text-white text-sm font-bold shadow-lg">
-                🎁 {settings.default_trial_days} DIAS GRÁTIS
-              </span>
-            </div>
-
-            <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-6 relative">
-              <p className="text-sm text-neutral-500 mb-2">Após o teste, apenas</p>
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-neutral-200 p-6 sm:p-8 md:p-10 shadow-xl relative overflow-hidden">
+            <div className="text-center mb-6 sm:mb-8 relative">
               <div className="flex items-baseline justify-center gap-1 sm:gap-2">
                 {loading ? (
                   <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
@@ -70,8 +49,11 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
                   </>
                 )}
               </div>
-              <p className="text-green-600 font-medium mt-2 text-sm sm:text-base">
-                ZERO taxa por pedido • Lucro 100% seu
+              <p className="text-neutral-500 mt-2 text-sm">
+                Mensal • Sem taxas por venda
+              </p>
+              <p className="text-neutral-400 text-sm mt-1">
+                Teste grátis por {settings.default_trial_days} dias • Sem compromisso
               </p>
             </div>
 
@@ -101,21 +83,13 @@ export function PricingSection({ onCtaClick }: PricingSectionProps) {
             <Button 
               size="lg"
               onClick={onCtaClick}
-              className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg shadow-primary/20"
+              className="w-full h-14 text-lg bg-neutral-900 hover:bg-neutral-800 text-white gap-2 shadow-lg"
             >
-              Começar Meu Teste Grátis
+              Começar Agora
               <ArrowRight className="w-5 h-5" />
             </Button>
             <p className="text-xs text-neutral-400 text-center mt-4">
-              Sem cartão de crédito • Sem cobrança automática • Cancele quando quiser
-            </p>
-          </div>
-
-          {/* Trust box below */}
-          <div className="mt-8 p-5 rounded-2xl bg-green-50 border border-green-200 text-center">
-            <p className="text-green-800 font-medium">
-              💡 Após os {settings.default_trial_days} dias, seu painel será apenas pausado.<br />
-              <span className="text-green-600 font-normal">Você só paga se o sistema realmente trouxer resultados.</span>
+              Sem cartão de crédito • Cancele quando quiser
             </p>
           </div>
         </div>
