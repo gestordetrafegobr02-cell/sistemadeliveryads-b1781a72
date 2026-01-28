@@ -340,6 +340,7 @@ export type Database = {
           recovery_delay_minutes: number
           recovery_message_template: string | null
           slug: string
+          trial_expires_at: string | null
           updated_at: string
           upsell_blocking_categories: string[] | null
           upsell_default_message: string | null
@@ -363,6 +364,7 @@ export type Database = {
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug: string
+          trial_expires_at?: string | null
           updated_at?: string
           upsell_blocking_categories?: string[] | null
           upsell_default_message?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug?: string
+          trial_expires_at?: string | null
           updated_at?: string
           upsell_blocking_categories?: string[] | null
           upsell_default_message?: string | null
@@ -641,6 +644,7 @@ export type Database = {
           price: number
         }[]
       }
+      get_platform_stats: { Args: never; Returns: Json }
       get_public_store_by_slug: {
         Args: { store_slug: string }
         Returns: {
@@ -694,6 +698,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
       toggle_store_active: { Args: { p_store_id: string }; Returns: boolean }
+      update_store_trial: {
+        Args: { p_store_id: string; p_trial_date: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

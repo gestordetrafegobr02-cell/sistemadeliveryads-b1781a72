@@ -157,23 +157,26 @@ export default function SuperAdmin() {
     }
   }, [user, authLoading, navigate]);
 
+  // Allow access for master admin OR users with admin role
+  const hasAccess = isMasterAdmin || isAdmin;
+
   useEffect(() => {
-    if (!adminLoading && !isAdmin && user) {
+    if (!adminLoading && !authLoading && user && !hasAccess) {
       navigate('/admin');
     }
-  }, [isAdmin, adminLoading, user, navigate]);
+  }, [hasAccess, adminLoading, authLoading, user, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (hasAccess) {
       fetchData();
     }
-  }, [isAdmin, activeTab]);
+  }, [hasAccess, activeTab]);
 
   useEffect(() => {
-    if (isAdmin && isMasterAdmin) {
+    if (hasAccess && isMasterAdmin) {
       fetchTemplates();
     }
-  }, [isAdmin, isMasterAdmin]);
+  }, [hasAccess, isMasterAdmin]);
 
   async function fetchData() {
     setLoading(true);
@@ -321,7 +324,7 @@ export default function SuperAdmin() {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return null;
   }
 

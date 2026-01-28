@@ -30,7 +30,7 @@ export default function TrialEditor({ storeId, currentTrialDate, onUpdate }: Tri
       // Using type assertion since types may not be updated yet
       const { error } = await supabase.rpc('update_store_trial' as never, {
         p_store_id: storeId,
-        p_trial_expires_at: date.toISOString(),
+        p_trial_date: date.toISOString(),
       } as never);
 
       if (error) throw error;

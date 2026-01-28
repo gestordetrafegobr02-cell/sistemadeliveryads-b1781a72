@@ -25,18 +25,29 @@ export default function Auth() {
   const [checkingStore, setCheckingStore] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       checkUserAccess();
     }
-  }, [user]);
+  }, [user, loading]);
 
   async function checkUserAccess() {
+    if (!user) return;
+    
     setCheckingStore(true);
     
     // Check if user is master admin - redirect directly to super-admin
-    const isMasterAdmin = user!.email === 'igormoises.ads@gmail.com';
+    // Master admin bypasses all other checks
+    const isMasterAdmin = user.email === 'igormoises.ads@gmail.com';
     if (isMasterAdmin) {
-      navigate('/super-admin');
+      navigate('/super-admin', { replace: true });
+      setCheckingStore(false);
+      return;
+    }
+    
+    // Check if user has admin role - redirect to super-admin
+    const { data: roleData } = await supabase.rpc('is_admin');
+    if (roleData === true) {
+      navigate('/super-admin', { replace: true });
       setCheckingStore(false);
       return;
     }
@@ -45,13 +56,13 @@ export default function Auth() {
     const { data } = await supabase
       .from('stores')
       .select('id')
-      .eq('owner_id', user!.id)
+      .eq('owner_id', user.id)
       .maybeSingle();
 
     if (data) {
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } else {
-      navigate('/onboarding');
+      navigate('/onboarding', { replace: true });
     }
     setCheckingStore(false);
   }
