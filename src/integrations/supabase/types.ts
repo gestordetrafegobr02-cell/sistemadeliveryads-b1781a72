@@ -567,12 +567,14 @@ export type Database = {
           created_at: string
           delivery_fee: number
           id: string
+          is_active: boolean
           is_open_manual: boolean
           name: string
           owner_email: string
           owner_id: string
           pix_key: string
           slug: string
+          trial_expires_at: string
           whatsapp: string
         }[]
       }
