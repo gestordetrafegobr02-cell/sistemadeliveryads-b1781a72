@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { MenuShowcase } from '@/components/landing/MenuShowcase';
+import { SystemShowcase } from '@/components/landing/SystemShowcase';
+import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
+import { PricingSection } from '@/components/landing/PricingSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
@@ -15,7 +18,10 @@ import {
   Mail,
   Lock,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Zap,
+  Users,
+  Clock
 } from 'lucide-react';
 
 export default function Index() {
@@ -111,92 +117,152 @@ export default function Index() {
   const features = [
     {
       icon: TrendingUp,
-      title: 'Venda Mais',
-      description: 'Upsell automático de acompanhamentos e bebidas no momento certo da compra.',
+      title: 'Upsell Inteligente',
+      description: 'Sugira combos e adicionais no momento certo da compra. Aumente seu ticket médio automaticamente.',
     },
     {
       icon: ShoppingCart,
-      title: 'Recupere Clientes',
-      description: 'Abas de carrinhos abandonados prontas para ação via WhatsApp.',
+      title: 'Recupere Vendas Perdidas',
+      description: 'Carrinhos abandonados? Recupere clientes com mensagens automáticas via WhatsApp.',
     },
     {
       icon: BarChart3,
-      title: 'Gestão Total',
-      description: 'Controle de trial e relatórios simples para decisões inteligentes.',
+      title: 'Relatórios Completos',
+      description: 'Acompanhe vendas, produtos mais pedidos e desempenho do seu delivery em tempo real.',
     },
+  ];
+
+  const stats = [
+    { icon: Users, value: '+500', label: 'Lojas ativas' },
+    { icon: Zap, value: '+15%', label: 'Aumento no ticket' },
+    { icon: Clock, value: '< 5min', label: 'Setup completo' },
   ];
 
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="max-w-6xl mx-auto px-4 md:px-6 py-6 flex items-center justify-between">
-        <span className="font-semibold text-xl text-neutral-900">
-          Menu<span className="text-primary">Digital</span>
-        </span>
-        <Link to="/auth">
-          <Button variant="ghost" className="text-neutral-600 hover:text-neutral-900">
-            Entrar
-          </Button>
-        </Link>
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-100">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+          <span className="font-bold text-xl text-neutral-900">
+            Menu<span className="text-primary">Digital</span>
+          </span>
+          <div className="flex items-center gap-3">
+            <Link to="/auth">
+              <Button variant="ghost" className="text-neutral-600 hover:text-neutral-900">
+                Entrar
+              </Button>
+            </Link>
+            <Button 
+              onClick={scrollToForm}
+              className="bg-primary hover:bg-primary/90 text-white hidden sm:flex"
+            >
+              Começar Grátis
+            </Button>
+          </div>
+        </div>
       </nav>
 
       {/* Hero Section */}
-      <header className="max-w-4xl mx-auto px-4 md:px-6 pt-16 pb-20 text-center">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold text-neutral-900 tracking-tight mb-6 leading-[1.1]">
-          O cardápio digital que<br />
-          <span className="text-primary">entende o seu negócio</span>
-        </h1>
-        
-        <p className="text-lg md:text-xl text-neutral-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Seja uma hamburgueria, açaiteria ou hortifruti: venda mais com upsell inteligente e gestão profissional.
-        </p>
+      <header className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-16 text-center relative">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6">
+            <Zap className="w-4 h-4" />
+            Zero taxas por pedido
+          </div>
 
-        <Button 
-          size="lg"
-          onClick={scrollToForm}
-          className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white gap-2 rounded-full"
-        >
-          Começar Teste Grátis
-          <ArrowRight className="w-5 h-5" />
-        </Button>
-        <p className="text-sm text-neutral-400 mt-4">
-          7 dias grátis • Sem cartão de crédito
-        </p>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 tracking-tight mb-6 leading-[1.1]">
+            O cardápio digital<br />
+            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              que vende mais
+            </span>
+          </h1>
+          
+          <p className="text-lg md:text-xl text-neutral-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Seja hamburgueria, açaiteria, pizzaria ou hortifruti: 
+            <strong className="text-neutral-700"> aumente seu ticket médio com upsell inteligente</strong> e receba pedidos direto no WhatsApp.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <Button 
+              size="lg"
+              onClick={scrollToForm}
+              className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg shadow-primary/20"
+            >
+              Começar Meu Teste Grátis
+              <ArrowRight className="w-5 h-5" />
+            </Button>
+          </div>
+
+          <p className="text-sm text-neutral-400 mb-8">
+            ✓ 7 dias grátis &nbsp;&nbsp; ✓ Sem cartão de crédito &nbsp;&nbsp; ✓ Cancele quando quiser
+          </p>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-6 md:gap-12">
+            {stats.map((stat, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xl font-bold text-neutral-900">{stat.value}</p>
+                  <p className="text-sm text-neutral-500">{stat.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </header>
 
-      {/* Menu Showcase - Infinite Scroll */}
-      <section className="py-16 bg-[#F9FAFB]">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 mb-10 text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-3">
-            Modelos de Cardápio
-          </h2>
-          <p className="text-neutral-500 text-lg">
-            Pronto para qualquer tipo de negócio
-          </p>
+      {/* System Showcase - Phone Mockups Carousel */}
+      <section className="py-16 md:py-24 bg-neutral-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12 px-4">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              Pronto para seu negócio
+            </span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-neutral-900 mb-4">
+              Um sistema para cada segmento
+            </h2>
+            <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
+              Cardápios otimizados para hamburguerias, açaiterias, pizzarias e hortifrutis
+            </p>
+          </div>
+          
+          <SystemShowcase onCtaClick={scrollToForm} />
         </div>
-        
-        <MenuShowcase />
       </section>
 
+      {/* Savings Comparison Section */}
+      <SavingsComparisonSection onCtaClick={scrollToForm} />
+
       {/* Features Grid */}
-      <section className="py-24 px-4 md:px-6 bg-white">
+      <section className="py-20 md:py-24 px-4 md:px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900 mb-4">
-              Tudo que você precisa
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              Funcionalidades
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+              Tudo que você precisa para vender mais
             </h2>
             <p className="text-neutral-500 text-lg">
-              Funcionalidades simples e poderosas
+              Ferramentas simples e poderosas para o seu delivery
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
+          <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto mb-5">
+              <div 
+                key={index} 
+                className="group p-8 rounded-3xl bg-gradient-to-b from-neutral-50 to-white border border-neutral-200 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                   <feature.icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
                 </div>
-                <h3 className="text-xl font-medium text-neutral-900 mb-3">
+                <h3 className="text-xl font-semibold text-neutral-900 mb-3">
                   {feature.title}
                 </h3>
                 <p className="text-neutral-500 leading-relaxed">
@@ -208,25 +274,31 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <PricingSection onCtaClick={scrollToForm} />
+
+      {/* FAQ Section */}
+      <FAQSection />
+
       {/* Signup Form */}
-      <section ref={formRef} className="py-24 px-4 md:px-6 bg-[#F9FAFB]">
+      <section ref={formRef} className="py-20 md:py-24 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
         <div className="max-w-md mx-auto">
-          <div className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-neutral-200">
+          <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-neutral-200">
             <div className="text-center mb-8">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium mb-4">
-                7 dias grátis
+              <span className="inline-block px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-4">
+                🎁 7 dias grátis
               </span>
-              <h3 className="text-2xl font-semibold text-neutral-900 mb-2">
+              <h3 className="text-2xl font-bold text-neutral-900 mb-2">
                 Crie sua loja agora
               </h3>
               <p className="text-neutral-500">
-                Setup em menos de 2 minutos
+                Setup em menos de 5 minutos
               </p>
             </div>
 
             <form onSubmit={handleSignup} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="storeName" className="text-neutral-700">Nome da sua Loja</Label>
+                <Label htmlFor="storeName" className="text-neutral-700 font-medium">Nome da sua Loja</Label>
                 <div className="relative">
                   <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <Input
@@ -235,14 +307,14 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl"
                     maxLength={100}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-neutral-700">E-mail</Label>
+                <Label htmlFor="email" className="text-neutral-700 font-medium">E-mail</Label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <Input
@@ -251,14 +323,14 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl"
                     maxLength={255}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-neutral-700">Senha</Label>
+                <Label htmlFor="password" className="text-neutral-700 font-medium">Senha</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
                   <Input
@@ -267,7 +339,7 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl"
+                    className="pl-12 h-12 bg-neutral-50 border-neutral-200 focus:bg-white focus:border-primary focus:ring-primary rounded-xl"
                     minLength={6}
                   />
                 </div>
@@ -276,7 +348,7 @@ export default function Index() {
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-white rounded-xl"
+                className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20"
               >
                 {loading ? 'Criando sua loja...' : 'Começar meu Teste Grátis'}
               </Button>
@@ -289,9 +361,9 @@ export default function Index() {
 
           {/* Trust Signals */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 text-sm text-neutral-500">
-            {['Setup em 2 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
+            {['Setup em 5 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
               <div key={idx} className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 <span>{item}</span>
               </div>
             ))}
@@ -299,10 +371,30 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Final CTA */}
+      <section className="py-16 px-4 md:px-6 bg-gradient-to-r from-primary to-primary/80">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Pronto para vender mais?
+          </h2>
+          <p className="text-white/80 text-lg mb-8">
+            Junte-se a mais de 500 lojas que já aumentaram suas vendas
+          </p>
+          <Button 
+            size="lg"
+            onClick={scrollToForm}
+            className="h-14 px-8 text-lg bg-white text-primary hover:bg-white/90 gap-2 shadow-lg"
+          >
+            Começar Meu Teste Grátis
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="py-12 px-4 md:px-6 border-t border-neutral-100 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="font-semibold text-lg text-neutral-900">
+          <span className="font-bold text-lg text-neutral-900">
             Menu<span className="text-primary">Digital</span>
           </span>
           <p className="text-sm text-neutral-400">
