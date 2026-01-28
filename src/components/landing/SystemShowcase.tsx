@@ -28,10 +28,11 @@ const segments = [
   {
     id: 'pizza',
     title: 'Pizzaria',
-    description: 'Meio a meio e bordas recheadas sem complicação.',
+    description: 'Pizza meio a meio, bordas recheadas e adicionais por sabor.',
     mockup: PizzaMockup,
     demoUrl: '/shop/demo-pizza',
     gradient: 'from-orange-500 to-red-600',
+    highlight: true, // Highlight this segment
   },
   {
     id: 'hortifruti',
@@ -100,15 +101,15 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
   return (
     <div className="space-y-12">
       {/* Carousel */}
-      <div className="relative overflow-hidden">
-        {/* Gradient fades */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-neutral-50 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-neutral-50 to-transparent z-10 pointer-events-none" />
+      <div className="relative" style={{ overflow: 'visible' }}>
+        {/* Gradient fades - adjusted to not clip content */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-neutral-50 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-l from-neutral-50 to-transparent z-10 pointer-events-none" />
         
         <div
           ref={scrollRef}
-          className="flex gap-8 overflow-x-hidden py-8 px-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          className="flex gap-6 md:gap-8 overflow-x-auto py-12 pb-16 px-6 md:px-8"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           {duplicatedSegments.map((segment, index) => (
             <motion.div
@@ -121,7 +122,7 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
                 {/* Trial Badge */}
                 <div className="absolute -top-3 -right-2 z-20">
                   <span className={`inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r ${segment.gradient} text-white text-xs font-semibold shadow-lg`}>
-                    7 dias grátis
+                    {(segment as any).highlight ? '⭐ Destaque' : '7 dias grátis'}
                   </span>
                 </div>
 
@@ -131,11 +132,11 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
                 </PhoneMockup>
 
                 {/* Card Info */}
-                <div className="mt-4 text-center space-y-3">
+                <div className="mt-5 text-center space-y-3 px-2">
                   <h3 className="text-lg font-semibold text-neutral-900">
                     {segment.title}
                   </h3>
-                  <p className="text-sm text-neutral-500 max-w-[220px]">
+                  <p className="text-sm text-neutral-500 max-w-[220px] mx-auto leading-relaxed">
                     {segment.description}
                   </p>
                   <Button
