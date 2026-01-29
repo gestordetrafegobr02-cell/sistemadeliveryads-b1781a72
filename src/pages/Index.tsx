@@ -182,16 +182,13 @@ export default function Index() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-background">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-100">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
-          <span className="font-bold text-xl text-neutral-900">
-            Menu<span className="text-primary">Digital</span>
-          </span>
+      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-background/80 backdrop-blur-md border-b border-neutral-100 dark:border-border">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-end">
           <div className="flex items-center gap-3">
             <Link to="/auth">
-              <Button variant="ghost" className="text-neutral-600 hover:text-neutral-900">
+              <Button variant="ghost" className="text-neutral-600 dark:text-foreground/80 hover:text-neutral-900 dark:hover:text-foreground">
                 Entrar
               </Button>
             </Link>
@@ -210,21 +207,21 @@ export default function Index() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-16 text-center relative">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald/10 text-emerald text-sm font-medium mb-6">
             <Zap className="w-4 h-4" />
             Zero taxas por pedido
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 tracking-tight mb-6 leading-[1.1]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-6 leading-[1.1]">
             O cardápio digital<br />
             <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               que vende mais
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-neutral-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
             Seja hamburgueria, açaiteria, pizzaria ou hortifruti: 
-            <strong className="text-neutral-700"> aumente seu ticket médio com upsell inteligente</strong> e receba pedidos direto no WhatsApp.
+            <strong className="text-foreground/80"> aumente seu ticket médio com upsell inteligente</strong> e receba pedidos direto no WhatsApp.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -238,7 +235,7 @@ export default function Index() {
             </Button>
           </div>
 
-          <p className="text-sm text-neutral-400 mb-8">
+          <p className="text-sm text-muted-foreground mb-8">
             ✓ 7 dias grátis &nbsp;&nbsp; ✓ Sem cartão de crédito &nbsp;&nbsp; ✓ Cancele quando quiser
           </p>
 
@@ -250,8 +247,8 @@ export default function Index() {
                   <stat.icon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left">
-                  <p className="text-xl font-bold text-neutral-900">{stat.value}</p>
-                  <p className="text-sm text-neutral-500">{stat.label}</p>
+                  <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
                 </div>
               </div>
             ))}
@@ -260,16 +257,16 @@ export default function Index() {
       </header>
 
       {/* System Showcase - Phone Mockups Carousel */}
-      <section className="py-16 md:py-24 bg-neutral-50">
+      <section className="py-16 md:py-24 bg-secondary/50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 px-4">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
               Pronto para seu negócio
             </span>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-neutral-900 mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Um sistema para cada segmento
             </h2>
-            <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Cardápios otimizados para hamburguerias, açaiterias, pizzarias e hortifrutis
             </p>
           </div>
@@ -282,16 +279,16 @@ export default function Index() {
       <SavingsComparisonSection onCtaClick={scrollToForm} />
 
       {/* Features Grid */}
-      <section className="py-20 md:py-24 px-4 md:px-6 bg-white">
+      <section className="py-20 md:py-24 px-4 md:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
               Funcionalidades
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Tudo que você precisa para vender mais
             </h2>
-            <p className="text-neutral-500 text-lg">
+            <p className="text-muted-foreground text-lg">
               Ferramentas simples e poderosas para o seu delivery
             </p>
           </div>
@@ -300,15 +297,15 @@ export default function Index() {
             {features.map((feature, index) => (
               <div 
                 key={index} 
-                className="group p-8 rounded-3xl bg-gradient-to-b from-neutral-50 to-white border border-neutral-200 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                className="group p-8 rounded-3xl bg-card border border-border hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
               >
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                   <feature.icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+                <h3 className="text-xl font-semibold text-foreground mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-neutral-500 leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
               </div>
@@ -324,17 +321,17 @@ export default function Index() {
       <FAQSection />
 
       {/* Signup Form */}
-      <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6 bg-gradient-to-b from-neutral-50 to-white">
+      <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6">
         <div className="max-w-lg mx-auto">
-          <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-neutral-200">
+          <div className="bg-card rounded-3xl p-8 md:p-10 shadow-xl border border-border">
             <div className="text-center mb-8">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-4">
+              <span className="inline-block px-4 py-1.5 rounded-full bg-emerald/10 text-emerald text-sm font-medium mb-4">
                 🎁 7 dias grátis
               </span>
-              <h3 className="text-2xl font-bold text-neutral-900 mb-2">
+              <h3 className="text-2xl font-bold text-foreground mb-2">
                 Crie sua loja agora
               </h3>
-              <p className="text-neutral-500">
+              <p className="text-muted-foreground">
                 Setup em menos de 5 minutos
               </p>
             </div>
@@ -342,7 +339,7 @@ export default function Index() {
             <form onSubmit={handleSignup} className="space-y-5">
               {/* Niche Selection */}
               <div className="space-y-3">
-                <Label className="text-neutral-700 font-medium">Tipo do seu negócio</Label>
+                <Label className="text-foreground/80 font-medium">Tipo do seu negócio</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {NICHE_OPTIONS.map((niche) => {
                     const IconComponent = niche.icon;
@@ -355,16 +352,16 @@ export default function Index() {
                         className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
                           isSelected 
                             ? 'border-primary bg-primary/5 shadow-md' 
-                            : 'border-neutral-200 hover:border-primary/50 bg-white'
+                            : 'border-border hover:border-primary/50 bg-card'
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${niche.color} flex items-center justify-center mb-2`}>
                           <IconComponent className="w-5 h-5 text-white" />
                         </div>
-                        <p className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-neutral-900'}`}>
+                        <p className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-foreground'}`}>
                           {niche.name}
                         </p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{niche.description}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{niche.description}</p>
                         {isSelected && (
                           <div className="absolute top-2 right-2">
                             <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -377,48 +374,48 @@ export default function Index() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="storeName" className="text-neutral-700 font-medium">Nome da sua Loja</Label>
+                <Label htmlFor="storeName" className="text-foreground/80 font-medium">Nome da sua Loja</Label>
                 <div className="relative">
-                  <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                  <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="storeName"
                     type="text"
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
                     maxLength={100}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-neutral-700 font-medium">E-mail</Label>
+                <Label htmlFor="email" className="text-foreground/80 font-medium">E-mail</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
                     maxLength={255}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-neutral-700 font-medium">Senha</Label>
+                <Label htmlFor="password" className="text-foreground/80 font-medium">Senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-white border-neutral-200 focus:border-primary focus:ring-primary rounded-xl text-neutral-900 placeholder:text-neutral-400"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
                     minLength={6}
                   />
                 </div>
@@ -433,23 +430,23 @@ export default function Index() {
               </Button>
             </form>
 
-            <p className="text-xs text-neutral-400 text-center mt-6">
+            <p className="text-xs text-muted-foreground text-center mt-6">
               Após 7 dias, apenas R$ 97/mês. Cancele quando quiser.
             </p>
           </div>
 
           {/* Trust Signals */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 mb-8 text-sm text-neutral-500">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 mb-8 text-sm text-muted-foreground">
             {['Setup em 5 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
               <div key={idx} className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-emerald" />
                 <span>{item}</span>
               </div>
             ))}
           </div>
           
           {/* Extra bottom spacing text */}
-          <p className="text-center text-sm text-green-600 font-medium pb-8">
+          <p className="text-center text-sm text-emerald font-medium pb-8">
             ✓ 7 dias grátis • Sem compromisso
           </p>
         </div>

@@ -18,14 +18,6 @@ const segments = [
     gradient: 'from-amber-500 to-orange-600',
   },
   {
-    id: 'acai',
-    title: 'Açaiteria',
-    description: 'Facilite a montagem e evite erros nos pedidos.',
-    mockup: AcaiMockup,
-    demoUrl: '/demo/acai-shop',
-    gradient: 'from-purple-500 to-pink-600',
-  },
-  {
     id: 'pizza',
     title: 'Pizzaria',
     description: 'Pizza meio a meio, bordas recheadas e adicionais por sabor.',
@@ -33,6 +25,14 @@ const segments = [
     demoUrl: '/demo/pizza',
     gradient: 'from-orange-500 to-red-600',
     highlight: true,
+  },
+  {
+    id: 'acai',
+    title: 'Açaiteria',
+    description: 'Facilite a montagem e evite erros nos pedidos.',
+    mockup: AcaiMockup,
+    demoUrl: '/demo/acai-shop',
+    gradient: 'from-purple-500 to-pink-600',
   },
   {
     id: 'hortifruti',
@@ -102,9 +102,9 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
     <div className="space-y-12">
       {/* Carousel */}
       <div className="relative" style={{ overflow: 'visible' }}>
-        {/* Gradient fades - adjusted to not clip content */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-neutral-50 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-l from-neutral-50 to-transparent z-10 pointer-events-none" />
+        {/* Gradient fades - using theme colors */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-secondary/50 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-l from-secondary/50 to-transparent z-10 pointer-events-none" />
         
         <div
           ref={scrollRef}
@@ -133,10 +133,10 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
 
                 {/* Card Info */}
                 <div className="mt-5 text-center space-y-3 px-2">
-                  <h3 className="text-lg font-semibold text-neutral-900">
+                  <h3 className="text-lg font-semibold text-foreground">
                     {segment.title}
                   </h3>
-                  <p className="text-sm text-neutral-500 max-w-[220px] mx-auto leading-relaxed">
+                  <p className="text-sm text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
                     {segment.description}
                   </p>
                   <Button
@@ -164,10 +164,10 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
         transition={{ duration: 0.5 }}
       >
         <div className="space-y-2">
-          <h3 className="text-2xl md:text-3xl font-semibold text-neutral-900">
+          <h3 className="text-2xl md:text-3xl font-semibold text-foreground">
             Gostou? Sua loja pode ficar assim em menos de 5 minutos.
           </h3>
-          <p className="text-neutral-500">
+          <p className="text-muted-foreground">
             Escolha seu segmento e comece a vender hoje mesmo
           </p>
         </div>
