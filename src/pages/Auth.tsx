@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { z } from 'zod';
 import { Loader2, Mail, Lock } from 'lucide-react';
-import logoImage from '@/assets/logo.png';
 
 const authSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -103,7 +102,7 @@ export default function Auth() {
 
   if (loading || checkingStore) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="relative">
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent blur-xl opacity-50 animate-pulse" />
           <Loader2 className="w-10 h-10 animate-spin text-primary relative z-10" />
@@ -114,8 +113,8 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a]" />
+      {/* Background */}
+      <div className="absolute inset-0 bg-background" />
       
       {/* Abstract Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -163,20 +162,13 @@ export default function Auth() {
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
           }}
         >
-          {/* Logo & Welcome */}
+          {/* Welcome Text */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/10 mb-4 shadow-lg overflow-hidden p-2">
-              <img 
-                src={logoImage} 
-                alt="Sistema Delivery ADS" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <h1 className="font-display text-2xl tracking-wide bg-gradient-to-r from-cyan-400 via-teal-400 to-green-400 bg-clip-text text-transparent">
-              Sistema Delivery ADS
+            <h1 className="font-display text-2xl tracking-wide text-foreground">
+              Bem-vindo de volta
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">
-              Conecte. Promova. Entregue.
+              Acesse sua conta para gerenciar sua loja
             </p>
           </div>
 

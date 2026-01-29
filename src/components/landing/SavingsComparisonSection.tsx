@@ -6,19 +6,19 @@ interface SavingsComparisonSectionProps {
 
 export function SavingsComparisonSection({ onCtaClick }: SavingsComparisonSectionProps) {
   return (
-    <section className="py-16 md:py-20 px-4 md:px-6 bg-gradient-to-b from-white to-neutral-50">
+    <section className="py-16 md:py-20 px-4 md:px-6 bg-secondary/30">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10 md:mb-12">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 text-red-600 text-sm font-medium mb-6">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/10 text-destructive text-sm font-medium mb-6">
             <TrendingDown className="w-4 h-4" />
             Pare de perder dinheiro
           </span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-neutral-900 mb-4 px-2">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 px-2">
             Pare de dividir seu lucro<br />
-            <span className="text-red-500">com o iFood.</span>
+            <span className="text-destructive">com o iFood.</span>
           </h2>
-          <p className="text-base md:text-lg text-neutral-500 max-w-2xl mx-auto px-2">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             Enquanto outros apps comem até 27% do seu faturamento, aqui você fica com 100%.
           </p>
         </div>
@@ -101,25 +101,25 @@ export function SavingsComparisonSection({ onCtaClick }: SavingsComparisonSectio
         </div>
 
         {/* Bottom Highlight Box - ZERO TAXA emphasis */}
-        <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 rounded-2xl md:rounded-3xl p-6 md:p-8 border-2 border-amber-200 text-center">
+        <div className="bg-card rounded-2xl md:rounded-3xl p-6 md:p-8 border-2 border-primary/30 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
               <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </div>
           </div>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald/10 text-emerald text-sm font-bold mb-4">
             <TrendingUp className="w-4 h-4" />
             DIFERENTE DO IFOOD
           </div>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-neutral-900 mb-3 px-2">
-            <span className="text-red-500 line-through">ZERO TAXA</span> por venda.<br />
-            <span className="text-green-600">Todo o lucro é SEU!</span>
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-3 px-2">
+            <span className="text-destructive line-through">ZERO TAXA</span> por venda.<br />
+            <span className="text-emerald">Todo o lucro é SEU!</span>
           </h3>
-          <p className="text-neutral-600 max-w-xl mx-auto text-sm md:text-base px-2 mb-4">
-            Em uma venda de R$ 100,00, você coloca <strong className="text-green-700">os R$ 100,00 no bolso.</strong><br />
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base px-2 mb-4">
+            Em uma venda de R$ 100,00, você coloca <strong className="text-emerald">os R$ 100,00 no bolso.</strong><br />
             Sem letras miúdas, sem comissões escondidas, sem surpresas no final do mês.
           </p>
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500 text-white font-bold text-lg">
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald text-white font-bold text-lg">
             💰 O LUCRO É 100% SEU!
           </div>
         </div>
