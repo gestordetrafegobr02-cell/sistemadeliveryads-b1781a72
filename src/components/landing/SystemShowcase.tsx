@@ -114,11 +114,12 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
           {duplicatedSegments.map((segment, index) => (
             <motion.div
               key={`${segment.id}-${index}`}
-              className="flex-shrink-0 group"
+              className="flex-shrink-0 group cursor-pointer"
               whileHover={{ scale: 1.03, y: -8 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
+              onClick={() => handleDemoClick(segment.demoUrl)}
             >
-              <div className="relative">
+              <div className="relative transition-shadow duration-300 group-hover:shadow-xl rounded-3xl">
                 {/* Trial Badge */}
                 <div className="absolute -top-3 -right-2 z-20">
                   <span className={`inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r ${segment.gradient} text-white text-xs font-semibold shadow-lg`}>
@@ -132,22 +133,13 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
                 </PhoneMockup>
 
                 {/* Card Info */}
-                <div className="mt-5 text-center space-y-3 px-2">
-                  <h3 className="text-lg font-semibold text-foreground">
+                <div className="mt-5 text-center space-y-2 px-2">
+                  <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
                     {segment.title}
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
                     {segment.description}
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDemoClick(segment.demoUrl)}
-                    className="gap-2 text-primary border-primary/30 hover:bg-primary/5 hover:border-primary"
-                  >
-                    Ver Demonstração
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Button>
                 </div>
               </div>
             </motion.div>
