@@ -101,7 +101,7 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
   return (
     <div className="space-y-12">
       {/* Carousel */}
-      <div className="relative" style={{ overflow: 'visible' }}>
+      <div className="relative overflow-hidden">
         {/* Gradient fades - using theme colors */}
         <div className="absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-secondary to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-l from-secondary to-transparent z-10 pointer-events-none" />

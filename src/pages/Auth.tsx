@@ -112,9 +112,9 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 bg-slate-900">
       {/* Background */}
-      <div className="absolute inset-0 bg-background" />
+      <div className="absolute inset-0 bg-slate-900" />
       
       {/* Abstract Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -154,9 +154,9 @@ export default function Auth() {
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-md">
         <div 
-          className="rounded-2xl border border-white/10 p-8 shadow-2xl"
+          className="rounded-2xl border border-slate-700/50 p-8 shadow-2xl"
           style={{
-            background: 'rgba(30, 41, 59, 0.7)',
+            background: 'rgba(30, 41, 59, 0.8)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
@@ -164,17 +164,17 @@ export default function Auth() {
         >
           {/* Welcome Text */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-2xl tracking-wide text-foreground">
-              Bem-vindo de volta
+            <h1 className="font-display text-2xl tracking-wide text-slate-100">
+              Sistema Delivery ADS
             </h1>
-            <p className="text-muted-foreground mt-2 text-sm">
+            <p className="text-slate-400 mt-2 text-sm">
               Acesse sua conta para gerenciar sua loja
             </p>
           </div>
 
           {/* Tabs */}
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1 mb-6">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border border-slate-700 rounded-xl p-1 mb-6">
               <TabsTrigger 
                 value="login" 
                 className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-300"
@@ -191,7 +191,7 @@ export default function Auth() {
             
             <TabsContent value="login" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label htmlFor="login-email" className="text-foreground/80 text-sm font-medium">
+                <Label htmlFor="login-email" className="text-slate-300 text-sm font-medium">
                   Email
                 </Label>
                 <div className="relative">
@@ -202,12 +202,12 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
+                    className="pl-10 bg-slate-800/50 border-slate-700 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-slate-100 placeholder:text-slate-400"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password" className="text-foreground/80 text-sm font-medium">
+                <Label htmlFor="login-password" className="text-slate-300 text-sm font-medium">
                   Senha
                 </Label>
                 <div className="relative">
@@ -218,7 +218,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
+                    className="pl-10 bg-slate-800/50 border-slate-700 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-slate-100 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -244,7 +244,7 @@ export default function Auth() {
             
             <TabsContent value="signup" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label htmlFor="signup-email" className="text-foreground/80 text-sm font-medium">
+                <Label htmlFor="signup-email" className="text-slate-300 text-sm font-medium">
                   Email
                 </Label>
                 <div className="relative">
@@ -255,12 +255,12 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
+                    className="pl-10 bg-slate-800/50 border-slate-700 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-slate-100 placeholder:text-slate-400"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-foreground/80 text-sm font-medium">
+                <Label htmlFor="signup-password" className="text-slate-300 text-sm font-medium">
                   Senha
                 </Label>
                 <div className="relative">
@@ -271,7 +271,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-white placeholder:text-white/50"
+                    className="pl-10 bg-slate-800/50 border-slate-700 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 rounded-xl h-12 text-slate-100 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function Auth() {
                 )}
               </Button>
 
-              <p className="text-xs text-center text-muted-foreground mt-4">
+              <p className="text-xs text-center text-slate-400 mt-4">
                 Ao criar sua conta, você concorda com nossos Termos de Uso
               </p>
             </TabsContent>
@@ -302,7 +302,7 @@ export default function Auth() {
         </div>
 
         {/* Bottom decorative line */}
-        <div className="mt-8 flex items-center justify-center gap-2 text-muted-foreground/50 text-xs">
+        <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs">
           <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           <span>Sistema de Delivery Inteligente</span>
           <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
