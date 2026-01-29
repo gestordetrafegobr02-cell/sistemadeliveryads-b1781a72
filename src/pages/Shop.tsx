@@ -10,6 +10,7 @@ import { StoreStatusBadge } from '@/components/StoreStatusBadge';
 import { TrialExpiredBanner } from '@/components/TrialExpiredBanner';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { CartProvider } from '@/lib/cart';
+import { StoreThemeProvider } from '@/lib/storeTheme';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
 
@@ -26,6 +27,7 @@ interface StorePublic {
   is_open_manual: boolean;
   is_active?: boolean;
   is_trial_expired?: boolean;
+  primary_color?: string | null;
 }
 
 // Payment data from secure RPC (fetched during checkout flow)
@@ -140,6 +142,7 @@ export default function Shop() {
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
           is_trial_expired: storeData.is_trial_expired ?? false,
+          primary_color: storeData.primary_color ?? null,
         };
         setStore(mappedStore);
 
@@ -305,9 +308,10 @@ export default function Shop() {
   const showCategorySections = activeCategory === null;
 
   return (
-    <CartProvider>
-      <div className="min-h-screen bg-background pb-28">
-        {/* Demo Mode Banner */}
+    <StoreThemeProvider primaryColor={store.primary_color ?? null}>
+      <CartProvider>
+        <div className="min-h-screen bg-background pb-28">
+          {/* Demo Mode Banner */}
         {isDemoStore && <DemoModeBanner storeName={store.name} />}
         
         {/* Minimalist Header with Logo Centered */}
@@ -434,16 +438,17 @@ export default function Shop() {
           )}
         </main>
 
-        <CartSheet
-          storeId={store.id}
-          whatsapp={paymentData?.whatsapp || ''}
-          deliveryFee={store.delivery_fee || 0}
-          pixKey={paymentData?.pix_key || undefined}
-          onPurchase={handlePurchase}
-          onOpen={handleCartOpen}
-          isStoreOpen={storeIsOpen}
-        />
-      </div>
-    </CartProvider>
+          <CartSheet
+            storeId={store.id}
+            whatsapp={paymentData?.whatsapp || ''}
+            deliveryFee={store.delivery_fee || 0}
+            pixKey={paymentData?.pix_key || undefined}
+            onPurchase={handlePurchase}
+            onOpen={handleCartOpen}
+            isStoreOpen={storeIsOpen}
+          />
+        </div>
+      </CartProvider>
+    </StoreThemeProvider>
   );
 }

@@ -27,6 +27,7 @@ import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
 import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
 import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
+import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 
 interface StoreData {
   id: string;
@@ -40,6 +41,7 @@ interface StoreData {
   logo_url: string | null;
   opening_hours: OpeningHours | null;
   recovery_message_template: string | null;
+  primary_color: string | null;
 }
 
 interface Category {
@@ -167,6 +169,7 @@ export default function Admin() {
         logo_url: storeData.logo_url,
         opening_hours: storeData.opening_hours as OpeningHours | null,
         recovery_message_template: storeData.recovery_message_template,
+        primary_color: storeData.primary_color ?? null,
       };
       setStore(mappedStore);
       setStoreName(storeData.name);
@@ -598,6 +601,15 @@ export default function Admin() {
                     storeId={store.id} 
                     categories={categories}
                     products={products}
+                  />
+                )}
+
+                {/* Theme Customization */}
+                {store && (
+                  <StoreThemeEditor 
+                    storeId={store.id}
+                    currentColor={store.primary_color}
+                    onColorChange={(color) => setStore({ ...store, primary_color: color })}
                   />
                 )}
               </CardContent>
