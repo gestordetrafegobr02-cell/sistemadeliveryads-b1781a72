@@ -66,17 +66,32 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     async function fetchUpsellConfig() {
       if (!storeId) return;
       
-      const { data: storeData } = await supabase
-        .from('stores')
-        .select('upsell_enabled')
-        .eq('id', storeId)
-        .single();
-      
-      if (storeData) {
-        setUpsellConfig({
-          upsell_enabled: storeData.upsell_enabled ?? false,
-          upsell_blocking_categories: [], // Not needed anymore, RPC handles it
-        });
+      try {
+        const { data: storeData, error } = await supabase
+          .from('stores')
+          .select('upsell_enabled')
+          .eq('id', storeId)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching upsell config:', error);
+          // Default to enabled to attempt upsell via RPC
+          setUpsellConfig({ upsell_enabled: true, upsell_blocking_categories: [] });
+          return;
+        }
+        
+        if (storeData) {
+          setUpsellConfig({
+            upsell_enabled: storeData.upsell_enabled ?? false,
+            upsell_blocking_categories: [], // Not needed anymore, RPC handles it
+          });
+        } else {
+          // Store not found or not accessible, try upsell anyway via RPC
+          setUpsellConfig({ upsell_enabled: true, upsell_blocking_categories: [] });
+        }
+      } catch (err) {
+        console.error('Upsell config fetch error:', err);
+        setUpsellConfig({ upsell_enabled: true, upsell_blocking_categories: [] });
       }
     }
     fetchUpsellConfig();

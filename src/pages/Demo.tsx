@@ -5,6 +5,8 @@ import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { CategoriesBar } from '@/components/CategoriesBar';
 import { ProductCard } from '@/components/ProductCard';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
+import { CartSheet } from '@/components/CartSheet';
+import { CartProvider } from '@/lib/cart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,9 +61,16 @@ export default function Demo() {
         .from('store_templates')
         .select('name, categories, products')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
-      if (fetchError || !data) {
+      if (fetchError) {
+        console.error('Template fetch error:', fetchError);
+        setError('Erro ao carregar template');
+        setLoading(false);
+        return;
+      }
+      
+      if (!data) {
         setError('Template não encontrado');
         setLoading(false);
         return;
@@ -144,60 +153,65 @@ export default function Demo() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Demo Banner */}
-      <DemoModeBanner storeName={storeName} />
+    <CartProvider>
+      <div className="min-h-screen bg-neutral-50 pb-28">
+        {/* Demo Banner */}
+        <DemoModeBanner storeName={storeName} />
 
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link to="/" className="text-neutral-500 hover:text-neutral-700">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <h1 className="text-lg font-semibold text-neutral-900">{storeName}</h1>
-        </div>
-      </header>
-
-      {/* Categories */}
-      {sortedCategories.length > 0 && (
-        <CategoriesBar
-          categories={sortedCategories}
-          activeCategory={activeCategory}
-          onCategoryClick={setActiveCategory}
-        />
-      )}
-
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
-        {/* Featured Products */}
-        {!activeCategory && featuredProducts.length > 0 && (
-          <FeaturedProducts products={featuredProducts} />
-        )}
-
-        {/* Products by Category */}
-        {groupedProducts.map(({ category, products }) => (
-          <section key={category.id} id={`cat-${category.id}`} className="space-y-4">
-            <h2 className="text-lg font-semibold text-neutral-900">{category.name}</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {products.map(product => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  description={product.description || undefined}
-                  price={product.price}
-                  image_url={product.image_url || undefined}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-12 text-neutral-500">
-            Nenhum produto disponível
+        {/* Header */}
+        <header className="bg-white border-b sticky top-0 z-40">
+          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+            <Link to="/" className="text-neutral-500 hover:text-neutral-700">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <h1 className="text-lg font-semibold text-neutral-900">{storeName}</h1>
           </div>
+        </header>
+
+        {/* Categories */}
+        {sortedCategories.length > 0 && (
+          <CategoriesBar
+            categories={sortedCategories}
+            activeCategory={activeCategory}
+            onCategoryClick={setActiveCategory}
+          />
         )}
-      </main>
-    </div>
+
+        <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+          {/* Featured Products */}
+          {!activeCategory && featuredProducts.length > 0 && (
+            <FeaturedProducts products={featuredProducts} />
+          )}
+
+          {/* Products by Category */}
+          {groupedProducts.map(({ category, products }) => (
+            <section key={category.id} id={`cat-${category.id}`} className="space-y-4">
+              <h2 className="text-lg font-semibold text-neutral-900">{category.name}</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {products.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    description={product.description || undefined}
+                    price={product.price}
+                    image_url={product.image_url || undefined}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12 text-neutral-500">
+              Nenhum produto disponível
+            </div>
+          )}
+        </main>
+
+        {/* Demo Cart - disabled checkout but allows browsing */}
+        <CartSheet isStoreOpen={false} />
+      </div>
+    </CartProvider>
   );
 }
