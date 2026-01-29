@@ -21,6 +21,7 @@ interface StorePublic {
   id: string;
   name: string;
   logo_url: string | null;
+  cover_url: string | null;
   delivery_fee: number | null;
   opening_hours: OpeningHours | null;
   is_open_manual: boolean;
@@ -136,6 +137,7 @@ export default function Shop() {
           id: storeData.id,
           name: storeData.name,
           logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+          cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
           delivery_fee: storeData.delivery_fee,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
@@ -310,22 +312,37 @@ export default function Shop() {
         {/* Demo Mode Banner */}
         {isDemoStore && <DemoModeBanner storeName={store.name} />}
         
+        {/* Cover Image */}
+        {store.cover_url && (
+          <div className="relative w-full h-32 sm:h-40 md:h-48 overflow-hidden">
+            <img
+              src={store.cover_url}
+              alt={`Capa ${store.name}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          </div>
+        )}
+        
         {/* Header */}
-        <header className="sticky top-0 z-40 glass-card border-b border-border/50">
+        <header className={`sticky ${store.cover_url ? 'top-0' : 'top-0'} z-40 glass-card border-b border-border/50`}>
           <div className="max-w-2xl mx-auto px-4 py-4">
             <div className="flex items-center gap-4">
               {store.logo_url && (
                 <img
                   src={store.logo_url}
                   alt={store.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-primary shadow-lg bg-background"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               )}
               <div className="flex-1">
-                <h1 className="font-display text-3xl text-gradient">{store.name}</h1>
+                <h1 className="font-display text-2xl sm:text-3xl text-gradient">{store.name}</h1>
                 {store.opening_hours && getTodayHours(store.opening_hours) && (
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Hoje: {getTodayHours(store.opening_hours)}
