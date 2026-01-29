@@ -38,7 +38,6 @@ interface StoreData {
   delivery_fee: number | null;
   is_open_manual: boolean;
   logo_url: string | null;
-  cover_url: string | null;
   opening_hours: OpeningHours | null;
   recovery_message_template: string | null;
 }
@@ -99,7 +98,6 @@ export default function Admin() {
   const [pixelId, setPixelId] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [coverUrl, setCoverUrl] = useState('');
   // Product dialog
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -167,7 +165,6 @@ export default function Admin() {
         delivery_fee: storeData.delivery_fee,
         is_open_manual: storeData.is_open_manual ?? true,
         logo_url: storeData.logo_url,
-        cover_url: storeData.cover_url,
         opening_hours: storeData.opening_hours as OpeningHours | null,
         recovery_message_template: storeData.recovery_message_template,
       };
@@ -179,7 +176,6 @@ export default function Admin() {
       setPixelId(storeData.facebook_pixel_id || '');
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
       setLogoUrl(storeData.logo_url || '');
-      setCoverUrl(storeData.cover_url || '');
 
       const [catRes, prodRes, ordersRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
@@ -224,7 +220,6 @@ export default function Admin() {
         facebook_pixel_id: pixelId || null,
         delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
         logo_url: logoUrl || null,
-        cover_url: coverUrl || null,
       };
 
       let error;
@@ -448,16 +443,6 @@ export default function Admin() {
                 <CardTitle className="font-display text-xl">Configurações da Loja</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Cover Image Upload */}
-                {store && (
-                  <ImageUpload
-                    value={coverUrl}
-                    onChange={setCoverUrl}
-                    folder="covers"
-                    storeId={store.id}
-                    label="Imagem de Capa (Banner)"
-                  />
-                )}
                 
                 {/* Logo Upload */}
                 {store && (
