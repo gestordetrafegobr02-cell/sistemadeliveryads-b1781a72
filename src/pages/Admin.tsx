@@ -217,7 +217,6 @@ export default function Admin() {
 
     try {
       const storePayload = {
-        owner_id: user!.id,
         name: storeName,
         slug: storeSlug.toLowerCase().replace(/\s+/g, '-'),
         whatsapp: whatsapp || null,
@@ -228,15 +227,26 @@ export default function Admin() {
         cover_url: coverUrl || null,
       };
 
-      // Use upsert - works for both insert and update
-      const { data, error } = await supabase
-        .from('stores')
-        .upsert(
-          store ? { ...storePayload, id: store.id } : storePayload,
-          { onConflict: 'owner_id' }
-        )
-        .select()
-        .single();
+      let error;
+
+      if (store) {
+        // UPDATE existing store
+        const result = await supabase
+          .from('stores')
+          .update(storePayload)
+          .eq('id', store.id)
+          .select()
+          .single();
+        error = result.error;
+      } else {
+        // INSERT new store
+        const result = await supabase
+          .from('stores')
+          .insert({ ...storePayload, owner_id: user!.id })
+          .select()
+          .single();
+        error = result.error;
+      }
 
       if (error) {
         if (error.message.includes('duplicate') || error.code === '23505') {
