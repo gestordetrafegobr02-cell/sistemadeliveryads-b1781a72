@@ -40,14 +40,15 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
     setUploading(true);
 
     try {
-      // Generate unique filename with store_id prefix for RLS policy validation
+      // Generate unique filename with store_id prefix + timestamp for cache busting
       const fileExt = file.name.split('.').pop();
-      const fileName = `${storeId}/${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      const fileName = `${storeId}/${folder}/${uniqueId}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from('store-assets')
         .upload(fileName, file, {
-          cacheControl: '3600',
+          cacheControl: '0', // Disable caching to ensure fresh images
           upsert: false,
         });
 
@@ -56,12 +57,21 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
         return;
       }
 
-      // Get public URL
+      // Verify upload was successful by checking if file exists
+      if (!uploadData?.path) {
+        toast.error('Erro: arquivo não foi salvo corretamente.');
+        return;
+      }
+
+      // Get public URL with cache-busting query parameter
       const { data: { publicUrl } } = supabase.storage
         .from('store-assets')
         .getPublicUrl(fileName);
 
-      onChange(publicUrl);
+      // Append cache-busting timestamp to URL to force browser refresh
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+
+      onChange(cacheBustedUrl);
       toast.success('Imagem enviada com sucesso!');
     } catch (err) {
       toast.error(getErrorMessage(err));
