@@ -109,6 +109,53 @@
     scrollbar-width: none;
   }
 
+  /* Glassmorphism card - premium minimalist style */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm rounded-xl border border-border/30;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.02), 0 1px 2px -1px rgb(0 0 0 / 0.02);
+  }
+
+  .glass-card:hover {
+    @apply border-border/50;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.03), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+  }
+
+  /* Clean white card - ultra minimalist */
+  .card-clean {
+    @apply bg-card rounded-2xl border border-gray-100 dark:border-border/20;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.02);
+    transition: all 0.2s ease;
+  }
+
+  .card-clean:hover {
+    box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.06);
+    transform: translateY(-2px);
+  }
+
+  /* Minimalist button - icon only */
+  .btn-minimal {
+    @apply w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200;
+    @apply bg-transparent border-2 border-primary/30 text-primary;
+  }
+
+  .btn-minimal:hover {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  .btn-minimal:active {
+    transform: scale(0.95);
+  }
+
+  /* Outlined button with fill on hover */
+  .btn-outline-fill {
+    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+    @apply bg-transparent border border-primary/40 text-primary;
+  }
+
+  .btn-outline-fill:hover {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
   /* Bottom cart button styles */
   .bottom-cart-container {
     @apply fixed bottom-0 left-0 right-0 z-50 p-4;
@@ -118,6 +165,11 @@
 
   .bottom-cart-container > * {
     pointer-events: auto;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent;
   }
 }
 

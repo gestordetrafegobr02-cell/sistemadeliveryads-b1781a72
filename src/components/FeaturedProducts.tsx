@@ -1,6 +1,5 @@
 import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 
 interface Product {
@@ -31,43 +30,42 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
   if (products.length === 0) return null;
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display text-2xl text-foreground flex items-center gap-2">
-          <Flame className="w-6 h-6 text-orange-500" />
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="font-semibold text-xl text-foreground flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
           Mais Pedidos
         </h2>
         {products.length > 2 && (
-          <div className="hidden sm:flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-8 h-8"
+          <div className="hidden sm:flex gap-1.5">
+            <button
+              className="w-8 h-8 rounded-full border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors"
               onClick={() => scroll('left')}
+              aria-label="Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-8 h-8"
+            </button>
+            <button
+              className="w-8 h-8 rounded-full border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors"
               onClick={() => scroll('right')}
+              aria-label="Próximo"
             >
               <ChevronRight className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
         )}
       </div>
       
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4"
       >
         {products.map((product) => (
           <div
             key={product.id}
-            className="min-w-[280px] max-w-[320px] snap-start flex-shrink-0"
+            className="min-w-[280px] max-w-[300px] snap-start flex-shrink-0"
           >
             <ProductCard
               id={product.id}

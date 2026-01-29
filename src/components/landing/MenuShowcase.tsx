@@ -80,9 +80,9 @@ export function MenuShowcase() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Gradient fades */}
-      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+      {/* Gradient fades - using semantic colors */}
+      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
       
       <div
         ref={scrollRef}
@@ -92,18 +92,20 @@ export function MenuShowcase() {
         {duplicatedSegments.map((segment, index) => (
           <div
             key={`${segment.id}-${index}`}
-            className="flex-shrink-0 w-72 group"
+            className="flex-shrink-0 w-64 group"
           >
-            <div className="relative rounded-2xl overflow-hidden bg-neutral-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-              {/* Trial Badge */}
+            <div className="relative rounded-2xl overflow-hidden bg-card border border-border/20 transition-all duration-300 hover:-translate-y-1"
+              style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.06)' }}
+            >
+              {/* Trial Badge - minimalist */}
               <div className="absolute top-3 right-3 z-10">
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary text-white text-xs font-medium">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/90 backdrop-blur-sm text-primary-foreground text-xs font-medium">
                   7 dias grátis
                 </span>
               </div>
               
-              {/* Image */}
-              <div className="aspect-[4/5] overflow-hidden">
+              {/* Image with 4:3 ratio */}
+              <div className="aspect-[4/3] overflow-hidden bg-muted/30">
                 <img
                   src={segment.image}
                   alt={segment.title}
@@ -111,9 +113,9 @@ export function MenuShowcase() {
                 />
               </div>
               
-              {/* Title */}
-              <div className="p-4 bg-white">
-                <h3 className="font-medium text-neutral-900 text-center">
+              {/* Title - clean typography */}
+              <div className="p-4 bg-card">
+                <h3 className="font-semibold text-foreground text-sm text-center tracking-tight">
                   {segment.title}
                 </h3>
               </div>
