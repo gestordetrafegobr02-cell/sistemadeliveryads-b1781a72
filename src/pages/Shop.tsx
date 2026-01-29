@@ -21,7 +21,6 @@ interface StorePublic {
   id: string;
   name: string;
   logo_url: string | null;
-  cover_url: string | null;
   delivery_fee: number | null;
   opening_hours: OpeningHours | null;
   is_open_manual: boolean;
@@ -137,7 +136,6 @@ export default function Shop() {
           id: storeData.id,
           name: storeData.name,
           logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
-          cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
           delivery_fee: storeData.delivery_fee,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
@@ -312,54 +310,34 @@ export default function Shop() {
         {/* Demo Mode Banner */}
         {isDemoStore && <DemoModeBanner storeName={store.name} />}
         
-        {/* Cover Image with Floating Logo */}
-        <div className="relative">
-          {store.cover_url ? (
-            <div className="relative w-full h-40 sm:h-48 md:h-72 overflow-hidden">
-              <img
-                src={store.cover_url}
-                alt={`Capa ${store.name}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
-                }}
-              />
-              {/* Gradient overlay for text readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-            </div>
-          ) : (
-            <div className="h-8" /> 
-          )}
-          
-          {/* Floating Logo - overlaps cover bottom */}
-          {store.logo_url && (
-            <div className={`absolute left-4 sm:left-1/2 sm:-translate-x-1/2 ${store.cover_url ? '-bottom-8' : 'top-4'} z-20`}>
-              <img
-                src={store.logo_url}
-                alt={store.name}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-background shadow-xl bg-background"
-                loading="lazy"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-        </div>
-        
-        {/* Header */}
-        <header className={`sticky top-0 z-40 glass-card border-b border-border/50 ${store.logo_url && store.cover_url ? 'pt-10 sm:pt-12' : ''}`}>
-          <div className="max-w-2xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 text-center sm:text-center">
-                <h1 className="font-display text-2xl sm:text-3xl text-gradient">{store.name}</h1>
+        {/* Minimalist Header with Logo Centered */}
+        <header className="sticky top-0 z-40 glass-card border-b border-border/50">
+          <div className="max-w-2xl mx-auto px-6 py-5">
+            <div className="flex flex-col items-center text-center gap-3">
+              {/* Logo Avatar */}
+              {store.logo_url && (
+                <img
+                  src={store.logo_url}
+                  alt={store.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-background shadow-lg bg-background"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
+              
+              {/* Store Name */}
+              <div className="space-y-1">
+                <h1 className="font-display text-xl sm:text-2xl text-gradient">{store.name}</h1>
                 {store.opening_hours && getTodayHours(store.opening_hours) && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground">
                     Hoje: {getTodayHours(store.opening_hours)}
                   </p>
                 )}
               </div>
+              
+              {/* Status Badge */}
               <StoreStatusBadge isOpen={storeIsOpen} />
             </div>
           </div>

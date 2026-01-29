@@ -158,13 +158,31 @@ export default function Demo() {
         {/* Demo Banner */}
         <DemoModeBanner storeName={storeName} />
 
-        {/* Header */}
+        {/* Minimalist Header */}
         <header className="bg-white border-b sticky top-0 z-40">
-          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-            <Link to="/" className="text-neutral-500 hover:text-neutral-700">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <h1 className="text-lg font-semibold text-neutral-900">{storeName}</h1>
+          <div className="max-w-2xl mx-auto px-6 py-5">
+            <div className="flex flex-col items-center text-center gap-2">
+              {/* Back button positioned absolute for mobile */}
+              <Link 
+                to="/" 
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 sm:static sm:translate-y-0 sm:self-start"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              
+              {/* Store Icon/Avatar placeholder */}
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Store className="w-7 h-7 text-primary" />
+              </div>
+              
+              {/* Store Name */}
+              <h1 className="text-lg font-semibold text-neutral-900">{storeName}</h1>
+              
+              {/* Demo Badge */}
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                Modo Demo
+              </span>
+            </div>
           </div>
         </header>
 
