@@ -146,16 +146,6 @@
     transform: scale(0.95);
   }
 
-  /* Outlined button with fill on hover */
-  .btn-outline-fill {
-    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
-    @apply bg-transparent border border-primary/40 text-primary;
-  }
-
-  .btn-outline-fill:hover {
-    @apply bg-primary text-primary-foreground border-primary;
-  }
-
   /* Bottom cart button styles */
   .bottom-cart-container {
     @apply fixed bottom-0 left-0 right-0 z-50 p-4;
@@ -170,11 +160,5 @@
   /* Text gradient */
   .text-gradient {
     @apply bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent;
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
   }
 }
