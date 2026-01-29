@@ -350,6 +350,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          cover_url: string | null
           created_at: string
           delivery_fee: number | null
           facebook_pixel_id: string | null
@@ -374,6 +375,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
           facebook_pixel_id?: string | null
@@ -673,6 +676,7 @@ export type Database = {
       get_public_store_by_slug: {
         Args: { store_slug: string }
         Returns: {
+          cover_url: string
           created_at: string
           delivery_fee: number
           id: string
@@ -681,7 +685,6 @@ export type Database = {
           logo_url: string
           name: string
           opening_hours: Json
-          slug: string
           updated_at: string
         }[]
       }
