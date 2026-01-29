@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { hapticClick, hapticSuccess } from '@/lib/haptics';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
+import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome muito curto').max(100),
@@ -60,6 +61,22 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Abandoned cart tracking
+  const cartItemsForTracking = items.map(item => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+  }));
+  
+  const { deleteAbandonedCart } = useAbandonedCartTracking(
+    storeId,
+    cartItemsForTracking,
+    total,
+    name,
+    phone
+  );
 
   // Fetch upsell config when store loads
   useEffect(() => {
@@ -235,11 +252,16 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           // Continue to WhatsApp even if DB fails
         } else {
           console.log('Order saved successfully');
+          // Mark abandoned cart as converted
+          await deleteAbandonedCart();
         }
       } catch (err) {
         console.error('Order save exception:', err);
         // Continue to WhatsApp even if DB fails
       }
+    } else {
+      // No storeId, but still clear abandoned cart tracking
+      await deleteAbandonedCart();
     }
 
     const orderId = generateOrderId();
