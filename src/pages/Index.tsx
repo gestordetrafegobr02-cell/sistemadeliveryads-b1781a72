@@ -383,7 +383,7 @@ export default function Index() {
                     placeholder="Ex: Burger do João"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-white placeholder:text-white/50"
                     maxLength={100}
                   />
                 </div>
@@ -399,7 +399,7 @@ export default function Index() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-white placeholder:text-white/50"
                     maxLength={255}
                   />
                 </div>
@@ -415,7 +415,7 @@ export default function Index() {
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
+                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-white placeholder:text-white/50"
                     minLength={6}
                   />
                 </div>
