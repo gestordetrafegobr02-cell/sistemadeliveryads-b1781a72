@@ -362,6 +362,7 @@ export type Database = {
           opening_hours: Json | null
           owner_id: string
           pix_key: string | null
+          primary_color: string | null
           recovery_delay_minutes: number
           recovery_message_template: string | null
           slug: string
@@ -387,6 +388,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id: string
           pix_key?: string | null
+          primary_color?: string | null
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug: string
@@ -412,6 +414,7 @@ export type Database = {
           opening_hours?: Json | null
           owner_id?: string
           pix_key?: string | null
+          primary_color?: string | null
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug?: string
@@ -685,6 +688,7 @@ export type Database = {
           logo_url: string
           name: string
           opening_hours: Json
+          primary_color: string
           updated_at: string
         }[]
       }
