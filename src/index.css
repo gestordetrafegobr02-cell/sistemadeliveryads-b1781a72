@@ -7,26 +7,26 @@
 /* Minimalist Clean Theme - Apple Style */
 @layer base {
   :root {
-    --background: 240 100% 3%;
-    --foreground: 40 20% 95%;
+    --background: 0 0% 100%;
+    --foreground: 220 20% 20%;
 
-    --card: 240 80% 5%;
-    --card-foreground: 40 20% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
 
-    --popover: 240 80% 4%;
-    --popover-foreground: 40 20% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
 
     --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 60% 8%;
-    --secondary-foreground: 40 20% 95%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 20%;
 
-    --muted: 240 60% 8%;
-    --muted-foreground: 40 10% 55%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 240 60% 8%;
-    --accent-foreground: 40 20% 95%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
 
     --emerald: 160 84% 39%;
     --emerald-foreground: 0 0% 100%;
@@ -34,19 +34,19 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 50% 12%;
-    --input: 240 50% 12%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
     --ring: 25 95% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 240 80% 4%;
-    --sidebar-foreground: 40 20% 95%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 20%;
     --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 60% 7%;
-    --sidebar-accent-foreground: 40 20% 95%;
-    --sidebar-border: 240 50% 12%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 220 14% 90%;
     --sidebar-ring: 25 95% 53%;
   }
 
