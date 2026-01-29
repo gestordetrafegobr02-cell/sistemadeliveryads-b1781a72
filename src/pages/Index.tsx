@@ -182,13 +182,13 @@ export default function Index() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-background">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-background/80 backdrop-blur-md border-b border-neutral-100 dark:border-border">
+      <nav className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-end">
           <div className="flex items-center gap-3">
             <Link to="/auth">
-              <Button variant="ghost" className="text-neutral-600 dark:text-foreground/80 hover:text-neutral-900 dark:hover:text-foreground">
+              <Button variant="ghost" className="text-foreground/80 hover:text-foreground">
                 Entrar
               </Button>
             </Link>
@@ -256,12 +256,12 @@ export default function Index() {
         </div>
       </header>
 
-      {/* System Showcase - Phone Mockups Carousel */}
-      <section className="py-16 md:py-24 bg-secondary/50">
+      {/* System Showcase - Phone Mockups Carousel (Templates) */}
+      <section className="py-16 md:py-24 bg-secondary">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 px-4">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              Pronto para seu negócio
+              Templates Prontos
             </span>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Um sistema para cada segmento
@@ -473,13 +473,10 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 md:px-6 border-t border-neutral-100 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="font-bold text-lg text-neutral-900">
-            Menu<span className="text-primary">Digital</span>
-          </span>
-          <p className="text-sm text-neutral-400">
-            © {new Date().getFullYear()} MenuDigital. Todos os direitos reservados.
+      <footer className="py-12 px-4 md:px-6 border-t border-border bg-background">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Sistema Delivery ADS. Todos os direitos reservados.
           </p>
         </div>
       </footer>
