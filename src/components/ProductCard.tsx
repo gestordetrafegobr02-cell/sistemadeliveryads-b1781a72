@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, ImageOff } from 'lucide-react';
+import { Plus, Check, ImageOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,8 +19,8 @@ export function ProductCard({ id, name, description, price, image_url }: Product
   const [imgError, setImgError] = useState(false);
   const [hasModifiers, setHasModifiers] = useState(false);
   const [modifierModalOpen, setModifierModalOpen] = useState(false);
+  const [added, setAdded] = useState(false);
 
-  // Check if product has modifiers
   useEffect(() => {
     async function checkModifiers() {
       const { count } = await supabase
@@ -27,7 +28,6 @@ export function ProductCard({ id, name, description, price, image_url }: Product
         .select('*', { count: 'exact', head: true })
         .eq('product_id', id)
         .eq('is_available', true);
-      
       setHasModifiers((count || 0) > 0);
     }
     checkModifiers();
@@ -35,11 +35,12 @@ export function ProductCard({ id, name, description, price, image_url }: Product
 
   const handleAdd = () => {
     hapticClick();
-    
     if (hasModifiers) {
       setModifierModalOpen(true);
     } else {
       addItem({ id, name, price, image_url });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
     }
   };
 
@@ -47,54 +48,81 @@ export function ProductCard({ id, name, description, price, image_url }: Product
 
   return (
     <>
-      <div className="card-clean p-5 group">
-        <div className="flex gap-5">
-          {/* Image with 4:3 aspect ratio */}
-          <div className="w-28 aspect-[4/3] rounded-xl overflow-hidden flex-shrink-0 bg-muted/50">
-            {showImage ? (
-              <img
-                src={image_url}
-                alt={name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/60">
-                <ImageOff className="w-5 h-5" />
-              </div>
-            )}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="bg-card rounded-2xl border border-border/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+      >
+        {/* Large image on top */}
+        {showImage ? (
+          <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted/30">
+            <img
+              src={image_url}
+              alt={name}
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+              onError={() => setImgError(true)}
+              loading="lazy"
+            />
           </div>
+        ) : (
+          <div className="w-full aspect-[16/10] bg-muted/20 flex items-center justify-center">
+            <ImageOff className="w-8 h-8 text-muted-foreground/40" />
+          </div>
+        )}
 
-          {/* Product info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-            <div>
-              <h3 className="font-semibold text-foreground text-base leading-tight line-clamp-1">
-                {name}
-              </h3>
-              {description && (
-                <p className="text-muted-foreground text-sm mt-1.5 line-clamp-2 leading-relaxed">
-                  {description}
-                </p>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-foreground font-bold text-lg">
-                R$ {price.toFixed(2).replace('.', ',')}
-              </span>
-              <button
-                onClick={handleAdd}
-                className="btn-minimal"
-                aria-label="Adicionar ao carrinho"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
+        {/* Product info */}
+        <div className="p-4 space-y-2">
+          <h3 className="font-semibold text-foreground text-base leading-tight line-clamp-1">
+            {name}
+          </h3>
+          {description && (
+            <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed">
+              {description}
+            </p>
+          )}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-primary font-bold text-lg">
+              R$ {price.toFixed(2).replace('.', ',')}
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleAdd}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                added
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-primary text-primary-foreground hover:opacity-90'
+              }`}
+              aria-label="Adicionar ao carrinho"
+            >
+              <AnimatePresence mode="wait">
+                {added ? (
+                  <motion.span
+                    key="check"
+                    initial={{ scale: 0, rotate: -90 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Check className="w-5 h-5" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="plus"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Modifier selection modal */}
       <ProductModifierSelect
         open={modifierModalOpen}
         onOpenChange={setModifierModalOpen}

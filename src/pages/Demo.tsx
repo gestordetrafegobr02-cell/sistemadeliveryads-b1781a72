@@ -7,6 +7,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
 import { CartSheet } from '@/components/CartSheet';
 import { CartProvider } from '@/lib/cart';
+import { StoreThemeProvider } from '@/lib/storeTheme';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,13 @@ interface TemplateData {
   categories: Category[];
   products: Product[];
 }
+
+const TEMPLATE_COLORS: Record<string, string> = {
+  'burger-shop': '#E74C3C',
+  'acai-shop': '#9B59B6',
+  'pizza': '#27AE60',
+  'grocery': '#2ECC71',
+};
 
 const TEMPLATE_NAMES: Record<string, string> = {
   'burger-shop': 'Hamburgueria Demo',
@@ -94,6 +102,7 @@ export default function Demo() {
   }, [slug]);
 
   const storeName = slug ? TEMPLATE_NAMES[slug] || templateData?.name || 'Demo' : 'Demo';
+  const templateColor = slug ? TEMPLATE_COLORS[slug] || null : null;
 
   const sortedCategories = templateData?.categories
     ? [...templateData.categories].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -119,7 +128,7 @@ export default function Demo() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50">
+      <div className="min-h-screen bg-background">
         <div className="bg-primary text-primary-foreground px-4 py-3">
           <Skeleton className="h-5 w-64 mx-auto bg-white/20" />
         </div>
@@ -137,10 +146,10 @@ export default function Demo() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Store className="w-16 h-16 mx-auto text-neutral-300" />
-          <h1 className="text-xl font-semibold text-neutral-700">{error}</h1>
+          <Store className="w-16 h-16 mx-auto text-muted-foreground/40" />
+          <h1 className="text-xl font-semibold text-foreground">{error}</h1>
           <Link to="/">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
@@ -153,83 +162,78 @@ export default function Demo() {
   }
 
   return (
-    <CartProvider>
-      <div className="min-h-screen bg-neutral-50 pb-28">
-        {/* Demo Banner */}
-        <DemoModeBanner storeName={storeName} />
+    <StoreThemeProvider primaryColor={templateColor}>
+      <CartProvider>
+        <div className="min-h-screen bg-background pb-28">
+          <DemoModeBanner storeName={storeName} />
 
-        {/* Minimalist Header */}
-        <header className="bg-white border-b sticky top-0 z-40">
-          <div className="max-w-2xl mx-auto px-6 py-5">
-            <div className="flex flex-col items-center text-center gap-2">
-              {/* Back button positioned absolute for mobile */}
-              <Link 
-                to="/" 
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 sm:static sm:translate-y-0 sm:self-start"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              
-              {/* Store Icon/Avatar placeholder */}
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Store className="w-7 h-7 text-primary" />
+          <header className="bg-background/80 backdrop-blur-md border-b border-border/30 sticky top-0 z-40">
+            <div className="max-w-2xl mx-auto px-6 py-5">
+              <div className="flex flex-col items-center text-center gap-2">
+                <Link 
+                  to="/" 
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground sm:static sm:translate-y-0 sm:self-start"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+                
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Store className="w-7 h-7 text-primary" />
+                </div>
+                
+                <h1 className="text-lg font-semibold text-foreground">{storeName}</h1>
+                
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  Modo Demo
+                </span>
               </div>
-              
-              {/* Store Name */}
-              <h1 className="text-lg font-semibold text-neutral-900">{storeName}</h1>
-              
-              {/* Demo Badge */}
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                Modo Demo
-              </span>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Categories */}
-        {sortedCategories.length > 0 && (
-          <CategoriesBar
-            categories={sortedCategories}
-            activeCategory={activeCategory}
-            onCategoryClick={setActiveCategory}
-          />
-        )}
-
-        <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
-          {/* Featured Products */}
-          {!activeCategory && featuredProducts.length > 0 && (
-            <FeaturedProducts products={featuredProducts} />
+          {sortedCategories.length > 0 && (
+            <CategoriesBar
+              categories={sortedCategories}
+              activeCategory={activeCategory}
+              onCategoryClick={setActiveCategory}
+            />
           )}
 
-          {/* Products by Category */}
-          {groupedProducts.map(({ category, products }) => (
-            <section key={category.id} id={`cat-${category.id}`} className="space-y-4">
-              <h2 className="text-lg font-semibold text-neutral-900">{category.name}</h2>
-              <div className="grid grid-cols-1 gap-4">
-                {products.map(product => (
-                  <ProductCard
-                    key={product.id}
-                    id={product.id}
-                    name={product.name}
-                    description={product.description || undefined}
-                    price={product.price}
-                    image_url={product.image_url || undefined}
-                  />
-                ))}
+          <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+            {!activeCategory && featuredProducts.length > 0 && (
+              <FeaturedProducts products={featuredProducts} />
+            )}
+
+            {groupedProducts.map(({ category, products }) => (
+              <section key={category.id} id={`cat-${category.id}`} className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <span className="w-2 h-5 bg-primary rounded-full" />
+                  {category.name}
+                </h2>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {products.map(product => (
+                    <ProductCard
+                      key={product.id}
+                      id={product.id}
+                      name={product.name}
+                      description={product.description || undefined}
+                      price={product.price}
+                      image_url={product.image_url || undefined}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum produto disponível
               </div>
-            </section>
-          ))}
+            )}
+          </main>
 
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12 text-neutral-500">
-              Nenhum produto disponível
-            </div>
-          )}
-        </main>
-
-        {/* Demo Cart - disabled checkout but allows browsing */}
-        <CartSheet isStoreOpen={false} />
-      </div>
-    </CartProvider>
+          <CartSheet isStoreOpen={false} />
+        </div>
+      </CartProvider>
+    </StoreThemeProvider>
   );
 }
