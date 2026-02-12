@@ -25,7 +25,11 @@ import {
   Pizza,
   Leaf,
   IceCream,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Palette,
+  LayoutGrid,
+  Smartphone,
+  Sparkles
 } from 'lucide-react';
 
 const NICHE_OPTIONS = [
@@ -159,6 +163,26 @@ export default function Index() {
 
   const features = [
     {
+      icon: Sparkles,
+      title: 'Design de Alto Nível',
+      description: 'Templates inteligentes (Hamburgueria, Pizzaria, Açaí) com animações fluidas e interface de última geração.',
+    },
+    {
+      icon: Palette,
+      title: 'Visual Personalizado',
+      description: 'Altere cores, fontes e estilos para combinar 100% com a identidade visual da sua marca.',
+    },
+    {
+      icon: LayoutGrid,
+      title: 'Navegação por Categorias',
+      description: 'Barra inteligente "Sticky" que facilita a escolha do cliente e aumenta o ticket médio.',
+    },
+    {
+      icon: Smartphone,
+      title: 'Mobile-First Real',
+      description: 'Otimizado para 2 colunas no celular, exibindo mais produtos com menos esforço de navegação.',
+    },
+    {
       icon: TrendingUp,
       title: 'Upsell Inteligente',
       description: 'Sugira combos e adicionais no momento certo da compra. Aumente seu ticket médio automaticamente.',
@@ -167,11 +191,6 @@ export default function Index() {
       icon: ShoppingCart,
       title: 'Recupere Vendas Perdidas',
       description: 'Carrinhos abandonados? Recupere clientes com mensagens automáticas via WhatsApp.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Relatórios Completos',
-      description: 'Acompanhe vendas, produtos mais pedidos e desempenho do seu delivery em tempo real.',
     },
   ];
 
@@ -280,20 +299,25 @@ export default function Index() {
 
       {/* Features Grid */}
       <section className="py-20 md:py-24 px-4 md:px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              Funcionalidades
-            </span>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                Funcionalidades
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald/10 text-emerald text-xs font-bold uppercase tracking-wider animate-pulse">
+                Nova Versão 2.0
+              </span>
+            </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Tudo que você precisa para vender mais
+              Uma experiência de App Nativo,<br className="hidden sm:block" /> sem precisar baixar nada.
             </h2>
-            <p className="text-muted-foreground text-lg">
-              Ferramentas simples e poderosas para o seu delivery
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Templates premium, navegação fluida e design que converte
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
               <div 
                 key={index} 
