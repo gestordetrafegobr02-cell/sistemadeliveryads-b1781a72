@@ -377,7 +377,7 @@ export default function Shop() {
                       <span className="w-2 h-6 bg-primary rounded-full" />
                       {category.name}
                     </h2>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       {category.products.map((product) => (
                         <ProductCard
                           key={product.id}
@@ -399,7 +399,7 @@ export default function Shop() {
                     <span className="w-2 h-6 bg-primary rounded-full" />
                     Geral
                   </h2>
-                  <div className="space-y-4">
+                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     {uncategorizedProducts.map((product) => (
                       <ProductCard
                         key={product.id}
@@ -415,7 +415,7 @@ export default function Shop() {
               )}
             </>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}

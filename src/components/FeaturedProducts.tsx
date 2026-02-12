@@ -19,9 +19,8 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const scrollAmount = 300;
       scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        left: direction === 'left' ? -280 : 280,
         behavior: 'smooth',
       });
     }
@@ -38,7 +37,7 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
           </div>
           Mais Pedidos
         </h2>
-        {products.length > 2 && (
+        {products.length > 1 && (
           <div className="hidden sm:flex gap-1.5">
             <button
               className="w-8 h-8 rounded-full border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors"
@@ -65,7 +64,7 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
         {products.map((product) => (
           <div
             key={product.id}
-            className="min-w-[280px] max-w-[300px] snap-start flex-shrink-0"
+            className="min-w-[260px] max-w-[280px] snap-start flex-shrink-0"
           >
             <ProductCard
               id={product.id}
