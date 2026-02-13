@@ -94,8 +94,10 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
     };
   }, []);
 
-  const handleDemoClick = (demoUrl: string) => {
-    window.open(demoUrl, '_blank');
+  const handleDemoClick = (e: React.MouseEvent, demoUrl: string) => {
+    e.stopPropagation();
+    const fullUrl = `${window.location.origin}${demoUrl}`;
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -117,7 +119,7 @@ export function SystemShowcase({ onCtaClick }: SystemShowcaseProps) {
               className="flex-shrink-0 group cursor-pointer"
               whileHover={{ scale: 1.03, y: -8 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              onClick={() => handleDemoClick(segment.demoUrl)}
+              onClick={(e) => handleDemoClick(e, segment.demoUrl)}
             >
               <div className="relative transition-shadow duration-300 group-hover:shadow-xl rounded-3xl">
                 {/* Trial Badge */}
