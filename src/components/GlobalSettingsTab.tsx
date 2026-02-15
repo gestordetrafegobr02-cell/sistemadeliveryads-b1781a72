@@ -59,33 +59,29 @@ export function GlobalSettingsTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      // Update all settings using the RPC function
-      const updates = [
-        supabase.rpc('update_global_setting', {
-          setting_key: 'owner_whatsapp',
-          setting_value: settings.owner_whatsapp,
-        }),
-        supabase.rpc('update_global_setting', {
-          setting_key: 'subscription_price',
-          setting_value: settings.subscription_price,
-        }),
-        supabase.rpc('update_global_setting', {
-          setting_key: 'default_trial_days',
-          setting_value: settings.default_trial_days,
-        }),
+      // Direct upsert to global_settings table for reliability
+      const entries = [
+        { key: 'owner_whatsapp', value: settings.owner_whatsapp },
+        { key: 'subscription_price', value: settings.subscription_price },
+        { key: 'default_trial_days', value: settings.default_trial_days },
       ];
 
-      const results = await Promise.all(updates);
-      const hasError = results.some((r) => r.error);
+      for (const entry of entries) {
+        const { error } = await supabase
+          .from('global_settings')
+          .update({ value: entry.value, updated_at: new Date().toISOString() })
+          .eq('key', entry.key);
 
-      if (hasError) {
-        throw new Error('Erro ao salvar algumas configurações');
+        if (error) {
+          console.error(`Error saving ${entry.key}:`, error);
+          throw new Error(`Erro ao salvar ${entry.key}`);
+        }
       }
 
       toast.success('Configurações atualizadas com sucesso! ✅');
     } catch (err) {
       console.error('Error saving settings:', err);
-      toast.error('Erro ao salvar configurações');
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }

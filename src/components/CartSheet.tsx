@@ -225,45 +225,6 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       if (referencePoint) addressStr += ` | Ref: ${referencePoint}`;
     }
 
-    // Save order to database
-    if (storeId) {
-      try {
-        const orderItems = items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          modifiers: item.modifiers || [],
-          observation: item.observation || null,
-        }));
-
-        const { error: orderError } = await supabase.from('orders').insert([{
-          store_id: storeId,
-          customer_name: name,
-          customer_phone: phone,
-          items: orderItems as unknown as import('@/integrations/supabase/types').Json,
-          total: grandTotal,
-          address: addressStr || null,
-          payment_method: paymentMethod,
-        }]);
-
-        if (orderError) {
-          console.error('Order save error:', orderError.message);
-          // Continue to WhatsApp even if DB fails
-        } else {
-          console.log('Order saved successfully');
-          // Mark abandoned cart as converted
-          await deleteAbandonedCart();
-        }
-      } catch (err) {
-        console.error('Order save exception:', err);
-        // Continue to WhatsApp even if DB fails
-      }
-    } else {
-      // No storeId, but still clear abandoned cart tracking
-      await deleteAbandonedCart();
-    }
-
     const orderId = generateOrderId();
 
     // Build items list with modifiers and observations
@@ -322,11 +283,40 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
-    // Open WhatsApp FIRST (before state changes) to avoid popup blockers
-    const whatsappWindow = window.open(whatsappUrl, '_blank');
-    // Fallback: if popup was blocked, use location.href
-    if (!whatsappWindow) {
-      window.location.href = whatsappUrl;
+    // CRITICAL: Open WhatsApp IMMEDIATELY in the synchronous user-gesture context
+    // This MUST happen before any async calls (DB insert, etc.) to avoid popup blockers
+    window.location.href = whatsappUrl;
+
+    // Save order to database in background (after redirect is triggered)
+    if (storeId) {
+      try {
+        const orderItems = items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          modifiers: item.modifiers || [],
+          observation: item.observation || null,
+        }));
+
+        supabase.from('orders').insert([{
+          store_id: storeId,
+          customer_name: name,
+          customer_phone: phone,
+          items: orderItems as unknown as import('@/integrations/supabase/types').Json,
+          total: grandTotal,
+          address: addressStr || null,
+          payment_method: paymentMethod,
+        }]).then(({ error: orderError }) => {
+          if (orderError) {
+            console.error('Order save error:', orderError.message);
+          } else {
+            deleteAbandonedCart();
+          }
+        });
+      } catch (err) {
+        console.error('Order save exception:', err);
+      }
     }
 
     onPurchase?.();
