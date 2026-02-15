@@ -96,7 +96,7 @@ export function UpsellModal({ open, onOpenChange, storeId, onContinue }: UpsellM
   const headerMessage = customHeaderMessage || defaultMessage;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={() => { /* Prevent closing without action */ }}>
       <DialogContent className="sm:max-w-md bg-gradient-to-br from-card to-secondary/30 border-primary/20 overflow-hidden">
         {/* Decorative background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">

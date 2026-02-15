@@ -1,18 +1,28 @@
-import { AlertTriangle, MessageCircle } from 'lucide-react';
+import { AlertTriangle, MessageCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useGlobalSettings } from '@/hooks/useGlobalSettings';
 
 interface TrialExpiredBannerProps {
   storeName: string;
-  whatsappNumber?: string;
 }
 
-export function TrialExpiredBanner({ storeName, whatsappNumber = '5511999999999' }: TrialExpiredBannerProps) {
+export function TrialExpiredBanner({ storeName }: TrialExpiredBannerProps) {
+  const { settings, loading } = useGlobalSettings();
+
   const handleWhatsApp = () => {
     const message = encodeURIComponent(
       `Olá! Sou proprietário da loja "${storeName}" e gostaria de renovar minha assinatura.`
     );
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${settings.owner_whatsapp}?text=${message}`, '_blank');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -31,7 +41,7 @@ export function TrialExpiredBanner({ storeName, whatsappNumber = '5511999999999'
         <Button
           size="lg"
           onClick={handleWhatsApp}
-          className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          className="gap-2 bg-primary hover:bg-primary/90"
         >
           <MessageCircle className="w-5 h-5" />
           Falar no WhatsApp
