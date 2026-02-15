@@ -322,11 +322,17 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
+    // Open WhatsApp FIRST (before state changes) to avoid popup blockers
+    const whatsappWindow = window.open(whatsappUrl, '_blank');
+    // Fallback: if popup was blocked, use location.href
+    if (!whatsappWindow) {
+      window.location.href = whatsappUrl;
+    }
+
     onPurchase?.();
     clearCart();
     setSubmitting(false);
     setOpen(false);
-    window.open(whatsappUrl, '_blank');
   };
 
   return (
