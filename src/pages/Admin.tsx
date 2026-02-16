@@ -28,6 +28,7 @@ import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
 import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
+import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 
 interface StoreData {
   id: string;
@@ -42,6 +43,7 @@ interface StoreData {
   opening_hours: OpeningHours | null;
   recovery_message_template: string | null;
   primary_color: string | null;
+  store_template_style: string | null;
 }
 
 interface Category {
@@ -170,6 +172,7 @@ export default function Admin() {
         opening_hours: storeData.opening_hours as OpeningHours | null,
         recovery_message_template: storeData.recovery_message_template,
         primary_color: storeData.primary_color ?? null,
+        store_template_style: storeData.store_template_style ?? 'default',
       };
       setStore(mappedStore);
       setStoreName(storeData.name);
@@ -601,6 +604,15 @@ export default function Admin() {
                     storeId={store.id} 
                     categories={categories}
                     products={products}
+                  />
+                )}
+
+                {/* Template Selector */}
+                {store && (
+                  <StoreTemplateSelector
+                    storeId={store.id}
+                    currentTemplate={store.store_template_style || 'default'}
+                    onTemplateChange={(template) => setStore({ ...store, store_template_style: template })}
                   />
                 )}
 
