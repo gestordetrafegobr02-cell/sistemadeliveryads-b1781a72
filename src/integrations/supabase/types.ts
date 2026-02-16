@@ -366,6 +366,7 @@ export type Database = {
           recovery_delay_minutes: number
           recovery_message_template: string | null
           slug: string
+          store_template_style: string | null
           trial_expires_at: string | null
           updated_at: string
           upsell_blocking_categories: string[] | null
@@ -392,6 +393,7 @@ export type Database = {
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug: string
+          store_template_style?: string | null
           trial_expires_at?: string | null
           updated_at?: string
           upsell_blocking_categories?: string[] | null
@@ -418,6 +420,7 @@ export type Database = {
           recovery_delay_minutes?: number
           recovery_message_template?: string | null
           slug?: string
+          store_template_style?: string | null
           trial_expires_at?: string | null
           updated_at?: string
           upsell_blocking_categories?: string[] | null

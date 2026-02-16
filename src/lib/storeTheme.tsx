@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect } from 'react';
+import { getTemplateById } from '@/lib/storeTemplates';
 
 interface StoreThemeContextType {
   primaryColor: string | null;
+  templateStyle: string | null;
 }
 
-const StoreThemeContext = createContext<StoreThemeContextType>({ primaryColor: null });
+const StoreThemeContext = createContext<StoreThemeContextType>({ primaryColor: null, templateStyle: null });
 
 export function useStoreTheme() {
   return useContext(StoreThemeContext);
@@ -12,6 +14,7 @@ export function useStoreTheme() {
 
 interface StoreThemeProviderProps {
   primaryColor: string | null;
+  templateStyle?: string | null;
   children: React.ReactNode;
 }
 
@@ -53,28 +56,52 @@ function hexToHSL(hex: string): { h: number; s: number; l: number } | null {
   };
 }
 
-export function StoreThemeProvider({ primaryColor, children }: StoreThemeProviderProps) {
+const CSS_VARS = [
+  '--background', '--foreground', '--card', '--card-foreground',
+  '--primary', '--primary-foreground', '--secondary', '--secondary-foreground',
+  '--muted', '--muted-foreground', '--accent', '--accent-foreground', '--border',
+  '--input', '--ring',
+] as const;
+
+export function StoreThemeProvider({ primaryColor, templateStyle, children }: StoreThemeProviderProps) {
   useEffect(() => {
-    if (primaryColor) {
+    const el = document.documentElement;
+
+    // Apply template if specified and not default
+    if (templateStyle && templateStyle !== 'default') {
+      const template = getTemplateById(templateStyle);
+      el.style.setProperty('--background', template.background);
+      el.style.setProperty('--foreground', template.foreground);
+      el.style.setProperty('--card', template.card);
+      el.style.setProperty('--card-foreground', template.cardForeground);
+      el.style.setProperty('--primary', template.primary);
+      el.style.setProperty('--primary-foreground', template.primaryForeground);
+      el.style.setProperty('--secondary', template.secondary);
+      el.style.setProperty('--secondary-foreground', template.secondaryForeground);
+      el.style.setProperty('--muted', template.muted);
+      el.style.setProperty('--muted-foreground', template.mutedForeground);
+      el.style.setProperty('--accent', template.accent);
+      el.style.setProperty('--accent-foreground', template.accentForeground);
+      el.style.setProperty('--border', template.border);
+      el.style.setProperty('--input', template.border);
+      el.style.setProperty('--ring', template.primary);
+    } else if (primaryColor) {
+      // Fallback: apply only primary color override (legacy behavior)
       const hsl = hexToHSL(primaryColor);
       if (hsl) {
-        // Apply custom primary color to the document
-        document.documentElement.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
-        document.documentElement.style.setProperty('--accent', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
-        document.documentElement.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+        el.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+        el.style.setProperty('--accent', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+        el.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
       }
     }
 
-    // Cleanup on unmount or color change
     return () => {
-      document.documentElement.style.removeProperty('--primary');
-      document.documentElement.style.removeProperty('--accent');
-      document.documentElement.style.removeProperty('--ring');
+      CSS_VARS.forEach((v) => el.style.removeProperty(v));
     };
-  }, [primaryColor]);
+  }, [primaryColor, templateStyle]);
 
   return (
-    <StoreThemeContext.Provider value={{ primaryColor }}>
+    <StoreThemeContext.Provider value={{ primaryColor, templateStyle: templateStyle ?? null }}>
       {children}
     </StoreThemeContext.Provider>
   );
