@@ -692,6 +692,7 @@ export type Database = {
           name: string
           opening_hours: Json
           primary_color: string
+          store_template_style: string
           updated_at: string
         }[]
       }
