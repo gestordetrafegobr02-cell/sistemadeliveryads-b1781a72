@@ -29,6 +29,8 @@ interface StorePublic {
   is_trial_expired?: boolean;
   primary_color?: string | null;
   store_template_style?: string | null;
+  bg_color?: string | null;
+  card_style?: string | null;
 }
 
 // Payment data from secure RPC (fetched during checkout flow)
@@ -145,6 +147,8 @@ export default function Shop() {
           is_trial_expired: storeData.is_trial_expired ?? false,
           primary_color: storeData.primary_color ?? null,
           store_template_style: (storeData as any).store_template_style ?? null,
+          bg_color: (storeData as any).bg_color ?? null,
+          card_style: (storeData as any).card_style ?? null,
         };
         setStore(mappedStore);
 
@@ -310,7 +314,7 @@ export default function Shop() {
   const showCategorySections = activeCategory === null;
 
   return (
-    <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null}>
+    <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null} bgColor={store.bg_color ?? null} cardStyle={store.card_style ?? null}>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
           {/* Demo Mode Banner */}

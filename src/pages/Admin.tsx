@@ -102,6 +102,8 @@ export default function Admin() {
   const [pixelId, setPixelId] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [storeBgColor, setStoreBgColor] = useState<string | null>(null);
+  const [storeCardStyle, setStoreCardStyle] = useState<string | null>('rounded');
   // Product dialog
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -182,6 +184,8 @@ export default function Admin() {
       setPixelId(storeData.facebook_pixel_id || '');
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
       setLogoUrl(storeData.logo_url || '');
+      setStoreBgColor((storeData as any).bg_color ?? null);
+      setStoreCardStyle((storeData as any).card_style ?? 'rounded');
 
       const [catRes, prodRes, ordersRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
@@ -621,7 +625,13 @@ export default function Admin() {
                   <StoreThemeEditor 
                     storeId={store.id}
                     currentColor={store.primary_color}
-                    onColorChange={(color) => setStore({ ...store, primary_color: color })}
+                    currentBgColor={storeBgColor}
+                    currentCardStyle={storeCardStyle}
+                    onThemeChange={(theme) => {
+                      setStore({ ...store, primary_color: theme.primary_color });
+                      setStoreBgColor(theme.bg_color);
+                      setStoreCardStyle(theme.card_style);
+                    }}
                   />
                 )}
               </CardContent>
