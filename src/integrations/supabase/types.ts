@@ -350,6 +350,8 @@ export type Database = {
       }
       stores: {
         Row: {
+          bg_color: string | null
+          card_style: string | null
           cover_url: string | null
           created_at: string
           delivery_fee: number | null
@@ -377,6 +379,8 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          bg_color?: string | null
+          card_style?: string | null
           cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
@@ -404,6 +408,8 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          bg_color?: string | null
+          card_style?: string | null
           cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
@@ -682,6 +688,8 @@ export type Database = {
       get_public_store_by_slug: {
         Args: { store_slug: string }
         Returns: {
+          bg_color: string
+          card_style: string
           cover_url: string
           created_at: string
           delivery_fee: number
