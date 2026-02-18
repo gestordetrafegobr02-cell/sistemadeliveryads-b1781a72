@@ -83,7 +83,7 @@ export function ProductCard({ id, name, description, price, image_url }: Product
             </p>
           )}
           <div className="flex items-center justify-between pt-1">
-            <span className="text-primary font-bold text-lg">
+            <span className="text-emerald font-bold text-lg">
               R$ {price.toFixed(2).replace('.', ',')}
             </span>
             <motion.button
