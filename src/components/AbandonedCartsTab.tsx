@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MessageCircle, ShoppingCart, Clock, AlertTriangle } from 'lucide-react';
+import { Loader2, MessageCircle, ShoppingCart, Clock, AlertTriangle, Flame, Volume2, VolumeX } from 'lucide-react';
 import { formatRecoveryMessage, createRecoveryWhatsAppUrl } from '@/lib/recoveryMessage';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,6 +30,25 @@ interface AbandonedCartsTabProps {
 
 const DEFAULT_TEMPLATE = 'Olá {cliente}, notamos que você deixou um {pedido} no carrinho na {loja}. Quer finalizar seu pedido agora?';
 
+// Simple beep using Web Audio API
+function playAlertBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {
+    // Audio not supported
+  }
+}
+
 export function AbandonedCartsTab({ 
   storeId, 
   storeName, 
@@ -39,11 +58,64 @@ export function AbandonedCartsTab({
 }: AbandonedCartsTabProps) {
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
   const [loading, setLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const previousCountRef = useRef(0);
+
+  const fetchAbandonedCarts = useCallback(async () => {
+    const { data: cartsData, error } = await supabase
+      .from('abandoned_carts')
+      .select('*')
+      .eq('store_id', storeId)
+      .is('converted_to_order_id', null)
+      .is('recovered_at', null)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching abandoned carts:', error);
+      setLoading(false);
+      return;
+    }
+
+    const { data: recentOrders } = await supabase
+      .from('orders')
+      .select('customer_phone')
+      .eq('store_id', storeId)
+      .not('customer_phone', 'is', null);
+
+    const orderedPhones = new Set(
+      (recentOrders || []).map(o => o.customer_phone?.replace(/\D/g, ''))
+    );
+
+    const typedCarts = (cartsData || []).map(cart => ({
+      ...cart,
+      items: cart.items as AbandonedCart['items']
+    }));
+
+    const filteredCarts = typedCarts.filter(cart => {
+      if (!cart.customer_phone) return true;
+      const cleanPhone = cart.customer_phone.replace(/\D/g, '');
+      return !orderedPhones.has(cleanPhone);
+    });
+
+    const delayThreshold = new Date(Date.now() - recoveryDelayMinutes * 60 * 1000);
+    const filteredByDelay = filteredCarts.filter(
+      cart => new Date(cart.created_at) < delayThreshold
+    );
+
+    // Play alert if new carts appeared
+    if (filteredByDelay.length > previousCountRef.current && previousCountRef.current > 0 && soundEnabled) {
+      playAlertBeep();
+    }
+    previousCountRef.current = filteredByDelay.length;
+
+    setCarts(filteredByDelay);
+    onAbandonedCountChange?.(filteredByDelay.length);
+    setLoading(false);
+  }, [storeId, recoveryDelayMinutes, soundEnabled, onAbandonedCountChange]);
 
   useEffect(() => {
     fetchAbandonedCarts();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('abandoned-carts-realtime')
       .on(
@@ -63,61 +135,7 @@ export function AbandonedCartsTab({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [storeId, recoveryDelayMinutes]);
-
-  async function fetchAbandonedCarts() {
-    // Fetch abandoned carts that haven't been converted to orders
-    const { data: cartsData, error } = await supabase
-      .from('abandoned_carts')
-      .select('*')
-      .eq('store_id', storeId)
-      .is('converted_to_order_id', null)
-      .is('recovered_at', null)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching abandoned carts:', error);
-      setLoading(false);
-      return;
-    }
-
-    // Filter out carts where customer already placed an order (by phone)
-    const { data: recentOrders } = await supabase
-      .from('orders')
-      .select('customer_phone')
-      .eq('store_id', storeId)
-      .not('customer_phone', 'is', null);
-
-    const orderedPhones = new Set(
-      (recentOrders || []).map(o => o.customer_phone?.replace(/\D/g, ''))
-    );
-
-    // Type assertion for items
-    const typedCarts = (cartsData || []).map(cart => ({
-      ...cart,
-      items: cart.items as AbandonedCart['items']
-    }));
-
-    const filteredCarts = typedCarts.filter(cart => {
-      if (!cart.customer_phone) return true; // Keep carts without phone
-      const cleanPhone = cart.customer_phone.replace(/\D/g, '');
-      return !orderedPhones.has(cleanPhone);
-    });
-
-    // Filter carts based on recovery delay - only show carts older than the configured delay
-    const delayThreshold = new Date(Date.now() - recoveryDelayMinutes * 60 * 1000);
-    const filteredByDelay = filteredCarts.filter(
-      cart => new Date(cart.created_at) < delayThreshold
-    );
-
-    setCarts(filteredByDelay);
-    
-    // Calculate carts from last 60 minutes for badge (those that recently crossed the threshold)
-    const recentCount = filteredByDelay.length;
-    
-    onAbandonedCountChange?.(recentCount);
-    setLoading(false);
-  }
+  }, [storeId, fetchAbandonedCarts]);
 
   function handleRecoverSale(cart: AbandonedCart) {
     if (!cart.customer_phone) {
@@ -136,7 +154,6 @@ export function AbandonedCartsTab({
     const url = createRecoveryWhatsAppUrl(cart.customer_phone, message);
     window.open(url, '_blank');
 
-    // Mark as recovered
     supabase
       .from('abandoned_carts')
       .update({ recovered_at: new Date().toISOString() })
@@ -165,10 +182,25 @@ export function AbandonedCartsTab({
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="font-display text-xl flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5 text-primary" />
-          Carrinhos Abandonados
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="font-display text-xl flex items-center gap-2">
+            <Flame className="w-5 h-5 text-orange-500" />
+            Radar de Vendas
+            {carts.length > 0 && (
+              <Badge variant="destructive" className="animate-pulse ml-2">
+                {carts.length} pendente{carts.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            title={soundEnabled ? 'Desativar som' : 'Ativar som'}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {carts.length === 0 ? (
@@ -178,7 +210,7 @@ export function AbandonedCartsTab({
               Nenhum carrinho abandonado no momento
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Quando clientes abandonarem carrinhos, eles aparecerão aqui
+              Quando clientes abandonarem carrinhos, eles aparecerão aqui com alerta sonoro
             </p>
           </div>
         ) : (
@@ -189,7 +221,7 @@ export function AbandonedCartsTab({
               return (
                 <div 
                   key={cart.id} 
-                  className={`p-4 glass-card rounded-lg space-y-3 ${isRecent ? 'ring-2 ring-orange-500/30' : ''}`}
+                  className={`p-4 glass-card rounded-lg space-y-3 ${isRecent ? 'ring-2 ring-orange-500/30 animate-pulse-glow' : ''}`}
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between gap-4">
@@ -197,7 +229,7 @@ export function AbandonedCartsTab({
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{cart.customer_name}</p>
                         {isRecent && (
-                          <Badge variant="destructive" className="text-xs gap-1">
+                          <Badge variant="destructive" className="text-xs gap-1 animate-pulse">
                             <AlertTriangle className="w-3 h-3" />
                             Urgente
                           </Badge>
@@ -235,7 +267,7 @@ export function AbandonedCartsTab({
                       className="gap-2 bg-green-600 hover:bg-green-700 text-white"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Recuperar Venda
+                      Recuperar Agora
                     </Button>
                   </div>
                 </div>

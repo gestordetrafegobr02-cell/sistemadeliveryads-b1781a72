@@ -70,7 +70,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     quantity: item.quantity,
   }));
   
-  const { deleteAbandonedCart } = useAbandonedCartTracking(
+  const { deleteAbandonedCart, saveImmediately } = useAbandonedCartTracking(
     storeId,
     cartItemsForTracking,
     total,
@@ -468,6 +468,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    onBlur={() => saveImmediately()}
                     placeholder="Seu nome completo"
                     className="mt-1 bg-secondary border-border"
                   />
@@ -475,11 +476,12 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
                 </div>
 
                 <div>
-                  <Label htmlFor="phone" className="text-foreground">Telefone</Label>
+                  <Label htmlFor="phone" className="text-foreground">Telefone / WhatsApp</Label>
                   <Input
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    onBlur={() => saveImmediately()}
                     placeholder="(11) 99999-9999"
                     className="mt-1 bg-secondary border-border"
                   />

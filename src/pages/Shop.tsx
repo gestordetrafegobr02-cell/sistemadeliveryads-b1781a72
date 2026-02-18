@@ -22,6 +22,7 @@ interface StorePublic {
   id: string;
   name: string;
   logo_url: string | null;
+  cover_url: string | null;
   delivery_fee: number | null;
   opening_hours: OpeningHours | null;
   is_open_manual: boolean;
@@ -141,6 +142,7 @@ export default function Shop() {
           id: storeData.id,
           name: storeData.name,
           logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+          cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
           delivery_fee: storeData.delivery_fee,
           opening_hours: storeData.opening_hours as OpeningHours | null,
           is_open_manual: storeData.is_open_manual ?? true,
@@ -324,9 +326,9 @@ export default function Shop() {
         <header className="relative">
           {/* Cover Image */}
           <div className="w-full h-40 sm:h-52 bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden">
-            {(store as any).cover_url ? (
+            {store.cover_url ? (
               <img
-                src={(store as any).cover_url}
+                src={store.cover_url}
                 alt={`Capa ${store.name}`}
                 className="w-full h-full object-cover"
                 loading="eager"
