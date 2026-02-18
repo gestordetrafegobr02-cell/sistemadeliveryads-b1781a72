@@ -320,35 +320,51 @@ export default function Shop() {
           {/* Demo Mode Banner */}
         {isDemoStore && <DemoModeBanner storeName={store.name} />}
         
-        {/* Minimalist Header with Logo Centered */}
-        <header className="sticky top-0 z-40 glass-card border-b border-border/50">
-          <div className="max-w-2xl mx-auto px-6 py-5">
-            <div className="flex flex-col items-center text-center gap-3">
-              {/* Logo Avatar */}
-              {store.logo_url && (
+        {/* Hero Section with Full-width Cover */}
+        <header className="relative">
+          {/* Cover Image */}
+          <div className="w-full h-40 sm:h-52 bg-gradient-to-br from-primary/30 to-primary/10 overflow-hidden">
+            {(store as any).cover_url ? (
+              <img
+                src={(store as any).cover_url}
+                alt={`Capa ${store.name}`}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+            )}
+          </div>
+
+          {/* Logo Avatar - overlapping cover */}
+          <div className="relative max-w-2xl mx-auto px-4">
+            <div className="flex flex-col items-center -mt-12 sm:-mt-14">
+              {store.logo_url ? (
                 <img
                   src={store.logo_url}
                   alt={store.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-background shadow-lg bg-background"
-                  loading="lazy"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-white shadow-xl bg-card"
+                  loading="eager"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
+              ) : (
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-card border-4 border-white shadow-xl flex items-center justify-center">
+                  <span className="text-3xl font-bold text-primary">{store.name.charAt(0)}</span>
+                </div>
               )}
-              
-              {/* Store Name */}
-              <div className="space-y-1">
-                <h1 className="font-display text-xl sm:text-2xl text-gradient">{store.name}</h1>
+
+              {/* Store Info */}
+              <div className="mt-3 text-center space-y-1">
+                <h1 className="font-bold text-xl sm:text-2xl text-foreground">{store.name}</h1>
                 {store.opening_hours && getTodayHours(store.opening_hours) && (
                   <p className="text-xs text-muted-foreground">
                     Hoje: {getTodayHours(store.opening_hours)}
                   </p>
                 )}
+                <StoreStatusBadge isOpen={storeIsOpen} />
               </div>
-              
-              {/* Status Badge */}
-              <StoreStatusBadge isOpen={storeIsOpen} />
             </div>
           </div>
         </header>
