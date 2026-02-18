@@ -40,6 +40,7 @@ interface StoreData {
   delivery_fee: number | null;
   is_open_manual: boolean;
   logo_url: string | null;
+  cover_url: string | null;
   opening_hours: OpeningHours | null;
   recovery_message_template: string | null;
   primary_color: string | null;
@@ -102,6 +103,7 @@ export default function Admin() {
   const [pixelId, setPixelId] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [storeBgColor, setStoreBgColor] = useState<string | null>(null);
   const [storeCardStyle, setStoreCardStyle] = useState<string | null>('rounded');
   // Product dialog
@@ -171,6 +173,7 @@ export default function Admin() {
         delivery_fee: storeData.delivery_fee,
         is_open_manual: storeData.is_open_manual ?? true,
         logo_url: storeData.logo_url,
+        cover_url: storeData.cover_url ?? null,
         opening_hours: storeData.opening_hours as OpeningHours | null,
         recovery_message_template: storeData.recovery_message_template,
         primary_color: storeData.primary_color ?? null,
@@ -184,6 +187,7 @@ export default function Admin() {
       setPixelId(storeData.facebook_pixel_id || '');
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
       setLogoUrl(storeData.logo_url || '');
+      setCoverUrl(storeData.cover_url || '');
       setStoreBgColor((storeData as any).bg_color ?? null);
       setStoreCardStyle((storeData as any).card_style ?? 'rounded');
 
@@ -230,6 +234,7 @@ export default function Admin() {
         facebook_pixel_id: pixelId || null,
         delivery_fee: deliveryFee ? parseFloat(deliveryFee.replace(',', '.')) : 0,
         logo_url: logoUrl || null,
+        cover_url: coverUrl || null,
       };
 
       let error;
@@ -432,10 +437,10 @@ export default function Admin() {
               Pedidos
             </TabsTrigger>
             <TabsTrigger value="recovery" className="gap-2 relative">
-              <ShoppingCart className="w-4 h-4" />
-              Recuperação
+              <Flame className="w-4 h-4" />
+              Radar de Vendas
               {abandonedCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
                   {abandonedCount > 9 ? '9+' : abandonedCount}
                 </span>
               )}
@@ -462,6 +467,17 @@ export default function Admin() {
                     folder="logos"
                     storeId={store.id}
                     label="Logo da Loja (Redondo)"
+                  />
+                )}
+
+                {/* Cover/Banner Upload */}
+                {store && (
+                  <ImageUpload
+                    value={coverUrl}
+                    onChange={setCoverUrl}
+                    folder="covers"
+                    storeId={store.id}
+                    label="Banner de Capa (aparece no topo do cardápio)"
                   />
                 )}
 

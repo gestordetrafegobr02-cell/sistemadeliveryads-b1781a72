@@ -16,9 +16,6 @@ interface AbandonedCartData {
   total: number;
 }
 
-// Session storage key for tracking current cart session
-const CART_SESSION_KEY = 'abandoned_cart_session';
-
 export function useAbandonedCartTracking(
   storeId: string | undefined,
   items: CartItem[],
@@ -30,35 +27,9 @@ export function useAbandonedCartTracking(
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentCartIdRef = useRef<string | null>(null);
 
-  // Generate a unique session ID for this cart session
-  const getOrCreateSessionId = useCallback(() => {
-    if (!storeId) return null;
-    
-    const sessionKey = `${CART_SESSION_KEY}_${storeId}`;
-    let sessionId = sessionStorage.getItem(sessionKey);
-    
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      sessionStorage.setItem(sessionKey, sessionId);
-    }
-    
-    return sessionId;
-  }, [storeId]);
-
-  // Clear the session when cart is completed
-  const clearCartSession = useCallback(() => {
-    if (!storeId) return;
-    const sessionKey = `${CART_SESSION_KEY}_${storeId}`;
-    sessionStorage.removeItem(sessionKey);
-    currentCartIdRef.current = null;
-    lastSavedRef.current = null;
-  }, [storeId]);
-
   // Save cart to database
   const saveAbandonedCart = useCallback(async (data: AbandonedCartData) => {
     if (!data.storeId || data.items.length === 0) return;
-    
-    // Only save if we have customer info (they started checkout)
     if (!data.customerName.trim() || !data.customerPhone.trim()) return;
 
     const cartSignature = JSON.stringify({
@@ -67,7 +38,6 @@ export function useAbandonedCartTracking(
       phone: data.customerPhone,
     });
 
-    // Don't save if nothing changed
     if (lastSavedRef.current === cartSignature) return;
 
     try {
@@ -78,7 +48,6 @@ export function useAbandonedCartTracking(
       }));
 
       if (currentCartIdRef.current) {
-        // Update existing cart
         const { error } = await supabase
           .from('abandoned_carts')
           .update({
@@ -89,13 +58,8 @@ export function useAbandonedCartTracking(
           })
           .eq('id', currentCartIdRef.current);
 
-        if (error) {
-          console.error('Error updating abandoned cart:', error);
-        } else {
-          lastSavedRef.current = cartSignature;
-        }
+        if (!error) lastSavedRef.current = cartSignature;
       } else {
-        // Create new cart
         const { data: insertedCart, error } = await supabase
           .from('abandoned_carts')
           .insert({
@@ -108,9 +72,7 @@ export function useAbandonedCartTracking(
           .select('id')
           .single();
 
-        if (error) {
-          console.error('Error creating abandoned cart:', error);
-        } else if (insertedCart) {
+        if (!error && insertedCart) {
           currentCartIdRef.current = insertedCart.id;
           lastSavedRef.current = cartSignature;
         }
@@ -120,19 +82,35 @@ export function useAbandonedCartTracking(
     }
   }, []);
 
+  // Immediate save function (for blur/unload events)
+  const saveImmediately = useCallback(() => {
+    if (!storeId || items.length === 0) return;
+    if (!customerName.trim() || !customerPhone.trim()) return;
+
+    // Clear any pending debounce
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    saveAbandonedCart({
+      storeId,
+      customerName,
+      customerPhone,
+      items,
+      total,
+    });
+  }, [storeId, items, total, customerName, customerPhone, saveAbandonedCart]);
+
   // Debounced save - triggers after user stops typing
   useEffect(() => {
     if (!storeId || items.length === 0) return;
-    
-    // Only track if customer has started filling info
     if (!customerName.trim() || !customerPhone.trim()) return;
 
-    // Clear previous timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Debounce: save after 2 seconds of inactivity
     saveTimeoutRef.current = setTimeout(() => {
       saveAbandonedCart({
         storeId,
@@ -150,72 +128,63 @@ export function useAbandonedCartTracking(
     };
   }, [storeId, items, total, customerName, customerPhone, saveAbandonedCart]);
 
-  // Save on page unload (beforeunload event)
+  // Save on page unload (beforeunload + visibilitychange)
   useEffect(() => {
     if (!storeId || items.length === 0) return;
     if (!customerName.trim() || !customerPhone.trim()) return;
 
-    const handleBeforeUnload = () => {
-      // Use sendBeacon for reliable save on page close
-      const formattedItems = items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      }));
-
-      // Note: sendBeacon is fire-and-forget, we can't use supabase client here
-      // So we rely on the debounced save which should have already run
+    const handleUnload = () => saveImmediately();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveImmediately();
+      }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [storeId, items, customerName, customerPhone]);
+  }, [saveImmediately]);
 
-  // Mark cart as converted when checkout completes
-  const markAsConverted = useCallback(async (orderId: string) => {
-    if (!currentCartIdRef.current) return;
-
-    try {
-      const { error } = await supabase
-        .from('abandoned_carts')
-        .update({
-          converted_to_order_id: orderId,
-          recovered_at: new Date().toISOString(),
-        })
-        .eq('id', currentCartIdRef.current);
-
-      if (error) {
-        console.error('Error marking cart as converted:', error);
-      }
-    } catch (err) {
-      console.error('Error marking cart as converted:', err);
-    }
-
-    clearCartSession();
-  }, [clearCartSession]);
+  // Clear the session when cart is completed
+  const clearCartSession = useCallback(() => {
+    currentCartIdRef.current = null;
+    lastSavedRef.current = null;
+  }, []);
 
   // Delete cart if order was placed successfully
   const deleteAbandonedCart = useCallback(async () => {
     if (!currentCartIdRef.current) return;
 
     try {
-      // Instead of deleting, just mark as converted so we have a record
-      // The AbandonedCartsTab already filters out converted carts
-      const { error } = await supabase
+      await supabase
+        .from('abandoned_carts')
+        .update({ recovered_at: new Date().toISOString() })
+        .eq('id', currentCartIdRef.current);
+    } catch (err) {
+      console.error('Error updating abandoned cart:', err);
+    }
+
+    clearCartSession();
+  }, [clearCartSession]);
+
+  // Mark cart as converted when checkout completes
+  const markAsConverted = useCallback(async (orderId: string) => {
+    if (!currentCartIdRef.current) return;
+
+    try {
+      await supabase
         .from('abandoned_carts')
         .update({
+          converted_to_order_id: orderId,
           recovered_at: new Date().toISOString(),
         })
         .eq('id', currentCartIdRef.current);
-
-      if (error) {
-        console.error('Error updating abandoned cart:', error);
-      }
     } catch (err) {
-      console.error('Error updating abandoned cart:', err);
+      console.error('Error marking cart as converted:', err);
     }
 
     clearCartSession();
@@ -225,5 +194,6 @@ export function useAbandonedCartTracking(
     markAsConverted,
     deleteAbandonedCart,
     clearCartSession,
+    saveImmediately,
   };
 }
