@@ -161,4 +161,29 @@
   .text-gradient {
     @apply bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent;
   }
+
+  /* Glow button */
+  .btn-glow {
+    @apply bg-primary text-primary-foreground font-semibold shadow-lg;
+    box-shadow: 0 4px 14px 0 hsl(var(--primary) / 0.4);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 6px 20px 0 hsl(var(--primary) / 0.5);
+  }
+
+  .btn-glow:active {
+    transform: scale(0.97);
+  }
+
+  /* Pulse glow animation */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px hsl(var(--primary) / 0.3); }
+    50% { box-shadow: 0 0 20px hsl(var(--primary) / 0.5); }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
 }
