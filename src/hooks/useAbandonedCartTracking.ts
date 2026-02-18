@@ -30,7 +30,8 @@ export function useAbandonedCartTracking(
   // Save cart to database
   const saveAbandonedCart = useCallback(async (data: AbandonedCartData) => {
     if (!data.storeId || data.items.length === 0) return;
-    if (!data.customerName.trim() || !data.customerPhone.trim()) return;
+    // Save as soon as we have at least a name OR phone (not both required)
+    if (!data.customerName.trim() && !data.customerPhone.trim()) return;
 
     const cartSignature = JSON.stringify({
       items: data.items.map(i => ({ id: i.id, qty: i.quantity })),
@@ -85,7 +86,7 @@ export function useAbandonedCartTracking(
   // Immediate save function (for blur/unload events)
   const saveImmediately = useCallback(() => {
     if (!storeId || items.length === 0) return;
-    if (!customerName.trim() || !customerPhone.trim()) return;
+    if (!customerName.trim() && !customerPhone.trim()) return;
 
     // Clear any pending debounce
     if (saveTimeoutRef.current) {
@@ -105,7 +106,7 @@ export function useAbandonedCartTracking(
   // Debounced save - triggers after user stops typing
   useEffect(() => {
     if (!storeId || items.length === 0) return;
-    if (!customerName.trim() || !customerPhone.trim()) return;
+    if (!customerName.trim() && !customerPhone.trim()) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -131,7 +132,7 @@ export function useAbandonedCartTracking(
   // Save on page unload (beforeunload + visibilitychange)
   useEffect(() => {
     if (!storeId || items.length === 0) return;
-    if (!customerName.trim() || !customerPhone.trim()) return;
+    if (!customerName.trim() && !customerPhone.trim()) return;
 
     const handleUnload = () => saveImmediately();
     const handleVisibilityChange = () => {
