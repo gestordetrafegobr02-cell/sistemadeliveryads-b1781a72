@@ -116,6 +116,7 @@ export function AbandonedCartsTab({
   useEffect(() => {
     fetchAbandonedCarts();
 
+    // Realtime subscription
     const channel = supabase
       .channel('abandoned-carts-realtime')
       .on(
@@ -132,8 +133,14 @@ export function AbandonedCartsTab({
       )
       .subscribe();
 
+    // Polling fallback every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchAbandonedCarts();
+    }, 30000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [storeId, fetchAbandonedCarts]);
 
