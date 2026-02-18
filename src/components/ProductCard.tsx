@@ -52,7 +52,8 @@ export function ProductCard({ id, name, description, price, image_url }: Product
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="bg-card rounded-2xl border border-border/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+        className="bg-card rounded-[20px] overflow-hidden transition-all duration-300"
+        style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}
       >
         {/* Large image on top */}
         {showImage ? (

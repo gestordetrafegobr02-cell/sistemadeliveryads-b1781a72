@@ -93,6 +93,25 @@ export function StoreThemeProvider({ primaryColor, templateStyle, bgColor, cardS
       el.style.setProperty('--input', template.border);
       el.style.setProperty('--ring', template.primary);
     } else {
+      // Default dark premium theme when no template is set
+      if (!primaryColor && !bgColor) {
+        el.style.setProperty('--background', '0 0% 7%');
+        el.style.setProperty('--foreground', '0 0% 100%');
+        el.style.setProperty('--card', '0 0% 12%');
+        el.style.setProperty('--card-foreground', '0 0% 100%');
+        el.style.setProperty('--primary', '16 100% 50%');
+        el.style.setProperty('--primary-foreground', '0 0% 100%');
+        el.style.setProperty('--secondary', '0 0% 15%');
+        el.style.setProperty('--secondary-foreground', '0 0% 90%');
+        el.style.setProperty('--muted', '0 0% 15%');
+        el.style.setProperty('--muted-foreground', '0 0% 60%');
+        el.style.setProperty('--accent', '16 100% 50%');
+        el.style.setProperty('--accent-foreground', '0 0% 100%');
+        el.style.setProperty('--border', '0 0% 18%');
+        el.style.setProperty('--input', '0 0% 18%');
+        el.style.setProperty('--ring', '16 100% 50%');
+      }
+
       // Apply individual color overrides
       if (primaryColor) {
         const hsl = hexToHSL(primaryColor);
