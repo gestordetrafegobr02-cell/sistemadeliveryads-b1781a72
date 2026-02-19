@@ -121,6 +121,8 @@ export default function Shop() {
   }, [slug]);
 
   useEffect(() => {
+    let retried = false;
+
     async function fetchData() {
       if (!cleanSlug) {
         setError('URL inválida');
@@ -133,14 +135,14 @@ export default function Shop() {
         const { data: storeResult, error: storeError } = await supabase
           .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
 
-        if (storeError) {
-          setError('Erro ao carregar a loja');
-          setLoading(false);
-          return;
-        }
-
-        if (!storeResult || storeResult.length === 0) {
-          setError('Loja não encontrada');
+        if (storeError || !storeResult || storeResult.length === 0) {
+          // Auto-retry once before showing error (handles slow mobile connections)
+          if (!retried) {
+            retried = true;
+            setTimeout(fetchData, 1500);
+            return;
+          }
+          setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
           setLoading(false);
           return;
         }

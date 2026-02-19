@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -503,6 +503,40 @@ export default function Admin() {
                       Sua loja: /shop/{storeSlug || 'seu-slug'}
                     </p>
                   </div>
+                </div>
+
+                {/* Link do Cardápio - Copiar */}
+                {store && (
+                  <div className="p-4 glass-card rounded-lg space-y-2">
+                    <Label className="flex items-center gap-2 text-base">
+                      <Link className="w-4 h-4" />
+                      Link do Cardápio
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={`${window.location.origin}/shop/${store.slug}`}
+                        className="bg-secondary border-border font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        className="gap-2 shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/shop/${store.slug}`);
+                          toast.success('Link copiado!');
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copiar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Compartilhe este link com seus clientes
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>WhatsApp (com DDD)</Label>
                     <Input
