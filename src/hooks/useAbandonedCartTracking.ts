@@ -27,10 +27,9 @@ export function useAbandonedCartTracking(
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentCartIdRef = useRef<string | null>(null);
 
-  // Save cart to database
+  // Save cart via secure RPC
   const saveAbandonedCart = useCallback(async (data: AbandonedCartData) => {
     if (!data.storeId || data.items.length === 0) return;
-    // Save as soon as we have at least a name OR phone (not both required)
     if (!data.customerName.trim() && !data.customerPhone.trim()) return;
 
     const cartSignature = JSON.stringify({
@@ -48,35 +47,18 @@ export function useAbandonedCartTracking(
         price: item.price,
       }));
 
-      if (currentCartIdRef.current) {
-        const { error } = await supabase
-          .from('abandoned_carts')
-          .update({
-            customer_name: data.customerName,
-            customer_phone: data.customerPhone,
-            items: formattedItems as unknown as import('@/integrations/supabase/types').Json,
-            total: data.total,
-          })
-          .eq('id', currentCartIdRef.current);
+      const { data: cartId, error } = await supabase.rpc('upsert_abandoned_cart', {
+        p_cart_id: currentCartIdRef.current || undefined,
+        p_store_id: data.storeId,
+        p_customer_name: data.customerName,
+        p_customer_phone: data.customerPhone || undefined,
+        p_items: formattedItems as any,
+        p_total: data.total,
+      });
 
-        if (!error) lastSavedRef.current = cartSignature;
-      } else {
-        const { data: insertedCart, error } = await supabase
-          .from('abandoned_carts')
-          .insert({
-            store_id: data.storeId,
-            customer_name: data.customerName,
-            customer_phone: data.customerPhone,
-            items: formattedItems as unknown as import('@/integrations/supabase/types').Json,
-            total: data.total,
-          })
-          .select('id')
-          .single();
-
-        if (!error && insertedCart) {
-          currentCartIdRef.current = insertedCart.id;
-          lastSavedRef.current = cartSignature;
-        }
+      if (!error && cartId) {
+        currentCartIdRef.current = cartId;
+        lastSavedRef.current = cartSignature;
       }
     } catch (err) {
       console.error('Error saving abandoned cart:', err);
@@ -88,7 +70,6 @@ export function useAbandonedCartTracking(
     if (!storeId || items.length === 0) return;
     if (!customerName.trim() && !customerPhone.trim()) return;
 
-    // Clear any pending debounce
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -129,7 +110,7 @@ export function useAbandonedCartTracking(
     };
   }, [storeId, items, total, customerName, customerPhone, saveAbandonedCart]);
 
-  // Save on page unload (beforeunload + visibilitychange)
+  // Save on page unload
   useEffect(() => {
     if (!storeId || items.length === 0) return;
     if (!customerName.trim() && !customerPhone.trim()) return;
@@ -161,10 +142,9 @@ export function useAbandonedCartTracking(
     if (!currentCartIdRef.current) return;
 
     try {
-      await supabase
-        .from('abandoned_carts')
-        .update({ recovered_at: new Date().toISOString() })
-        .eq('id', currentCartIdRef.current);
+      await supabase.rpc('mark_abandoned_cart_converted', {
+        p_cart_id: currentCartIdRef.current,
+      });
     } catch (err) {
       console.error('Error updating abandoned cart:', err);
     }
@@ -177,13 +157,10 @@ export function useAbandonedCartTracking(
     if (!currentCartIdRef.current) return;
 
     try {
-      await supabase
-        .from('abandoned_carts')
-        .update({
-          converted_to_order_id: orderId,
-          recovered_at: new Date().toISOString(),
-        })
-        .eq('id', currentCartIdRef.current);
+      await supabase.rpc('mark_abandoned_cart_converted', {
+        p_cart_id: currentCartIdRef.current,
+        p_order_id: orderId,
+      });
     } catch (err) {
       console.error('Error marking cart as converted:', err);
     }
