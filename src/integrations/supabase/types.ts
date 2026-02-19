@@ -742,6 +742,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
+      mark_abandoned_cart_converted: {
+        Args: { p_cart_id: string; p_order_id?: string }
+        Returns: undefined
+      }
       toggle_store_active: { Args: { p_store_id: string }; Returns: boolean }
       update_global_setting: {
         Args: { setting_key: string; setting_value: string }
@@ -750,6 +754,17 @@ export type Database = {
       update_store_trial: {
         Args: { p_store_id: string; p_trial_date: string }
         Returns: boolean
+      }
+      upsert_abandoned_cart: {
+        Args: {
+          p_cart_id?: string
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_items?: Json
+          p_store_id?: string
+          p_total?: number
+        }
+        Returns: string
       }
     }
     Enums: {
