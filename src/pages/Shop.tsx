@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductCard } from '@/components/ProductCard';
 import { CartSheet } from '@/components/CartSheet';
@@ -102,6 +103,7 @@ function loadFacebookPixel(pixelId: string) {
 
 export default function Shop() {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const [store, setStore] = useState<StorePublic | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [facebookPixelId, setFacebookPixelId] = useState<string | null>(null);
@@ -111,10 +113,16 @@ export default function Shop() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  // Clean slug: lowercase, strip query params / hash fragments
+  const cleanSlug = useMemo(() => {
+    const raw = (slug ?? '').trim().toLowerCase();
+    // Strip anything after ? or # in case it leaks into the param
+    return raw.split(/[?#]/)[0];
+  }, [slug]);
+
   useEffect(() => {
     async function fetchData() {
-      const trimmedSlug = (slug ?? '').trim().toLowerCase();
-      if (!trimmedSlug) {
+      if (!cleanSlug) {
         setError('URL inválida');
         setLoading(false);
         return;
@@ -123,7 +131,7 @@ export default function Shop() {
       try {
         // 1) Fetch store via secure RPC function (excludes sensitive data)
         const { data: storeResult, error: storeError } = await supabase
-          .rpc('get_public_store_by_slug', { store_slug: trimmedSlug });
+          .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
 
         if (storeError) {
           setError('Erro ao carregar a loja');
@@ -156,7 +164,7 @@ export default function Shop() {
 
         // 2) Fetch payment data via secure RPC (pix_key + whatsapp)
         const { data: paymentResult } = await supabase
-          .rpc('get_store_payment_data', { store_slug: trimmedSlug });
+          .rpc('get_store_payment_data', { store_slug: cleanSlug });
         
         if (paymentResult && paymentResult.length > 0) {
           setPaymentData(paymentResult[0]);
@@ -164,7 +172,7 @@ export default function Shop() {
 
         // 3) Fetch Facebook Pixel ID via secure RPC
         const { data: pixelId } = await supabase
-          .rpc('get_store_pixel_by_slug', { store_slug: trimmedSlug });
+          .rpc('get_store_pixel_by_slug', { store_slug: cleanSlug });
         
         if (pixelId) {
           setFacebookPixelId(pixelId);
@@ -210,7 +218,7 @@ export default function Shop() {
     }
 
     fetchData();
-  }, [slug]);
+  }, [cleanSlug]);
 
   // Check if store is open
   const storeIsOpen = useMemo(() => {
@@ -220,9 +228,8 @@ export default function Shop() {
 
   // Check if this is a demo store
   const isDemoStore = useMemo(() => {
-    const trimmedSlug = (slug ?? '').trim().toLowerCase();
-    return DEMO_SLUGS.includes(trimmedSlug);
-  }, [slug]);
+    return DEMO_SLUGS.includes(cleanSlug);
+  }, [cleanSlug]);
 
   // Filter products by category
   const filteredProducts = useMemo(() => {
@@ -315,8 +322,20 @@ export default function Shop() {
   const uncategorizedProducts = products.filter((p) => !p.category_id);
   const showCategorySections = activeCategory === null;
 
+  const ogTitle = store.name;
+  const ogDescription = `Peça agora no ${store.name}`;
+  const ogImage = store.logo_url || '/logo.png';
+
   return (
     <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null} bgColor={store.bg_color ?? null} cardStyle={store.card_style ?? null}>
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:description" content={ogDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:type" content="website" />
+        <meta name="description" content={ogDescription} />
+      </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
           {/* Demo Mode Banner */}
