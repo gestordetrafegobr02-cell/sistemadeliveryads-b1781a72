@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://sistemadeliveryads.lovable.app/sitemap.xml
+Sitemap: https://sistemadeliveryads.site/sitemap.xml
