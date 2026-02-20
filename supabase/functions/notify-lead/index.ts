@@ -27,16 +27,39 @@ Deno.serve(async (req: Request) => {
     const body: LeadNotification = await req.json();
     const { storeName, email, phone, segment } = body;
 
-    console.log('[notify-lead] Received lead notification request:', { storeName, email, segment });
-
     // Validate required fields
     if (!storeName || !email) {
-      console.error('[notify-lead] Missing required fields');
       return new Response(
         JSON.stringify({ error: 'storeName and email are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Enforce length limits
+    if (storeName.length > 100 || email.length > 200 ||
+        (phone && phone.length > 20) || (segment && segment.length > 50)) {
+      return new Response(
+        JSON.stringify({ error: 'Input exceeds maximum length' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize control characters
+    const sanitize = (str: string) => str.replace(/[\x00-\x1F\x7F]/g, '');
+    const cleanStoreName = sanitize(storeName);
+    const cleanEmail = sanitize(email);
+    const cleanPhone = phone ? sanitize(phone) : undefined;
+    const cleanSegment = segment ? sanitize(segment) : 'Hamburgueria';
+
+    console.log('[notify-lead] Received lead notification request:', { storeName: cleanStoreName, email: cleanEmail, segment: cleanSegment });
 
     // Get the owner WhatsApp number from global settings
     const { data: ownerWhatsApp, error: settingsError } = await supabase.rpc('get_global_setting', {
@@ -53,10 +76,10 @@ Deno.serve(async (req: Request) => {
     // Format the notification message
     const message = `🔔 *NOVO LEAD CADASTRADO!*
 
-📍 *Loja:* ${storeName}
-📧 *E-mail:* ${email}
-📱 *Telefone:* ${phone || 'Não informado'}
-🏪 *Segmento:* ${segment || 'Hamburgueria'}
+📍 *Loja:* ${cleanStoreName}
+📧 *E-mail:* ${cleanEmail}
+📱 *Telefone:* ${cleanPhone || 'Não informado'}
+🏪 *Segmento:* ${cleanSegment}
 
 ---
 _Notificação automática do Sistema Delivery ADS_`;
@@ -67,17 +90,17 @@ _Notificação automática do Sistema Delivery ADS_`;
 
     console.log('[notify-lead] Lead notification prepared:', {
       targetWhatsApp,
-      storeName,
-      email,
+      storeName: cleanStoreName,
+      email: cleanEmail,
       whatsappUrl: whatsappUrl.substring(0, 100) + '...'
     });
 
     // Log the lead for analytics/tracking
     console.log('[notify-lead] SUCCESS - Lead ready for notification:', {
-      storeName,
-      email,
-      phone: phone || 'N/A',
-      segment: segment || 'Hamburgueria',
+      storeName: cleanStoreName,
+      email: cleanEmail,
+      phone: cleanPhone || 'N/A',
+      segment: cleanSegment,
       timestamp: new Date().toISOString()
     });
 
