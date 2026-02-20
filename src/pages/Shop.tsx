@@ -114,8 +114,17 @@ export default function Shop() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   // Clean slug: lowercase, strip query params / hash fragments
+  // Fallback to window.location.pathname for mobile browser compatibility
   const cleanSlug = useMemo(() => {
-    const raw = (slug ?? '').trim().toLowerCase();
+    let raw = (slug ?? '').trim().toLowerCase();
+    if (!raw) {
+      // Fallback: extract slug from pathname (e.g. /shop/my-store)
+      const segments = window.location.pathname.split('/').filter(Boolean);
+      const shopIndex = segments.indexOf('shop');
+      if (shopIndex >= 0 && segments[shopIndex + 1]) {
+        raw = segments[shopIndex + 1].toLowerCase();
+      }
+    }
     // Strip anything after ? or # in case it leaks into the param
     return raw.split(/[?#]/)[0];
   }, [slug]);
@@ -123,103 +132,108 @@ export default function Shop() {
   useEffect(() => {
     let retried = false;
 
-    async function fetchData() {
+    // Small delay to ensure mobile browser has processed the URL
+    const timer = setTimeout(async () => {
       if (!cleanSlug) {
         setError('URL inválida');
         setLoading(false);
         return;
       }
 
-      try {
-        // 1) Fetch store via secure RPC function (excludes sensitive data)
-        const { data: storeResult, error: storeError } = await supabase
-          .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
+      async function doFetch() {
+        try {
+          // 1) Fetch store via secure RPC function (excludes sensitive data)
+          const { data: storeResult, error: storeError } = await supabase
+            .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
 
-        if (storeError || !storeResult || storeResult.length === 0) {
-          // Auto-retry once before showing error (handles slow mobile connections)
-          if (!retried) {
-            retried = true;
-            setTimeout(fetchData, 1500);
+          if (storeError || !storeResult || storeResult.length === 0) {
+            // Auto-retry once before showing error (handles slow mobile connections)
+            if (!retried) {
+              retried = true;
+              setTimeout(doFetch, 1500);
+              return;
+            }
+            setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
+            setLoading(false);
             return;
           }
-          setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
+
+          const storeData = storeResult[0];
+          const mappedStore: StorePublic = {
+            id: storeData.id,
+            name: storeData.name,
+            logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+            cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
+            delivery_fee: storeData.delivery_fee,
+            opening_hours: storeData.opening_hours as OpeningHours | null,
+            is_open_manual: storeData.is_open_manual ?? true,
+            is_trial_expired: storeData.is_trial_expired ?? false,
+            primary_color: storeData.primary_color ?? null,
+            store_template_style: (storeData as any).store_template_style ?? null,
+            bg_color: (storeData as any).bg_color ?? null,
+            card_style: (storeData as any).card_style ?? null,
+          };
+          setStore(mappedStore);
+
+          // 2) Fetch payment data via secure RPC (pix_key + whatsapp)
+          const { data: paymentResult } = await supabase
+            .rpc('get_store_payment_data', { store_slug: cleanSlug });
+          
+          if (paymentResult && paymentResult.length > 0) {
+            setPaymentData(paymentResult[0]);
+          }
+
+          // 3) Fetch Facebook Pixel ID via secure RPC
+          const { data: pixelId } = await supabase
+            .rpc('get_store_pixel_by_slug', { store_slug: cleanSlug });
+          
+          if (pixelId) {
+            setFacebookPixelId(pixelId);
+            loadFacebookPixel(pixelId);
+            setTimeout(() => {
+              if (window.fbq) window.fbq('track', 'ViewContent');
+            }, 100);
+          }
+
+          // 4) Fetch categories by store_id
+          const { data: catData } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('store_id', mappedStore.id)
+            .order('sort_order');
+
+          setCategories(catData ?? []);
+
+          // 5) Fetch products by store_id
+          const { data: prodData } = await supabase
+            .from('products')
+            .select('*')
+            .eq('store_id', mappedStore.id)
+            .eq('is_available', true)
+            .order('sort_order');
+
+          const sanitizedProducts: Product[] = (prodData ?? []).map((p) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: Number(p.price),
+            image_url: sanitizeImageUrl(p.image_url) ?? null,
+            category_id: p.category_id,
+            is_featured: p.is_featured ?? false,
+          }));
+
+          setProducts(sanitizedProducts);
+        } catch {
+          setError('Erro inesperado ao carregar dados');
+        } finally {
           setLoading(false);
-          return;
         }
-
-        const storeData = storeResult[0];
-        const mappedStore: StorePublic = {
-          id: storeData.id,
-          name: storeData.name,
-          logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
-          cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
-          delivery_fee: storeData.delivery_fee,
-          opening_hours: storeData.opening_hours as OpeningHours | null,
-          is_open_manual: storeData.is_open_manual ?? true,
-          is_trial_expired: storeData.is_trial_expired ?? false,
-          primary_color: storeData.primary_color ?? null,
-          store_template_style: (storeData as any).store_template_style ?? null,
-          bg_color: (storeData as any).bg_color ?? null,
-          card_style: (storeData as any).card_style ?? null,
-        };
-        setStore(mappedStore);
-
-        // 2) Fetch payment data via secure RPC (pix_key + whatsapp)
-        const { data: paymentResult } = await supabase
-          .rpc('get_store_payment_data', { store_slug: cleanSlug });
-        
-        if (paymentResult && paymentResult.length > 0) {
-          setPaymentData(paymentResult[0]);
-        }
-
-        // 3) Fetch Facebook Pixel ID via secure RPC
-        const { data: pixelId } = await supabase
-          .rpc('get_store_pixel_by_slug', { store_slug: cleanSlug });
-        
-        if (pixelId) {
-          setFacebookPixelId(pixelId);
-          loadFacebookPixel(pixelId);
-          setTimeout(() => {
-            if (window.fbq) window.fbq('track', 'ViewContent');
-          }, 100);
-        }
-
-        // 4) Fetch categories by store_id
-        const { data: catData, error: catError } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('store_id', mappedStore.id)
-          .order('sort_order');
-
-        setCategories(catData ?? []);
-
-        // 5) Fetch products by store_id
-        const { data: prodData } = await supabase
-          .from('products')
-          .select('*')
-          .eq('store_id', mappedStore.id)
-          .eq('is_available', true)
-          .order('sort_order');
-
-        const sanitizedProducts: Product[] = (prodData ?? []).map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          price: Number(p.price),
-          image_url: sanitizeImageUrl(p.image_url) ?? null,
-          category_id: p.category_id,
-          is_featured: p.is_featured ?? false,
-        }));
-
-        setProducts(sanitizedProducts);
-      } catch {
-        setError('Erro inesperado ao carregar dados');
-      } finally {
-        setLoading(false);
       }
-    }
 
-    fetchData();
+      doFetch();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [cleanSlug]);
 
   // Check if store is open
