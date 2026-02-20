@@ -521,9 +521,24 @@ export default function Admin() {
                       <Button
                         variant="outline"
                         className="gap-2 shrink-0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/shop/${store.slug}`);
-                          toast.success('Link copiado!');
+                        onClick={async () => {
+                          const url = `${window.location.origin}/shop/${store.slug}`;
+                          try {
+                            await navigator.clipboard.writeText(url);
+                            toast.success('Link copiado!');
+                          } catch {
+                            // Fallback for mobile browsers without clipboard API
+                            const textarea = document.createElement('textarea');
+                            textarea.value = url;
+                            textarea.style.position = 'fixed';
+                            textarea.style.opacity = '0';
+                            document.body.appendChild(textarea);
+                            textarea.focus();
+                            textarea.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(textarea);
+                            toast.success('Link copiado!');
+                          }
                         }}
                       >
                         <Copy className="w-4 h-4" />
