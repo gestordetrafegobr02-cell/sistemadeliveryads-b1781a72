@@ -137,8 +137,10 @@ export default function Shop() {
     async function doFetch() {
       if (cancelled) return;
       
+      console.log('[Shop] cleanSlug:', JSON.stringify(cleanSlug), '| raw slug param:', JSON.stringify(slug), '| pathname:', window.location.pathname);
+
       if (!cleanSlug) {
-        setError('URL inválida');
+        setError('URL inválida — slug vazio. Verifique o link.');
         setLoading(false);
         return;
       }
@@ -146,19 +148,31 @@ export default function Shop() {
       try {
         // 1) Fetch store via secure RPC function (excludes sensitive data)
         const { data: storeResult, error: storeError } = await supabase
-          .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
+          .rpc('get_public_store_by_slug', { store_slug: cleanSlug.toLowerCase() });
+
+        console.log('[Shop] RPC result:', { storeError, resultCount: storeResult?.length ?? 0 });
 
         if (cancelled) return;
 
-        if (storeError || !storeResult || storeResult.length === 0) {
-          // Auto-retry with exponential backoff (handles slow mobile connections)
+        if (storeError) {
+          console.error('[Shop] Supabase RPC error:', storeError);
           if (retryCount < MAX_RETRIES) {
             retryCount++;
-            const delay = Math.min(1000 * retryCount, 3000);
-            setTimeout(doFetch, delay);
+            setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
             return;
           }
-          setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
+          setError(`Erro de conexão: ${storeError.message}`);
+          setLoading(false);
+          return;
+        }
+
+        if (!storeResult || storeResult.length === 0) {
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
+            return;
+          }
+          setError(`Loja "${cleanSlug}" não encontrada. Verifique se o link está correto.`);
           setLoading(false);
           return;
         }
@@ -304,9 +318,15 @@ export default function Shop() {
   if (error || !store) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
+        <div className="text-center max-w-md space-y-4">
           <h1 className="font-display text-4xl text-foreground mb-2">Oops!</h1>
-          <p className="text-muted-foreground">{error || 'Loja não encontrada'}</p>
+          <p className="text-muted-foreground text-lg">{error || 'Loja não encontrada'}</p>
+          <p className="text-xs text-muted-foreground/60 font-mono break-all">
+            slug: "{cleanSlug}" | path: {window.location.pathname}
+          </p>
+          <a href="/" className="inline-block mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+            Voltar ao início
+          </a>
         </div>
       </div>
     );
