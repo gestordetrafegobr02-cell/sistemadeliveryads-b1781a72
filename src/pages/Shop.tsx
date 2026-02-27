@@ -113,20 +113,23 @@ export default function Shop() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // Clean slug: lowercase, strip query params / hash fragments
+  // Clean slug: lowercase, strip query params / hash / invisible chars
   // Fallback to window.location.pathname for mobile browser compatibility
   const cleanSlug = useMemo(() => {
     let raw = (slug ?? '').trim().toLowerCase();
     if (!raw) {
-      // Fallback: extract slug from pathname (e.g. /shop/my-store)
+      // Fallback: extract slug from pathname (e.g. /shop/my-store or /my-store)
       const segments = window.location.pathname.split('/').filter(Boolean);
       const shopIndex = segments.indexOf('shop');
       if (shopIndex >= 0 && segments[shopIndex + 1]) {
         raw = segments[shopIndex + 1].toLowerCase();
+      } else if (segments.length === 1) {
+        // Root-level access: /my-store
+        raw = segments[0].toLowerCase();
       }
     }
-    // Strip anything after ? or # in case it leaks into the param
-    return raw.split(/[?#]/)[0];
+    // Strip query/hash, remove invisible unicode chars (mobile keyboards)
+    return raw.split(/[?#]/)[0].replace(/[\u200B-\u200D\uFEFF\s]/g, '');
   }, [slug]);
 
   useEffect(() => {
