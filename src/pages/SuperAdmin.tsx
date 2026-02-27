@@ -230,7 +230,7 @@ export default function SuperAdmin() {
   }
 
   function handleImpersonate(store: AdminStore) {
-    window.open(`/shop/${store.slug}`, '_blank');
+    window.open(`/${store.slug}`, '_blank');
   }
 
   if (authLoading || adminLoading) {
@@ -466,7 +466,7 @@ export default function SuperAdmin() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => window.open(`/shop/${store.slug}`, '_blank')}
+                                  onClick={() => window.open(`/${store.slug}`, '_blank')}
                                   title="Abrir Cardápio"
                                 >
                                   <ExternalLink className="w-4 h-4" />
