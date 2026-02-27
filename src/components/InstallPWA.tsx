@@ -68,17 +68,17 @@ export default function InstallPWA() {
   if (!showInstallBanner) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 animate-fade-in">
-      <div className="glass-card p-4 flex items-center gap-3 border border-primary/30">
-        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-          <Download className="w-6 h-6 text-primary" />
+    <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-card/95 backdrop-blur-lg p-4 flex items-center gap-3 border border-primary/20 rounded-2xl shadow-xl shadow-primary/10">
+        <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+          <Download className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground text-sm">Instalar App</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground text-sm">Baixe nosso App</p>
+          <p className="text-xs text-muted-foreground leading-snug">
             {isIOS 
-              ? 'Toque em Compartilhar e "Adicionar à Tela de Início"'
-              : 'Acesse rápido direto da sua tela inicial'
+              ? 'Toque em Compartilhar ➜ "Adicionar à Tela de Início"'
+              : 'Peça mais rápido direto da sua tela inicial!'
             }
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function InstallPWA() {
           <Button 
             size="sm" 
             onClick={handleInstallClick}
-            className="bg-primary text-primary-foreground flex-shrink-0"
+            className="bg-primary text-primary-foreground flex-shrink-0 rounded-xl"
           >
             Instalar
           </Button>
@@ -96,7 +96,7 @@ export default function InstallPWA() {
           className="p-1 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Fechar"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>

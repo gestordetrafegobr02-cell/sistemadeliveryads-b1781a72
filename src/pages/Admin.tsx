@@ -472,13 +472,18 @@ export default function Admin() {
 
                 {/* Cover/Banner Upload */}
                 {store && (
-                  <ImageUpload
-                    value={coverUrl}
-                    onChange={setCoverUrl}
-                    folder="covers"
-                    storeId={store.id}
-                    label="Banner de Capa (aparece no topo do cardápio)"
-                  />
+                  <div>
+                    <ImageUpload
+                      value={coverUrl}
+                      onChange={setCoverUrl}
+                      folder="covers"
+                      storeId={store.id}
+                      label="Banner de Capa (aparece no topo do cardápio)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tamanho ideal: 1080x608 pixels (16:9). Evite informações no centro inferior, pois a logo será sobreposta aqui.
+                    </p>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
