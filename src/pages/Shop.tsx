@@ -118,13 +118,11 @@ export default function Shop() {
   const cleanSlug = useMemo(() => {
     let raw = (slug ?? '').trim().toLowerCase();
     if (!raw) {
-      // Fallback: extract slug from pathname (e.g. /shop/my-store or /my-store)
+      // Fallback: extract slug from pathname (e.g. /my-store)
       const segments = window.location.pathname.split('/').filter(Boolean);
-      const shopIndex = segments.indexOf('shop');
-      if (shopIndex >= 0 && segments[shopIndex + 1]) {
-        raw = segments[shopIndex + 1].toLowerCase();
-      } else if (segments.length === 1) {
-        // Root-level access: /my-store
+      // Skip known system routes
+      const systemRoutes = ['admin', 'auth', 'onboarding', 'super-admin', 'demo'];
+      if (segments.length >= 1 && !systemRoutes.includes(segments[0])) {
         raw = segments[0].toLowerCase();
       }
     }
