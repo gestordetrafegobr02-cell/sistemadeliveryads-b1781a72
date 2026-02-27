@@ -130,33 +130,38 @@ export default function Shop() {
   }, [slug]);
 
   useEffect(() => {
-    let retried = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    let cancelled = false;
 
-    // Small delay to ensure mobile browser has processed the URL
-    const timer = setTimeout(async () => {
+    async function doFetch() {
+      if (cancelled) return;
+      
       if (!cleanSlug) {
         setError('URL inválida');
         setLoading(false);
         return;
       }
 
-      async function doFetch() {
-        try {
-          // 1) Fetch store via secure RPC function (excludes sensitive data)
-          const { data: storeResult, error: storeError } = await supabase
-            .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
+      try {
+        // 1) Fetch store via secure RPC function (excludes sensitive data)
+        const { data: storeResult, error: storeError } = await supabase
+          .rpc('get_public_store_by_slug', { store_slug: cleanSlug });
 
-          if (storeError || !storeResult || storeResult.length === 0) {
-            // Auto-retry once before showing error (handles slow mobile connections)
-            if (!retried) {
-              retried = true;
-              setTimeout(doFetch, 1500);
-              return;
-            }
-            setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
-            setLoading(false);
+        if (cancelled) return;
+
+        if (storeError || !storeResult || storeResult.length === 0) {
+          // Auto-retry with exponential backoff (handles slow mobile connections)
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            const delay = Math.min(1000 * retryCount, 3000);
+            setTimeout(doFetch, delay);
             return;
           }
+          setError(storeError ? 'Erro ao carregar a loja' : 'Loja não encontrada');
+          setLoading(false);
+          return;
+        }
 
           const storeData = storeResult[0];
           const mappedStore: StorePublic = {
@@ -223,17 +228,23 @@ export default function Shop() {
           }));
 
           setProducts(sanitizedProducts);
-        } catch {
-          setError('Erro inesperado ao carregar dados');
-        } finally {
-          setLoading(false);
+      } catch {
+        if (cancelled) return;
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          setTimeout(doFetch, 1000 * retryCount);
+          return;
         }
+        setError('Erro inesperado ao carregar dados');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    }
 
-      doFetch();
-    }, 100);
+    // Start fetching immediately — no artificial delay
+    doFetch();
 
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; };
   }, [cleanSlug]);
 
   // Check if store is open
