@@ -28,6 +28,7 @@ import { AbandonedCartsTab } from '@/components/AbandonedCartsTab';
 import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
+import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 
 interface StoreData {
@@ -403,7 +404,7 @@ export default function Admin() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(`/shop/${store.slug}`, '_blank')}
+                onClick={() => window.open(`/${store.slug}`, '_blank')}
                 className="gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -505,7 +506,7 @@ export default function Admin() {
                       className="mt-1 bg-secondary border-border"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Sua loja: /shop/{storeSlug || 'seu-slug'}
+                      Sua loja: sistemadeliveryads.site/{storeSlug || 'seu-slug'}
                     </p>
                   </div>
                 </div>
@@ -520,14 +521,14 @@ export default function Admin() {
                     <div className="flex gap-2">
                       <Input
                         readOnly
-                        value={`${window.location.origin}/shop/${store.slug}`}
+                        value={getStoreUrl(store.slug)}
                         className="bg-secondary border-border font-mono text-sm"
                       />
                       <Button
                         variant="outline"
                         className="gap-2 shrink-0"
                         onClick={async () => {
-                          const url = `${window.location.origin}/shop/${store.slug}`;
+                          const url = getStoreUrl(store.slug);
                           try {
                             await navigator.clipboard.writeText(url);
                             toast.success('Link copiado!');
