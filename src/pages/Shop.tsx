@@ -371,8 +371,10 @@ export default function Shop() {
   const showCategorySections = activeCategory === null;
 
   const ogTitle = store.name;
-  const ogDescription = `Peça agora no ${store.name}`;
-  const ogImage = store.logo_url || '/logo.png';
+  const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
+  const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
+  const ogImage = storeLogoSanitized || `${window.location.origin}/logo.png`;
+  const ogUrl = `https://sistemadeliveryads.site/${cleanSlug}`;
 
   return (
     <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null} bgColor={store.bg_color ?? null} cardStyle={store.card_style ?? null}>
@@ -381,8 +383,11 @@ export default function Shop() {
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Sistema Delivery ADS" />
         <meta name="description" content={ogDescription} />
+        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
