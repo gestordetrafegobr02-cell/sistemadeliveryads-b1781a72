@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["logo.png", "robots.txt"],
       manifest: false, // Using our own manifest.json
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

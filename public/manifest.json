@@ -1,7 +1,7 @@
 {
-  "name": "Sistema Delivery ADS",
-  "short_name": "Delivery ADS",
-  "description": "Plataforma completa de gestão para delivery",
+  "name": "Delivery ADS",
+  "short_name": "Delivery",
+  "description": "Cardápio digital",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
