@@ -284,6 +284,31 @@ export default function Shop() {
     return products.filter((p) => p.is_featured);
   }, [products]);
 
+  // Dynamic PWA manifest per store (must be before early returns)
+  const storeLogoSanitized = useMemo(() => sanitizeImageUrl(store?.logo_url), [store?.logo_url]);
+
+  const dynamicManifestUrl = useMemo(() => {
+    if (!store) return undefined;
+    const manifest = {
+      name: store.name,
+      short_name: store.name.slice(0, 12),
+      description: `Cardápio online - ${store.name}`,
+      start_url: `/${cleanSlug}`,
+      display: 'standalone',
+      background_color: store.primary_color || '#0a0a0a',
+      theme_color: store.primary_color || '#f59e0b',
+      orientation: 'portrait-primary',
+      icons: [
+        { src: storeLogoSanitized || '/logo.png?v=2', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: storeLogoSanitized || '/logo.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: storeLogoSanitized || '/logo.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+      lang: 'pt-BR',
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    return URL.createObjectURL(blob);
+  }, [store?.name, store?.primary_color, storeLogoSanitized, cleanSlug]);
+
   const handlePurchase = () => {
     if (window.fbq && facebookPixelId) {
       window.fbq('track', 'Purchase');
@@ -372,7 +397,6 @@ export default function Shop() {
 
   const ogTitle = store.name;
   const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
-  const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
   const ogImage = storeLogoSanitized || `${window.location.origin}/logo.png`;
   const ogUrl = `https://sistemadeliveryads.site/${cleanSlug}`;
 
@@ -385,9 +409,14 @@ export default function Shop() {
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Sistema Delivery ADS" />
+        <meta property="og:site_name" content={ogTitle} />
         <meta name="description" content={ogDescription} />
+        <meta name="apple-mobile-web-app-title" content={ogTitle} />
+        <meta name="application-name" content={ogTitle} />
+        <meta name="theme-color" content={store.primary_color || '#f59e0b'} />
         <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="manifest" href={dynamicManifestUrl || '/manifest.json'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
