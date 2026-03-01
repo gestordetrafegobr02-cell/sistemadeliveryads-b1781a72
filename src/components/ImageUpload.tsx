@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Loader2, Image as ImageIcon, Images } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/errorMapper';
+import { StockImageGallery } from './StockImageGallery';
 
 interface ImageUploadProps {
   value: string;
@@ -18,20 +19,19 @@ interface ImageUploadProps {
 
 export function ImageUpload({ value, onChange, folder, storeId, label, className }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!validTypes.includes(file.type)) {
       toast.error('Tipo de arquivo inválido. Use JPG, PNG, WebP ou GIF.');
       return;
     }
 
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Arquivo muito grande. Máximo 5MB.');
       return;
@@ -40,7 +40,6 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
     setUploading(true);
 
     try {
-      // Generate unique filename with store_id prefix + timestamp for cache busting
       const fileExt = file.name.split('.').pop();
       const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       const fileName = `${storeId}/${folder}/${uniqueId}.${fileExt}`;
@@ -48,7 +47,7 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('store-assets')
         .upload(fileName, file, {
-          cacheControl: '0', // Disable caching to ensure fresh images
+          cacheControl: '0',
           upsert: false,
         });
 
@@ -57,20 +56,16 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
         return;
       }
 
-      // Verify upload was successful by checking if file exists
       if (!uploadData?.path) {
         toast.error('Erro: arquivo não foi salvo corretamente.');
         return;
       }
 
-      // Get public URL with cache-busting query parameter
       const { data: { publicUrl } } = supabase.storage
         .from('store-assets')
         .getPublicUrl(fileName);
 
-      // Append cache-busting timestamp to URL to force browser refresh
       const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
-
       onChange(cacheBustedUrl);
       toast.success('Imagem enviada com sucesso!');
     } catch (err) {
@@ -84,7 +79,6 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
   }
 
   async function handleRemove() {
-    // Just clear the URL - we could also delete from storage but keeping for simplicity
     onChange('');
     toast.success('Imagem removida');
   }
@@ -121,8 +115,8 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
           </div>
         )}
 
-        {/* Upload Button */}
-        <div className="flex gap-2">
+        {/* Upload + Gallery Buttons */}
+        <div className="flex gap-2 flex-wrap">
           <Input
             ref={fileInputRef}
             type="file"
@@ -144,10 +138,29 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
             ) : (
               <Upload className="w-4 h-4" />
             )}
-            {uploading ? 'Enviando...' : 'Enviar Imagem'}
+            {uploading ? 'Enviando...' : 'Enviar Foto'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setGalleryOpen(true)}
+            className="gap-2"
+          >
+            <Images className="w-4 h-4" />
+            Escolher da Galeria
           </Button>
         </div>
       </div>
+
+      <StockImageGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        onSelect={(url) => {
+          onChange(url);
+          toast.success('Imagem da galeria selecionada!');
+        }}
+      />
     </div>
   );
 }
