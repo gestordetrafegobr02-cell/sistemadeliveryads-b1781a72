@@ -112,7 +112,7 @@ export default function OrderStatus() {
 
   const ogTitle = order ? `Acompanhe seu pedido - ${order.store_name}` : 'Acompanhe seu pedido';
   const ogDescription = order ? `Veja em tempo real o status do seu pedido na ${order.store_name}` : 'Veja o status do seu pedido em tempo real';
-  const ogImage = order?.store_logo_url ? `${order.store_logo_url}?v=4` : '/logo.png?v=4';
+  const ogImage = order?.store_logo_url ? (order.store_logo_url.includes('?') ? `${order.store_logo_url}&v=20` : `${order.store_logo_url}?v=20`) : '/logo.png?v=20';
 
   if (loading) {
     return (

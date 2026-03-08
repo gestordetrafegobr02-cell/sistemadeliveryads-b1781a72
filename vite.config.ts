@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
         navigateFallback: null,
+        // Force SW update by changing this version string
+        additionalManifestEntries: [{ url: '/cache-bust-v20', revision: 'v20' }],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

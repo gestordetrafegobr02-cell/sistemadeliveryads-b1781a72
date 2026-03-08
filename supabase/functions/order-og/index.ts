@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   const ogTitle = `Acompanhe seu pedido - ${storeName}`;
   const ogDescription = `Veja em tempo real o status do seu pedido na ${storeName}`;
   const rawLogo = order?.store_logo_url || `${siteDomain}/logo.png`;
-  const ogImage = rawLogo.includes("?") ? `${rawLogo}&v=4` : `${rawLogo}?v=4`;
+  const ogImage = rawLogo.includes("?") ? `${rawLogo}&v=20` : `${rawLogo}?v=20`;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
