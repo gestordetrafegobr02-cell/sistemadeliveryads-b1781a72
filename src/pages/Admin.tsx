@@ -971,25 +971,8 @@ export default function Admin() {
                                 if (error) {
                                   toast.error('Erro ao atualizar status');
                                 } else {
-                                  toast.success('Status atualizado!');
+                                  toast.success('Status atualizado! O cliente será notificado automaticamente.');
                                   fetchData();
-
-                                  // Auto-open WhatsApp to notify the customer
-                                  if (order.customer_phone && store) {
-                                    const customerPhone = order.customer_phone.replace(/\D/g, '');
-                                    const firstName = order.customer_name.split(' ')[0];
-                                    const orderCode = order.id.slice(0, 8).toUpperCase();
-                                    const statusMessages: Record<string, string> = {
-                                      preparing: `Olá ${firstName}! 🔥 Seu pedido #${orderCode} da ${store.name} está sendo preparado com carinho! Já já sai! 👨‍🍳`,
-                                      out_for_delivery: `Boa notícia, ${firstName}! 🛵 Seu pedido #${orderCode} da ${store.name} saiu para entrega! O entregador chegará em breve! 📦`,
-                                      completed: `Olá ${firstName}! ✅ Seu pedido #${orderCode} da ${store.name} foi concluído! Esperamos que aproveite! 😋🎉`,
-                                      cancelled: `Olá ${firstName}, infelizmente seu pedido #${orderCode} da ${store.name} foi cancelado. Entre em contato se precisar de ajuda.`,
-                                    };
-                                    const msg = statusMessages[newStatus];
-                                    if (msg) {
-                                      window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                                    }
-                                  }
                                 }
                               }}
                             >
