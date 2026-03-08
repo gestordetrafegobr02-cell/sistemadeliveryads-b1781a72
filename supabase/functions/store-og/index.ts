@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(storeName)}" />
   <meta property="og:description" content="${escapeHtml(storeDescription)}" />
-  <meta property="og:image" content="${escapeHtml(storeImage)}" />
+  ${storeImage ? `<meta property="og:image" content="${escapeHtml(storeImage)}" />` : ''}
   <meta property="og:url" content="${escapeHtml(storeUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(storeName)}" />
 
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(storeName)}" />
   <meta name="twitter:description" content="${escapeHtml(storeDescription)}" />
-  <meta name="twitter:image" content="${escapeHtml(storeImage)}" />
+  ${storeImage ? `<meta name="twitter:image" content="${escapeHtml(storeImage)}" />` : ''}
 
   <!-- Redirect to actual store -->
   <meta http-equiv="refresh" content="0;url=${escapeHtml(storeUrl)}" />

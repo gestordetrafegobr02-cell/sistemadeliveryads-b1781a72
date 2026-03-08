@@ -412,7 +412,7 @@ export default function Shop() {
         <title>{ogTitle}</title>
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
-        <meta property="og:image" content={ogImage} />
+        {ogImage && <meta property="og:image" content={ogImage} />}
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content={ogTitle} />

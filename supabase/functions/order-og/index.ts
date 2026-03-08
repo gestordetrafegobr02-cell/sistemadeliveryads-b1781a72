@@ -45,14 +45,14 @@ Deno.serve(async (req) => {
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(ogTitle)}" />
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
-  <meta property="og:image" content="${escapeHtml(ogImage)}" />
+  ${ogImage ? `<meta property="og:image" content="${escapeHtml(ogImage)}" />` : ''}
   <meta property="og:url" content="${escapeHtml(orderUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(storeName)}" />
 
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="${escapeHtml(ogTitle)}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
-  <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  ${ogImage ? `<meta name="twitter:image" content="${escapeHtml(ogImage)}" />` : ''}
 
   <meta http-equiv="refresh" content="0;url=${escapeHtml(orderUrl)}" />
   <link rel="canonical" href="${escapeHtml(orderUrl)}" />
