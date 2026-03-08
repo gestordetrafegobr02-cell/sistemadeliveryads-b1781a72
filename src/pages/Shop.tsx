@@ -568,6 +568,7 @@ export default function Shop() {
 
           <CartSheet
             storeId={store.id}
+            storeSlug={cleanSlug}
             whatsapp={paymentData?.whatsapp || ''}
             deliveryFee={store.delivery_fee || 0}
             pixKey={paymentData?.pix_key || undefined}

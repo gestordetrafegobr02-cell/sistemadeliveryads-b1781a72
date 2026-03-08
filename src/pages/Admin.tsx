@@ -30,6 +30,8 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
+import { AdminDashboardCards } from '@/components/AdminDashboardCards';
+import { NewOrderAlert } from '@/components/NewOrderAlert';
 
 interface StoreData {
   id: string;
@@ -887,6 +889,21 @@ export default function Admin() {
 
           {/* Orders Tab */}
           <TabsContent value="orders">
+            {/* Dashboard Cards */}
+            {store && <AdminDashboardCards orders={orders} />}
+
+            {/* Sound Alert for new pending orders */}
+            {store && (
+              <NewOrderAlert
+                pendingOrderIds={orders.filter((o) => o.status === 'pending').map((o) => o.id)}
+                onAccept={async (orderId) => {
+                  await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
+                  toast.success('Pedido aceito!');
+                  fetchData();
+                }}
+              />
+            )}
+
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="font-display text-xl">Pedidos Recentes</CardTitle>
