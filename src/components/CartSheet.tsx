@@ -280,7 +280,7 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
             if (phoneNumber) {
               const adminUrl = `https://sistemadeliveryads.site/admin`;
               const shortMsg = encodeURIComponent(
-                `🔔 *Novo Pedido!*\n\nCliente: ${name}\nTotal: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n📋 Confira os detalhes no painel:\n${adminUrl}`
+                `🚨 *NOVO PEDIDO RECEBIDO!* 🚨\n\nCliente: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nVerifique agora no seu Painel de Gestão:\n${adminUrl}`
               );
               window.open(`https://wa.me/${phoneNumber}?text=${shortMsg}`, '_blank');
             }
