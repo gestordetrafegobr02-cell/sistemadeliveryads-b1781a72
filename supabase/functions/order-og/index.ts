@@ -31,8 +31,8 @@ Deno.serve(async (req) => {
   const storeName = order?.store_name || "Pedido";
   const ogTitle = `Acompanhe seu pedido - ${storeName}`;
   const ogDescription = `Veja em tempo real o status do seu pedido na ${storeName}`;
-  const rawLogo = order?.store_logo_url || `${siteDomain}/logo.png`;
-  const ogImage = rawLogo.includes("?") ? `${rawLogo}&v=20` : `${rawLogo}?v=20`;
+  const rawLogo = order?.store_logo_url || '';
+  const ogImage = rawLogo ? (rawLogo.includes("?") ? `${rawLogo}&v=100` : `${rawLogo}?v=100`) : '';
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -45,14 +45,14 @@ Deno.serve(async (req) => {
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(ogTitle)}" />
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
-  <meta property="og:image" content="${escapeHtml(ogImage)}" />
+  ${ogImage ? `<meta property="og:image" content="${escapeHtml(ogImage)}" />` : ''}
   <meta property="og:url" content="${escapeHtml(orderUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(storeName)}" />
 
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="${escapeHtml(ogTitle)}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
-  <meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+  ${ogImage ? `<meta name="twitter:image" content="${escapeHtml(ogImage)}" />` : ''}
 
   <meta http-equiv="refresh" content="0;url=${escapeHtml(orderUrl)}" />
   <link rel="canonical" href="${escapeHtml(orderUrl)}" />

@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
 
   const storeName = store?.name || slug;
   const storeDescription = `Faça seu pedido online agora! | ${storeName}`;
-  const rawLogo = store?.logo_url || `${siteDomain}/logo.png`;
-  const storeImage = rawLogo.includes('?') ? `${rawLogo}&v=20` : `${rawLogo}?v=20`;
+  const rawLogo = store?.logo_url || '';
+  const storeImage = rawLogo ? (rawLogo.includes('?') ? `${rawLogo}&v=100` : `${rawLogo}?v=100`) : '';
   const themeColor = store?.primary_color || "#f59e0b";
 
   const html = `<!DOCTYPE html>
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(storeName)}" />
   <meta property="og:description" content="${escapeHtml(storeDescription)}" />
-  <meta property="og:image" content="${escapeHtml(storeImage)}" />
+  ${storeImage ? `<meta property="og:image" content="${escapeHtml(storeImage)}" />` : ''}
   <meta property="og:url" content="${escapeHtml(storeUrl)}" />
   <meta property="og:site_name" content="${escapeHtml(storeName)}" />
 
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(storeName)}" />
   <meta name="twitter:description" content="${escapeHtml(storeDescription)}" />
-  <meta name="twitter:image" content="${escapeHtml(storeImage)}" />
+  ${storeImage ? `<meta name="twitter:image" content="${escapeHtml(storeImage)}" />` : ''}
 
   <!-- Redirect to actual store -->
   <meta http-equiv="refresh" content="0;url=${escapeHtml(storeUrl)}" />

@@ -112,7 +112,7 @@ export default function OrderStatus() {
 
   const ogTitle = order ? `Acompanhe seu pedido - ${order.store_name}` : 'Acompanhe seu pedido';
   const ogDescription = order ? `Veja em tempo real o status do seu pedido na ${order.store_name}` : 'Veja o status do seu pedido em tempo real';
-  const ogImage = order?.store_logo_url ? (order.store_logo_url.includes('?') ? `${order.store_logo_url}&v=20` : `${order.store_logo_url}?v=20`) : '/logo.png?v=20';
+  const ogImage = order?.store_logo_url ? (order.store_logo_url.includes('?') ? `${order.store_logo_url}&v=100` : `${order.store_logo_url}?v=100`) : '';
 
   if (loading) {
     return (
@@ -157,12 +157,12 @@ export default function OrderStatus() {
         <meta name="description" content={ogDescription} />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
-        <meta property="og:image" content={ogImage} />
+        {ogImage && <meta property="og:image" content={ogImage} />}
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={ogDescription} />
-        <meta name="twitter:image" content={ogImage} />
+        {ogImage && <meta name="twitter:image" content={ogImage} />}
       </Helmet>
       <div className="max-w-md mx-auto px-4 py-8 space-y-6">
         {/* Success Header */}
