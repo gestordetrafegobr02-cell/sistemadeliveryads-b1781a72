@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => ({
       manifest: false, // Using our own manifest.json
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

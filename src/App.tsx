@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import InstallPWA from "@/components/InstallPWA";
+
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import Demo from "./pages/Demo";
@@ -33,7 +33,7 @@ const App = () => (
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <InstallPWA />
+          
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
