@@ -164,33 +164,33 @@ export default function Index() {
   const features = [
     {
       icon: Sparkles,
-      title: 'Design de Alto Nível',
-      description: 'Templates inteligentes (Hamburgueria, Pizzaria, Açaí) com animações fluidas e interface de última geração.',
+      title: 'Cardápio Profissional',
+      description: 'Templates prontos para hamburgueria, pizzaria e açaiteria. Seu delivery com cara de app em minutos.',
     },
     {
       icon: Palette,
-      title: 'Visual Personalizado',
-      description: 'Altere cores, fontes e estilos para combinar 100% com a identidade visual da sua marca.',
+      title: 'Sua Marca, Seu Estilo',
+      description: 'Personalize cores, logo e layout. O cliente vê a sua marca, não a nossa.',
     },
     {
       icon: LayoutGrid,
-      title: 'Navegação por Categorias',
-      description: 'Barra inteligente "Sticky" que facilita a escolha do cliente e aumenta o ticket médio.',
+      title: 'Navegação que Vende',
+      description: 'Categorias fixas no topo facilitam a escolha e aumentam o valor do pedido.',
     },
     {
       icon: Smartphone,
-      title: 'Mobile-First Real',
-      description: 'Otimizado para 2 colunas no celular, exibindo mais produtos com menos esforço de navegação.',
+      title: 'Feito pro Celular',
+      description: 'Grid de 2 colunas otimizado. Mais produtos na tela, menos rolagem, mais vendas.',
     },
     {
       icon: TrendingUp,
-      title: 'Upsell Inteligente',
-      description: 'Sugira combos e adicionais no momento certo da compra. Aumente seu ticket médio automaticamente.',
+      title: 'Ticket Médio Maior',
+      description: 'Sugira combos e adicionais na hora certa. Seus clientes gastam mais sem perceber.',
     },
     {
       icon: ShoppingCart,
       title: 'Recupere Vendas Perdidas',
-      description: 'Carrinhos abandonados? Recupere clientes com mensagens automáticas via WhatsApp.',
+      description: 'Cliente abandonou o carrinho? Envie uma mensagem automática e feche a venda.',
     },
   ];
 
@@ -232,15 +232,15 @@ export default function Index() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-6 leading-[1.1]">
-            O cardápio digital<br />
+            O cardápio que<br />
             <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              que vende mais
+              vende por você
             </span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Seja hamburgueria, açaiteria, pizzaria ou hortifruti: 
-            <strong className="text-foreground/80"> aumente seu ticket médio com upsell inteligente</strong> e receba pedidos direto no WhatsApp.
+            Sua lanchonete no próximo nível. Receba pedidos pelo WhatsApp,
+            <strong className="text-foreground/80"> aumente o ticket médio</strong> e pare de pagar comissão pro iFood.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -283,10 +283,10 @@ export default function Index() {
               Templates Prontos
             </span>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Um sistema para cada segmento
+              Pronto pro seu nicho
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Cardápios otimizados para hamburguerias, açaiterias, pizzarias e hortifrutis
+              Cardápio sob medida para cada tipo de delivery. É só escolher e começar a vender.
             </p>
           </div>
           
@@ -305,15 +305,15 @@ export default function Index() {
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 Funcionalidades
               </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald/10 text-emerald text-xs font-bold uppercase tracking-wider animate-pulse">
-                Nova Versão 2.0
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald/10 text-emerald text-xs font-bold uppercase tracking-wider">
+                Completo
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Uma experiência de App Nativo,<br className="hidden sm:block" /> sem precisar baixar nada.
+              Tudo que seu delivery precisa<br className="hidden sm:block" /> pra faturar mais.
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Templates premium, navegação fluida e design que converte
+              Sem app pra baixar. Sem comissão. Só resultado.
             </p>
           </div>
 
