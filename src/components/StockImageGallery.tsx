@@ -4,6 +4,54 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
+// Hambúrgueres
+import burgerXtudo from '@/assets/gallery/burger-xtudo.jpg';
+import burgerXbacon from '@/assets/gallery/burger-xbacon.jpg';
+import burgerHotdog from '@/assets/gallery/burger-hotdog.jpg';
+import burgerSmash from '@/assets/gallery/burger-smash.jpg';
+import burgerXsalada from '@/assets/gallery/burger-xsalada.jpg';
+import burgerXegg from '@/assets/gallery/burger-xegg.jpg';
+
+// Pizzas
+import pizzaCalabresa from '@/assets/gallery/pizza-calabresa.jpg';
+import pizzaFrango from '@/assets/gallery/pizza-frango.jpg';
+import pizzaPortuguesa from '@/assets/gallery/pizza-portuguesa.jpg';
+import pizza4queijos from '@/assets/gallery/pizza-4queijos.jpg';
+import pizzaFatia from '@/assets/gallery/pizza-fatia.jpg';
+import pizzaMargherita from '@/assets/gallery/pizza-margherita.jpg';
+
+// Açaí
+import acaiCopo1 from '@/assets/gallery/acai-copo1.jpg';
+import acaiCopo2 from '@/assets/gallery/acai-copo2.jpg';
+import acaiBowl from '@/assets/gallery/acai-bowl.jpg';
+import acaiSmoothie from '@/assets/gallery/acai-smoothie.jpg';
+import acaiNutella from '@/assets/gallery/acai-nutella.jpg';
+import acaiPacoca from '@/assets/gallery/acai-pacoca.jpg';
+
+// Bebidas
+import bebidaRefri from '@/assets/gallery/bebida-refri.jpg';
+import bebidaSuco from '@/assets/gallery/bebida-suco.jpg';
+import bebidaCoca from '@/assets/gallery/bebida-coca.jpg';
+import bebidaMilkshake from '@/assets/gallery/bebida-milkshake.jpg';
+import bebidaAgua from '@/assets/gallery/bebida-agua.jpg';
+import bebidaCafe from '@/assets/gallery/bebida-cafe.jpg';
+
+// Porções
+import porcaoBatataCheddar from '@/assets/gallery/porcao-batata-cheddar.jpg';
+import porcaoCalabresa from '@/assets/gallery/porcao-calabresa.jpg';
+import porcaoNuggets from '@/assets/gallery/porcao-nuggets.jpg';
+import porcaoOnion from '@/assets/gallery/porcao-onion.jpg';
+import porcaoFrango from '@/assets/gallery/porcao-frango.jpg';
+import porcaoMandioca from '@/assets/gallery/porcao-mandioca.jpg';
+
+// Sobremesas
+import docePudim from '@/assets/gallery/doce-pudim.jpg';
+import doceBrownie from '@/assets/gallery/doce-brownie.jpg';
+import doceBolo from '@/assets/gallery/doce-bolo.jpg';
+import docePetit from '@/assets/gallery/doce-petit.jpg';
+import doceBrigadeiro from '@/assets/gallery/doce-brigadeiro.jpg';
+import doceSorvete from '@/assets/gallery/doce-sorvete.jpg';
+
 interface StockImage {
   url: string;
   alt: string;
@@ -16,69 +64,69 @@ interface GalleryCategory {
 
 const GALLERY: GalleryCategory[] = [
   {
-    name: 'Pizzas',
+    name: 'Hambúrgueres',
     images: [
-      { url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=600&q=80', alt: 'Pizza calabresa' },
-      { url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80', alt: 'Pizza com coberturas' },
-      { url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&q=80', alt: 'Pizza inteira' },
-      { url: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=600&q=80', alt: 'Pizza quatro queijos' },
-      { url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&q=80', alt: 'Pizza portuguesa' },
-      { url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80', alt: 'Pizza fatia' },
+      { url: burgerXtudo, alt: 'X-Tudo completo' },
+      { url: burgerXbacon, alt: 'X-Bacon suculento' },
+      { url: burgerHotdog, alt: 'Hot Dog prensado' },
+      { url: burgerSmash, alt: 'Smash burger duplo' },
+      { url: burgerXsalada, alt: 'X-Salada' },
+      { url: burgerXegg, alt: 'X-Egg com ovo' },
     ],
   },
   {
-    name: 'Hambúrgueres',
+    name: 'Pizzas',
     images: [
-      { url: 'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=600&q=80', alt: 'X-Bacon artesanal' },
-      { url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', alt: 'X-Tudo completo' },
-      { url: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&q=80', alt: 'Hambúrguer duplo suculento' },
-      { url: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&q=80', alt: 'Smash burger' },
-      { url: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=600&q=80', alt: 'Cheeseburguer artesanal' },
-      { url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', alt: 'X-Salada completo' },
+      { url: pizzaCalabresa, alt: 'Pizza calabresa acebolada' },
+      { url: pizzaFrango, alt: 'Pizza frango com catupiry' },
+      { url: pizzaPortuguesa, alt: 'Pizza portuguesa' },
+      { url: pizza4queijos, alt: 'Pizza quatro queijos' },
+      { url: pizzaFatia, alt: 'Fatia de pizza' },
+      { url: pizzaMargherita, alt: 'Pizza margherita' },
     ],
   },
   {
     name: 'Açaí',
     images: [
-      { url: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=600&q=80', alt: 'Açaí bowl com frutas' },
-      { url: 'https://images.unsplash.com/photo-1615478503562-ec2d8aa0a24b?w=600&q=80', alt: 'Açaí com morango e banana' },
-      { url: 'https://images.unsplash.com/photo-1501959915551-4e8d30928317?w=600&q=80', alt: 'Smoothie de açaí' },
-      { url: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=600&q=80', alt: 'Açaí no copo' },
-      { url: 'https://images.unsplash.com/photo-1511690743698-d9d18f7e20f1?w=600&q=80', alt: 'Açaí com granola e leite condensado' },
-      { url: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?w=600&q=80', alt: 'Frutas tropicais frescas' },
+      { url: acaiCopo1, alt: 'Açaí com morango e banana' },
+      { url: acaiCopo2, alt: 'Açaí com granola e leite condensado' },
+      { url: acaiBowl, alt: 'Açaí bowl com frutas' },
+      { url: acaiSmoothie, alt: 'Açaí no copo com canudo' },
+      { url: acaiNutella, alt: 'Açaí com Nutella e morango' },
+      { url: acaiPacoca, alt: 'Açaí com paçoca e leite em pó' },
     ],
   },
   {
     name: 'Bebidas',
     images: [
-      { url: 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?w=600&q=80', alt: 'Latas de refrigerante geladas' },
-      { url: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=600&q=80', alt: 'Coca-Cola gelada' },
-      { url: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&q=80', alt: 'Suco natural de laranja' },
-      { url: 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=600&q=80', alt: 'Água de coco' },
-      { url: 'https://images.unsplash.com/photo-1570831739435-6601aa3fa4fb?w=600&q=80', alt: 'Milkshake' },
-      { url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80', alt: 'Café' },
+      { url: bebidaRefri, alt: 'Latas de refrigerante geladas' },
+      { url: bebidaCoca, alt: 'Coca-Cola gelada' },
+      { url: bebidaSuco, alt: 'Suco natural de laranja' },
+      { url: bebidaMilkshake, alt: 'Milkshake de chocolate' },
+      { url: bebidaAgua, alt: 'Água e água de coco' },
+      { url: bebidaCafe, alt: 'Café expresso' },
     ],
   },
   {
     name: 'Porções',
     images: [
-      { url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&q=80', alt: 'Batata frita com queijo e bacon' },
-      { url: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=600&q=80', alt: 'Batata frita crocante' },
-      { url: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=600&q=80', alt: 'Onion rings' },
-      { url: 'https://images.unsplash.com/photo-1585325701956-60dd9c8553bc?w=600&q=80', alt: 'Nuggets' },
-      { url: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600&q=80', alt: 'Frango frito' },
-      { url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&q=80', alt: 'Petiscos variados' },
+      { url: porcaoBatataCheddar, alt: 'Batata com cheddar e bacon' },
+      { url: porcaoCalabresa, alt: 'Calabresa acebolada' },
+      { url: porcaoNuggets, alt: 'Nuggets com molho' },
+      { url: porcaoOnion, alt: 'Onion rings' },
+      { url: porcaoFrango, alt: 'Frango frito' },
+      { url: porcaoMandioca, alt: 'Mandioca frita' },
     ],
   },
   {
     name: 'Sobremesas',
     images: [
-      { url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80', alt: 'Bolo de chocolate' },
-      { url: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600&q=80', alt: 'Donuts' },
-      { url: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80', alt: 'Pudim' },
-      { url: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=600&q=80', alt: 'Sorvete' },
-      { url: 'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?w=600&q=80', alt: 'Brownie' },
-      { url: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=80', alt: 'Cheesecake' },
+      { url: docePudim, alt: 'Pudim de leite' },
+      { url: doceBrownie, alt: 'Brownie com sorvete' },
+      { url: doceBolo, alt: 'Bolo de chocolate' },
+      { url: docePetit, alt: 'Petit gâteau' },
+      { url: doceBrigadeiro, alt: 'Brigadeiros' },
+      { url: doceSorvete, alt: 'Sorvete 3 sabores' },
     ],
   },
 ];
@@ -132,7 +180,7 @@ export function StockImageGallery({ open, onOpenChange, onSelect }: StockImageGa
           <div className="grid grid-cols-3 gap-2">
             {currentImages.map((img) => (
               <button
-                key={img.url}
+                key={img.alt}
                 type="button"
                 onClick={() => handleSelect(img.url)}
                 className={cn(
@@ -149,6 +197,9 @@ export function StockImageGallery({ open, onOpenChange, onSelect }: StockImageGa
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
+                <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate">
+                  {img.alt}
+                </span>
               </button>
             ))}
           </div>
