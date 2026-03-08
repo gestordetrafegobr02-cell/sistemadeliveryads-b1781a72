@@ -575,6 +575,7 @@ export default function Shop() {
             onOpen={handleCartOpen}
             isStoreOpen={storeIsOpen}
           />
+          <InstallPWA storeName={store.name} />
         </div>
       </CartProvider>
     </StoreThemeProvider>
