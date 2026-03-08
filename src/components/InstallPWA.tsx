@@ -7,7 +7,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export default function InstallPWA() {
+interface InstallPWAProps {
+  storeName?: string;
+}
+
+export default function InstallPWA({ storeName }: InstallPWAProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -67,6 +71,8 @@ export default function InstallPWA() {
 
   if (!showInstallBanner) return null;
 
+  const displayName = storeName || 'nosso App';
+
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-500">
       <div className="bg-card/95 backdrop-blur-lg p-4 flex items-center gap-3 border border-primary/20 rounded-2xl shadow-xl shadow-primary/10">
@@ -74,7 +80,7 @@ export default function InstallPWA() {
           <Download className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground text-sm">Baixe nosso App</p>
+          <p className="font-semibold text-foreground text-sm">Instale {displayName}</p>
           <p className="text-xs text-muted-foreground leading-snug">
             {isIOS 
               ? 'Toque em Compartilhar ➜ "Adicionar à Tela de Início"'
