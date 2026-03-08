@@ -19,7 +19,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
-import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
+
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
@@ -988,13 +988,7 @@ export default function Admin() {
                               </SelectContent>
                             </Select>
                             
-                            <WhatsAppNotifyButton
-                              orderId={order.id}
-                              customerName={order.customer_name}
-                              customerPhone={order.customer_phone}
-                              status={order.status}
-                              storeName={store?.name || 'Loja'}
-                            />
+                            
                             
                             <Button
                               size="icon"
