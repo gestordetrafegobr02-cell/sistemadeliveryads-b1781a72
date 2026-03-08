@@ -272,21 +272,27 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
           setOpen(false);
           setSubmitting(false);
 
-          // 3) Navigate to order status page
-          navigate(`/order-status/${orderData.id}`);
+          // 3) Build WhatsApp URL BEFORE any async navigation
+          const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
+          const orderStatusUrl = `${window.location.origin}/order-status/${orderData.id}`;
+          const displayName = storeName || 'sua loja';
+          const msgText = [
+            `Olá! Acabei de fazer um pedido aqui na ${displayName}.`,
+            '',
+            `Nome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}`,
+            '',
+            `Acompanhe o status em tempo real por aqui:`,
+            orderStatusUrl,
+          ].join('\n');
+          const waUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msgText)}`;
 
-          // 4) Open WhatsApp with clean message FROM client to store owner
-          setTimeout(() => {
-            const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
-            if (phoneNumber) {
-              const orderStatusUrl = `${window.location.origin}/order-status/${orderData.id}`;
-              const displayName = storeName || 'sua loja';
-              const shortMsg = encodeURIComponent(
-                `Olá! Acabei de fazer um pedido aqui na ${displayName}.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nAcompanhe meu status por aqui:\n${orderStatusUrl}`
-              );
-              window.open(`https://wa.me/${phoneNumber}?text=${shortMsg}`, '_blank');
-            }
-          }, 500);
+          // 4) Redirect to WhatsApp first (sync with user gesture for mobile)
+          if (phoneNumber) {
+            window.location.href = waUrl;
+          } else {
+            // No WhatsApp configured, just go to status page
+            navigate(`/order-status/${orderData.id}`);
+          }
         }
       } catch (err) {
         console.error('Order save exception:', err);
