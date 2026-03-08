@@ -30,6 +30,7 @@ const checkoutSchema = z.object({
 interface CartSheetProps {
   storeId?: string;
   storeSlug?: string;
+  storeName?: string;
   whatsapp?: string;
   deliveryFee?: number;
   pixKey?: string;
@@ -43,7 +44,7 @@ interface StoreUpsellConfig {
   upsell_blocking_categories: string[];
 }
 
-export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
+export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -274,13 +275,14 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
           // 3) Navigate to order status page
           navigate(`/order-status/${orderData.id}`);
 
-          // 4) Open WhatsApp with message FROM client to store owner (after slight delay)
+          // 4) Open WhatsApp with clean message FROM client to store owner
           setTimeout(() => {
             const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
             if (phoneNumber) {
               const orderStatusUrl = `${window.location.origin}/order-status/${orderData.id}`;
+              const displayName = storeName || 'sua loja';
               const shortMsg = encodeURIComponent(
-                `Olá! Acabei de fazer um pedido no cardápio.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nVou acompanhar o status pelo link:\n${orderStatusUrl}`
+                `Olá! Acabei de fazer um pedido aqui na ${displayName}.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nAcompanhe meu status por aqui:\n${orderStatusUrl}`
               );
               window.open(`https://wa.me/${phoneNumber}?text=${shortMsg}`, '_blank');
             }
@@ -295,30 +297,10 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
     }
   };
 
-  // Fallback: direct WhatsApp redirect (old behavior)
+  // Fallback: direct WhatsApp redirect (clean message, no item summary)
   function fallbackWhatsApp(addressStr: string) {
-    const itemsList = items
-      .map((item) => {
-        const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
-        const itemTotal = (item.price + modifiersTotal) * item.quantity;
-        let itemText = `• ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
-        if (item.modifiers && item.modifiers.length > 0) {
-          const modifiersList = item.modifiers.map((m) => `  ↳ ${m.name} (+R$ ${m.price.toFixed(2).replace('.', ',')})`).join('\n');
-          itemText += `\n${modifiersList}`;
-        }
-        if (item.observation) {
-          itemText += `\n  📝 ${item.observation}`;
-        }
-        return itemText;
-      })
-      .join('\n');
-
-    let message = `🛵 *NOVO PEDIDO*\n\n`;
-    message += `*Cliente:* ${name}\n*Telefone:* ${phone}\n\n`;
-    message += `*Itens:*\n${itemsList}\n\n`;
-    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n`;
-    if (paymentMethod) message += `*Pagamento:* ${paymentLabels[paymentMethod]}\n`;
-    if (addressStr) message += `\n*📍 Endereço:* ${addressStr}`;
+    const displayName = storeName || 'sua loja';
+    const message = `Olá! Acabei de fazer um pedido aqui na ${displayName}.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nAguardo confirmação! 😊`;
 
     const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
     window.location.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
