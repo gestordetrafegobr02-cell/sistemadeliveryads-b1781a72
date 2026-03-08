@@ -274,13 +274,13 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
           // 3) Navigate to order status page
           navigate(`/order-status/${orderData.id}`);
 
-          // 4) Open WhatsApp with short notification to store owner (after slight delay)
+          // 4) Open WhatsApp with message FROM client to store owner (after slight delay)
           setTimeout(() => {
             const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
             if (phoneNumber) {
-              const adminUrl = `https://sistemadeliveryads.site/admin`;
+              const orderStatusUrl = `${window.location.origin}/order-status/${orderData.id}`;
               const shortMsg = encodeURIComponent(
-                `🚨 *NOVO PEDIDO RECEBIDO!* 🚨\n\nCliente: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nVerifique agora no seu Painel de Gestão:\n${adminUrl}`
+                `Olá! Acabei de fazer um pedido no cardápio.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nVou acompanhar o status pelo link:\n${orderStatusUrl}`
               );
               window.open(`https://wa.me/${phoneNumber}?text=${shortMsg}`, '_blank');
             }
@@ -688,7 +688,7 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                {isStoreOpen ? 'FINALIZAR PEDIDO E ACOMPANHAR' : 'Loja Fechada'}
+                {isStoreOpen ? 'CONCLUIR PEDIDO E AVISAR LOJISTA' : 'Loja Fechada'}
               </Button>
             </div>
           </div>
