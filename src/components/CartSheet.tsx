@@ -163,12 +163,6 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
   const grandTotal = subtotal + deliveryAmount;
 
-  // Generate order ID
-  const generateOrderId = () => {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${timestamp}-${random}`;
-  };
 
   useEffect(() => {
     if (open && onOpen) {
