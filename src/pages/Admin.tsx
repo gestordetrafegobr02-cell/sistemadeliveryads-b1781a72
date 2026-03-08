@@ -30,6 +30,8 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
+import { AdminDashboardCards } from '@/components/AdminDashboardCards';
+import { NewOrderAlert } from '@/components/NewOrderAlert';
 
 interface StoreData {
   id: string;
