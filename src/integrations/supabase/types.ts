@@ -631,6 +631,18 @@ export type Database = {
         }[]
       }
       get_global_setting: { Args: { setting_key: string }; Returns: string }
+      get_order_by_id: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          items: Json
+          payment_method: string
+          status: string
+          store_name: string
+          total: number
+        }[]
+      }
       get_order_details: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {

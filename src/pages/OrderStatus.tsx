@@ -37,24 +37,33 @@ export default function OrderStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const sessionToken = typeof window !== 'undefined'
-    ? localStorage.getItem(`order_session_${orderId}`) || ''
-    : '';
-
   useEffect(() => {
-    if (!orderId || !sessionToken) {
+    if (!orderId) {
       setError('Pedido não encontrado');
       setLoading(false);
       return;
     }
 
     async function fetchOrder() {
-      const { data, error: fetchErr } = await supabase.rpc('get_order_details', {
-        order_id_param: orderId!,
-        session_token_param: sessionToken,
+      // Try new public RPC first (no session token needed)
+      const { data, error: fetchErr } = await supabase.rpc('get_order_by_id', {
+        p_order_id: orderId!,
       });
 
       if (fetchErr || !data || data.length === 0) {
+        // Fallback: try legacy session-token approach
+        const sessionToken = localStorage.getItem(`order_session_${orderId}`) || '';
+        if (sessionToken) {
+          const { data: legacyData, error: legacyErr } = await supabase.rpc('get_order_details', {
+            order_id_param: orderId!,
+            session_token_param: sessionToken,
+          });
+          if (!legacyErr && legacyData && legacyData.length > 0) {
+            setOrder(legacyData[0] as unknown as OrderData);
+            setLoading(false);
+            return;
+          }
+        }
         setError('Pedido não encontrado');
       } else {
         setOrder(data[0] as unknown as OrderData);
@@ -84,7 +93,7 @@ export default function OrderStatus() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId, sessionToken]);
+  }, [orderId]);
 
   const currentStepIndex = STATUS_STEPS.findIndex((s) => s.key === (order?.status || 'pending'));
   const isCancelled = order?.status === 'cancelled' || order?.status === 'cancelado';
