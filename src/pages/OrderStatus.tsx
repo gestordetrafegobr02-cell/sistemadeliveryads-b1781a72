@@ -157,12 +157,12 @@ export default function OrderStatus() {
         <meta name="description" content={ogDescription} />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
-        <meta property="og:image" content={ogImage} />
+        {ogImage && <meta property="og:image" content={ogImage} />}
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={ogTitle} />
         <meta name="twitter:description" content={ogDescription} />
-        <meta name="twitter:image" content={ogImage} />
+        {ogImage && <meta name="twitter:image" content={ogImage} />}
       </Helmet>
       <div className="max-w-md mx-auto px-4 py-8 space-y-6">
         {/* Success Header */}
