@@ -1,5 +1,5 @@
 {
-  "name": "Delivery ADS",
+  "name": "Cardápio Digital",
   "short_name": "Delivery",
   "description": "Cardápio digital",
   "start_url": "/",
@@ -9,37 +9,37 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png?v=3",
+      "src": "/logo.png?v=5",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
