@@ -13,6 +13,7 @@ import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { CartProvider } from '@/lib/cart';
 import { StoreThemeProvider } from '@/lib/storeTheme';
 import { Skeleton } from '@/components/ui/skeleton';
+import InstallPWA from '@/components/InstallPWA';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
 
 // Demo store slugs
