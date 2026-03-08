@@ -578,6 +578,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_store_manual: {
+        Args: {
+          p_owner_email: string
+          p_store_name: string
+          p_store_slug: string
+          p_template_slug?: string
+          p_trial_days?: number
+        }
+        Returns: string
+      }
       create_user_store_with_template: {
         Args: {
           p_store_name: string
