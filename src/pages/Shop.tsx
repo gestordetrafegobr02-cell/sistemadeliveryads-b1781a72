@@ -294,6 +294,7 @@ export default function Shop() {
       short_name: store.name.slice(0, 12),
       description: `Cardápio online - ${store.name}`,
       start_url: `/${cleanSlug}`,
+      scope: `/${cleanSlug}`,
       display: 'standalone',
       background_color: store.primary_color || '#0a0a0a',
       theme_color: store.primary_color || '#f59e0b',
@@ -304,6 +305,7 @@ export default function Shop() {
         { src: storeLogoSanitized || '/logo.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
       lang: 'pt-BR',
+      id: `/${cleanSlug}`,
     };
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     return URL.createObjectURL(blob);
