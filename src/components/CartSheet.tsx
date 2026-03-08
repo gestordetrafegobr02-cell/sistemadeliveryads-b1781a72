@@ -526,9 +526,46 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
               {/* Address Fields - Only show for delivery */}
               {orderType === 'delivery' && (
                 <div className="space-y-3 p-4 glass-card rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <Label className="text-foreground font-medium">Endereço de Entrega</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <Label className="text-foreground font-medium">Endereço de Entrega</Label>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={async () => {
+                        if (!navigator.geolocation) {
+                          setErrors({ address: 'Geolocalização não suportada neste navegador' });
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          async (pos) => {
+                            try {
+                              const res = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`,
+                                { headers: { 'Accept-Language': 'pt-BR' } }
+                              );
+                              const data = await res.json();
+                              if (data.address) {
+                                setStreet(data.address.road || data.address.pedestrian || '');
+                                setNeighborhood(data.address.suburb || data.address.neighbourhood || '');
+                                setZipCode(data.address.postcode || '');
+                              }
+                            } catch {
+                              setErrors({ address: 'Erro ao buscar endereço' });
+                            }
+                          },
+                          () => setErrors({ address: 'Permissão de localização negada' }),
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                      }}
+                    >
+                      <LocateFixed className="w-3 h-3" />
+                      Usar localização
+                    </Button>
                   </div>
                   
                   {errors.address && <p className="text-destructive text-sm">{errors.address}</p>}
