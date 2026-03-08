@@ -165,7 +165,7 @@ export default function Auth() {
           {/* Welcome Text */}
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl tracking-wide text-slate-100">
-              Sistema Delivery ADS
+              Painel do Lojista
             </h1>
             <p className="text-slate-400 mt-2 text-sm">
               Acesse sua conta para gerenciar sua loja
