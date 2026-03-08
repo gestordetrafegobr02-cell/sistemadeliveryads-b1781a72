@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ interface OrderData {
   payment_method: string;
   created_at: string;
   store_name: string;
+  store_logo_url?: string;
 }
 
 interface OrderItem {
@@ -45,13 +47,11 @@ export default function OrderStatus() {
     }
 
     async function fetchOrder() {
-      // Try new public RPC first (no session token needed)
       const { data, error: fetchErr } = await supabase.rpc('get_order_by_id', {
         p_order_id: orderId!,
       });
 
       if (fetchErr || !data || data.length === 0) {
-        // Fallback: try legacy session-token approach
         const sessionToken = localStorage.getItem(`order_session_${orderId}`) || '';
         if (sessionToken) {
           const { data: legacyData, error: legacyErr } = await supabase.rpc('get_order_details', {
@@ -73,7 +73,6 @@ export default function OrderStatus() {
 
     fetchOrder();
 
-    // Realtime subscription for status updates
     const channel = supabase
       .channel(`order-status-${orderId}`)
       .on(
@@ -95,12 +94,32 @@ export default function OrderStatus() {
     };
   }, [orderId]);
 
+  // Dynamic favicon
+  useEffect(() => {
+    if (!order?.store_logo_url) return;
+    const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (link) {
+      link.href = order.store_logo_url;
+    }
+    const appleLinks = document.querySelectorAll("link[rel='apple-touch-icon']");
+    appleLinks.forEach((el) => {
+      (el as HTMLLinkElement).href = order.store_logo_url!;
+    });
+  }, [order?.store_logo_url]);
+
   const currentStepIndex = STATUS_STEPS.findIndex((s) => s.key === (order?.status || 'pending'));
   const isCancelled = order?.status === 'cancelled' || order?.status === 'cancelado';
+
+  const ogTitle = order ? `Acompanhe seu pedido - ${order.store_name}` : 'Acompanhe seu pedido';
+  const ogDescription = order ? `Veja em tempo real o status do seu pedido na ${order.store_name}` : 'Veja o status do seu pedido em tempo real';
+  const ogImage = order?.store_logo_url ? `${order.store_logo_url}?v=4` : '/logo.png?v=4';
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
+        <Helmet>
+          <title>Carregando pedido...</title>
+        </Helmet>
         <div className="max-w-md mx-auto space-y-6 pt-8">
           <Skeleton className="h-16 w-full rounded-xl" />
           <Skeleton className="h-48 w-full rounded-xl" />
@@ -113,6 +132,9 @@ export default function OrderStatus() {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Helmet>
+          <title>Pedido não encontrado</title>
+        </Helmet>
         <div className="text-center space-y-4">
           <XCircle className="w-16 h-16 text-destructive mx-auto" />
           <h1 className="text-2xl font-bold text-foreground">Pedido não encontrado</h1>
@@ -130,6 +152,18 @@ export default function OrderStatus() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:description" content={ogDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
       <div className="max-w-md mx-auto px-4 py-8 space-y-6">
         {/* Success Header */}
         <div className="text-center space-y-3">

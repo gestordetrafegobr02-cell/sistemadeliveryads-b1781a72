@@ -639,6 +639,7 @@ export type Database = {
           items: Json
           payment_method: string
           status: string
+          store_logo_url: string
           store_name: string
           total: number
         }[]
