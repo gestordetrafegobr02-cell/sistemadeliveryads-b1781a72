@@ -677,6 +677,13 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
                 </div>
               )}
 
+              {errors.submit && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg mb-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">{errors.submit}</p>
+                </div>
+              )}
+
               <Button
                 onClick={() => {
                   hapticSuccess();
