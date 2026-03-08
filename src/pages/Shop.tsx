@@ -290,6 +290,13 @@ export default function Shop() {
 
   const dynamicManifestUrl = useMemo(() => {
     if (!store) return undefined;
+    const icons = storeLogoSanitized
+      ? [
+          { src: storeLogoSanitized, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: storeLogoSanitized, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: storeLogoSanitized, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ]
+      : [];
     const manifest = {
       name: store.name,
       short_name: store.name.slice(0, 12),
@@ -300,11 +307,7 @@ export default function Shop() {
       background_color: store.primary_color || '#0a0a0a',
       theme_color: store.primary_color || '#f59e0b',
       orientation: 'portrait-primary',
-      icons: [
-        { src: storeLogoSanitized || '/logo.png?v=20', sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: storeLogoSanitized || '/logo.png?v=20', sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: storeLogoSanitized || '/logo.png?v=20', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ],
+      icons,
       lang: 'pt-BR',
       id: `/${cleanSlug}`,
     };
@@ -400,7 +403,7 @@ export default function Shop() {
 
   const ogTitle = store.name;
   const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
-  const ogImage = storeLogoSanitized ? (storeLogoSanitized.includes('?') ? `${storeLogoSanitized}&v=20` : `${storeLogoSanitized}?v=20`) : `${window.location.origin}/logo.png?v=20`;
+  const ogImage = storeLogoSanitized ? (storeLogoSanitized.includes('?') ? `${storeLogoSanitized}&v=100` : `${storeLogoSanitized}?v=100`) : '';
   const ogUrl = `https://sistemadeliveryads.site/${cleanSlug}`;
 
   return (
@@ -417,8 +420,8 @@ export default function Shop() {
         <meta name="apple-mobile-web-app-title" content={ogTitle} />
         <meta name="application-name" content={ogTitle} />
         <meta name="theme-color" content={store.primary_color || '#f59e0b'} />
-        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=20'} />
-        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=20'} />
+        {storeLogoSanitized && <link rel="icon" type="image/png" href={storeLogoSanitized} />}
+        {storeLogoSanitized && <link rel="apple-touch-icon" href={storeLogoSanitized} />}
         <link rel="manifest" href={dynamicManifestUrl || '/manifest.json'} />
       </Helmet>
       <CartProvider>

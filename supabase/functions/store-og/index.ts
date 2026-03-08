@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
 
   const storeName = store?.name || slug;
   const storeDescription = `Faça seu pedido online agora! | ${storeName}`;
-  const rawLogo = store?.logo_url || `${siteDomain}/logo.png`;
-  const storeImage = rawLogo.includes('?') ? `${rawLogo}&v=20` : `${rawLogo}?v=20`;
+  const rawLogo = store?.logo_url || '';
+  const storeImage = rawLogo ? (rawLogo.includes('?') ? `${rawLogo}&v=100` : `${rawLogo}?v=100`) : '';
   const themeColor = store?.primary_color || "#f59e0b";
 
   const html = `<!DOCTYPE html>
