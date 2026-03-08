@@ -316,7 +316,11 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
   // Fallback: direct WhatsApp redirect (clean message, no item summary)
   function fallbackWhatsApp(addressStr: string) {
     const displayName = storeName || 'sua loja';
-    const message = `Olá! Acabei de fazer um pedido aqui na ${displayName}.\n\nNome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\nAguardo confirmação! 😊`;
+    const message = [
+      `Olá! Acabei de fazer um pedido na ${displayName}.`,
+      '',
+      `Nome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}`,
+    ].join('\n');
 
     const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
     window.location.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
