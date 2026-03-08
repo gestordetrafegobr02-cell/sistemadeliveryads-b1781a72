@@ -33,7 +33,7 @@ const App = () => (
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <InstallPWA />
+          
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
