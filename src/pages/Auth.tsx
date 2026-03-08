@@ -34,9 +34,8 @@ export default function Auth() {
     
     setCheckingStore(true);
     
-    // Check if user is master admin - redirect directly to super-admin
-    // Master admin bypasses all other checks
-    const isMasterAdmin = user.email === 'igormoises.ads@gmail.com';
+    // Check if user is master admin via server-side RPC
+    const { data: isMasterAdmin } = await supabase.rpc('is_master_admin');
     if (isMasterAdmin) {
       navigate('/super-admin', { replace: true });
       setCheckingStore(false);
