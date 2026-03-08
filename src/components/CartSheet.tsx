@@ -688,7 +688,7 @@ export function CartSheet({ storeId, storeSlug, whatsapp, deliveryFee = 0, pixKe
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                {isStoreOpen ? 'FINALIZAR PEDIDO E ACOMPANHAR' : 'Loja Fechada'}
+                {isStoreOpen ? 'CONCLUIR PEDIDO E AVISAR LOJISTA' : 'Loja Fechada'}
               </Button>
             </div>
           </div>
