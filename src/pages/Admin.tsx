@@ -338,6 +338,16 @@ export default function Admin() {
       category_id: productCategory || null,
     };
 
+    // Validate that the selected category belongs to this store (avoid FK/orphan issues)
+    if (productData.category_id) {
+      const categoryBelongs = categories.some((c) => c.id === productData.category_id);
+      if (!categoryBelongs) {
+        toast.error('Categoria inválida. Recarregando lista...');
+        await fetchData();
+        return;
+      }
+    }
+
     if (editingProduct) {
       const { error } = await supabase
         .from('products')
@@ -345,10 +355,11 @@ export default function Admin() {
         .eq('id', editingProduct.id);
 
       if (error) {
-        toast.error('Erro ao atualizar produto');
-      } else {
-        toast.success('Produto atualizado!');
+        console.error('[products.update] code:', error.code, 'msg:', error.message);
+        toast.error(`Erro ao atualizar produto: ${error.message}`);
+        return;
       }
+      toast.success('Produto atualizado!');
     } else {
       const { error } = await supabase.from('products').insert({
         ...productData,
@@ -356,10 +367,11 @@ export default function Admin() {
       });
 
       if (error) {
-        toast.error('Erro ao criar produto');
-      } else {
-        toast.success('Produto criado!');
+        console.error('[products.insert] code:', error.code, 'msg:', error.message, 'store_id:', productData.store_id, 'category_id:', productData.category_id);
+        toast.error(`Erro ao criar produto: ${error.message}`);
+        return;
       }
+      toast.success('Produto criado!');
     }
 
     setProductDialogOpen(false);
