@@ -476,22 +476,22 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-16 px-4 md:px-6 bg-gradient-to-r from-primary to-primary/80">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pronto para vender mais?
+      {/* Final CTA — Black Premium */}
+      <section className="relative py-20 px-4 md:px-6 bg-black overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(210_100%_56%/0.18),transparent_70%)]" />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-[#F8F8F8] tracking-tight">
+            Pronto para <span className="text-[#1E90FF]">vender mais</span>?
           </h2>
-          <p className="text-white/80 text-lg mb-8">
-            Junte-se a mais de 500 lojas que já aumentaram suas vendas
+          <p className="text-white/70 text-lg mb-10">
+            Junte-se às lojas que escalaram com a IGOR MOISÉS ADS
           </p>
-          <Button 
+          <Button
             size="lg"
             onClick={scrollToForm}
-            className="h-14 px-8 text-lg bg-white text-primary hover:bg-white/90 gap-2 shadow-lg"
+            className="h-16 px-10 text-base md:text-lg font-bold bg-[#1E90FF] text-white hover:bg-[#1E90FF]/90 gap-2 rounded-xl shadow-[0_0_40px_hsl(210_100%_56%/0.55)] hover:shadow-[0_0_60px_hsl(210_100%_56%/0.8)] transition-shadow"
           >
-            Começar Meu Teste Grátis
-            <ArrowRight className="w-5 h-5" />
+            QUERO MEU SISTEMA PREMIUM AGORA 🚀
           </Button>
         </div>
       </section>

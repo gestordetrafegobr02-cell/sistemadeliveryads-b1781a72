@@ -1,14 +1,14 @@
 {
-  "name": "Cardápio Digital",
-  "short_name": "Cardápio",
-  "description": "Cardápio digital",
+  "name": "IGOR MOISÉS ADS",
+  "short_name": "IGOR ADS",
+  "description": "IGOR MOISÉS ADS — Sistema premium de gestão e tráfego",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#f59e0b",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "orientation": "portrait-primary",
   "icons": [],
-  "categories": ["food", "lifestyle"],
+  "categories": ["business", "food", "lifestyle"],
   "lang": "pt-BR",
   "version": "100"
 }
