@@ -188,3 +188,49 @@
     animation: pulse-glow 2s ease-in-out infinite;
   }
 }
+
+/* ============================================================
+   BLACK PREMIUM — Glassmorphism layer (LP, Auth, Admin, SuperAdmin)
+   Activated by `body.theme-bp` (set by GlobalBackground)
+   ============================================================ */
+@layer components {
+  body.theme-bp {
+    background-color: #000 !important;
+  }
+
+  /* Make app shells transparent so the global video/image shows through */
+  body.theme-bp #root,
+  body.theme-bp main,
+  body.theme-bp [data-app-shell] {
+    background-color: transparent !important;
+  }
+
+  /* Glass surfaces: cards, sidebars, navbars, dialogs, popovers */
+  body.theme-bp .bg-card,
+  body.theme-bp [data-glass],
+  body.theme-bp aside[data-sidebar],
+  body.theme-bp nav,
+  body.theme-bp [role="dialog"] > div,
+  body.theme-bp [data-radix-popper-content-wrapper] > * {
+    background-color: rgba(10, 10, 10, 0.7) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Helper utility class for explicit glass elements */
+  .glass-bp {
+    background-color: rgba(10, 10, 10, 0.7) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Brand glow text */
+  .brand-glow {
+    text-shadow:
+      0 0 12px rgba(30, 144, 255, 0.55),
+      0 0 24px rgba(30, 144, 255, 0.25);
+  }
+}
+
