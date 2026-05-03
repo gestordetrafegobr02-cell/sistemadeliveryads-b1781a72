@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { MetaPixelInjector } from "@/components/MetaPixelInjector";
+import { GlobalBackground } from "@/components/GlobalBackground";
 
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -26,6 +27,7 @@ const App = () => (
         <Sonner />
         <MetaPixelInjector />
         <BrowserRouter>
+          <GlobalBackground />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/demo/:slug" element={<Demo />} />
