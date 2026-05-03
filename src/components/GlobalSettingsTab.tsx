@@ -11,6 +11,7 @@ interface GlobalSettings {
   owner_whatsapp: string;
   subscription_price: string;
   default_trial_days: string;
+  meta_pixel_id: string;
 }
 
 export function GlobalSettingsTab() {
