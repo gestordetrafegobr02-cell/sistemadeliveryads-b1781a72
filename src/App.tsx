@@ -24,6 +24,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <MetaPixelInjector />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
