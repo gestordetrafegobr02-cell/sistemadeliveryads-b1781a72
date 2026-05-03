@@ -27,6 +27,7 @@ const App = () => (
         <Sonner />
         <MetaPixelInjector />
         <BrowserRouter>
+          <GlobalBackground />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/demo/:slug" element={<Demo />} />
