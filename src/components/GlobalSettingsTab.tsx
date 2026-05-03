@@ -67,6 +67,7 @@ export function GlobalSettingsTab() {
         { key: 'owner_whatsapp', value: settings.owner_whatsapp },
         { key: 'subscription_price', value: settings.subscription_price },
         { key: 'default_trial_days', value: settings.default_trial_days },
+        { key: 'meta_pixel_id', value: settings.meta_pixel_id.trim() },
       ];
 
       for (const entry of entries) {
