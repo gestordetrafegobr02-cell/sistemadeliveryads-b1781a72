@@ -11,6 +11,7 @@ interface GlobalSettings {
   owner_whatsapp: string;
   subscription_price: string;
   default_trial_days: string;
+  meta_pixel_id: string;
 }
 
 export function GlobalSettingsTab() {
@@ -18,6 +19,7 @@ export function GlobalSettingsTab() {
     owner_whatsapp: '',
     subscription_price: '97',
     default_trial_days: '7',
+    meta_pixel_id: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +41,7 @@ export function GlobalSettingsTab() {
         owner_whatsapp: '',
         subscription_price: '97',
         default_trial_days: '7',
+        meta_pixel_id: '',
       };
 
       data?.forEach((item) => {
@@ -64,6 +67,7 @@ export function GlobalSettingsTab() {
         { key: 'owner_whatsapp', value: settings.owner_whatsapp },
         { key: 'subscription_price', value: settings.subscription_price },
         { key: 'default_trial_days', value: settings.default_trial_days },
+        { key: 'meta_pixel_id', value: settings.meta_pixel_id.trim() },
       ];
 
       for (const entry of entries) {
@@ -192,6 +196,27 @@ Enviado pelo painel Master Admin`;
           />
           <p className="text-xs text-muted-foreground">
             Quantidade de dias de teste gratuito para novas lojas.
+          </p>
+        </div>
+
+        {/* Meta Pixel ID (Tracking) */}
+        <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-4">
+          <Label htmlFor="meta_pixel_id" className="text-foreground">
+            ID do Pixel do Facebook (Meta)
+          </Label>
+          <Input
+            id="meta_pixel_id"
+            type="text"
+            inputMode="numeric"
+            placeholder="Ex: 1234567890123456"
+            value={settings.meta_pixel_id}
+            onChange={(e) =>
+              setSettings({ ...settings, meta_pixel_id: e.target.value.replace(/\D/g, '') })
+            }
+            className="bg-background border-border/60 font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Pixel global da plataforma. Injetado automaticamente nas páginas (Landing, Auth, Admin) sem novo deploy. Deixe vazio para desativar.
           </p>
         </div>
 
