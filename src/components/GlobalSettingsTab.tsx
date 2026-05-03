@@ -199,6 +199,27 @@ Enviado pelo painel Master Admin`;
           </p>
         </div>
 
+        {/* Meta Pixel ID (Tracking) */}
+        <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-4">
+          <Label htmlFor="meta_pixel_id" className="text-foreground">
+            ID do Pixel do Facebook (Meta)
+          </Label>
+          <Input
+            id="meta_pixel_id"
+            type="text"
+            inputMode="numeric"
+            placeholder="Ex: 1234567890123456"
+            value={settings.meta_pixel_id}
+            onChange={(e) =>
+              setSettings({ ...settings, meta_pixel_id: e.target.value.replace(/\D/g, '') })
+            }
+            className="bg-background border-border/60 font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Pixel global da plataforma. Injetado automaticamente nas páginas (Landing, Auth, Admin) sem novo deploy. Deixe vazio para desativar.
+          </p>
+        </div>
+
         {/* Save Button */}
         <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
           {saving ? (
