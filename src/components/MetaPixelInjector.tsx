@@ -28,9 +28,9 @@ export function MetaPixelInjector() {
         const pixelId = (data?.value || '').trim();
         if (!pixelId || !/^\d{6,20}$/.test(pixelId)) return;
         if (window.__metaPixelLoaded === pixelId) return;
-        if (window.fbq) {
-          window.fbq('init', pixelId);
-          window.fbq('track', 'PageView');
+        if ((window as any).fbq) {
+          (window as any).fbq('init', pixelId);
+          (window as any).fbq('track', 'PageView');
           window.__metaPixelLoaded = pixelId;
           return;
         }
