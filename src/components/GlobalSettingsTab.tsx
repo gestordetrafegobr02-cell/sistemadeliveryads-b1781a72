@@ -41,6 +41,7 @@ export function GlobalSettingsTab() {
         owner_whatsapp: '',
         subscription_price: '97',
         default_trial_days: '7',
+        meta_pixel_id: '',
       };
 
       data?.forEach((item) => {
