@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
-    fbq?: (...args: unknown[]) => void;
     _fbq?: unknown;
     __metaPixelLoaded?: string;
   }
