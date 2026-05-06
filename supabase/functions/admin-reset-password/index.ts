@@ -37,14 +37,9 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized: Could not verify user')
     }
 
-    // Check if user is master admin via database setting
-    const { data: masterEmail } = await supabaseAdmin
-      .from('global_settings')
-      .select('value')
-      .eq('key', 'master_admin_email')
-      .single()
-
-    if (!masterEmail || user.email !== masterEmail.value) {
+    // Check if user is master admin (hardcoded email check for security)
+    const MASTER_EMAIL = 'igormoises.ads@gmail.com'
+    if (user.email !== MASTER_EMAIL) {
       throw new Error('Unauthorized: Master admin access required')
     }
 

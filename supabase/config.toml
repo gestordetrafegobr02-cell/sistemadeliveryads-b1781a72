@@ -2,6 +2,3 @@ project_id = "rxmjjuhibcvqzidgidxp"
 
 [functions.notify-lead]
 verify_jwt = false
-
-[functions.store-og]
-verify_jwt = false

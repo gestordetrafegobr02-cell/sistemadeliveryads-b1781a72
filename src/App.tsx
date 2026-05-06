@@ -4,9 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { MetaPixelInjector } from "@/components/MetaPixelInjector";
-import { GlobalBackground } from "@/components/GlobalBackground";
-
+import InstallPWA from "@/components/InstallPWA";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import Demo from "./pages/Demo";
@@ -14,7 +12,6 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import SuperAdmin from "./pages/SuperAdmin";
 import Onboarding from "./pages/Onboarding";
-import OrderStatus from "./pages/OrderStatus";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,21 +22,19 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <MetaPixelInjector />
         <BrowserRouter>
-          <GlobalBackground />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/order-status/:orderId" element={<OrderStatus />} />
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          
+          <InstallPWA />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

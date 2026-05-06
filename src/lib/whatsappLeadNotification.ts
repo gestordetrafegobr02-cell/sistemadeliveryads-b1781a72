@@ -13,8 +13,8 @@ export async function sendLeadNotification(data: LeadData): Promise<void> {
   try {
     console.log('[sendLeadNotification] Sending lead notification:', data);
     
-    // Call the edge function to log the lead
-    const { error } = await supabase.functions.invoke('notify-lead', {
+    // Call the edge function to process the notification
+    const { data: response, error } = await supabase.functions.invoke('notify-lead', {
       body: {
         storeName: data.storeName,
         email: data.email,
@@ -26,6 +26,12 @@ export async function sendLeadNotification(data: LeadData): Promise<void> {
     if (error) {
       console.error('[sendLeadNotification] Edge function error:', error);
       return;
+    }
+
+    // Automatically open WhatsApp with the pre-filled message
+    if (response?.whatsappUrl) {
+      console.log('[sendLeadNotification] Opening WhatsApp notification...');
+      window.open(response.whatsappUrl, '_blank');
     }
 
     console.log('[sendLeadNotification] Lead notification processed successfully');

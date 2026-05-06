@@ -13,7 +13,6 @@ import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { CartProvider } from '@/lib/cart';
 import { StoreThemeProvider } from '@/lib/storeTheme';
 import { Skeleton } from '@/components/ui/skeleton';
-import InstallPWA from '@/components/InstallPWA';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
 
 // Demo store slugs
@@ -285,36 +284,6 @@ export default function Shop() {
     return products.filter((p) => p.is_featured);
   }, [products]);
 
-  // Dynamic PWA manifest per store (must be before early returns)
-  const storeLogoSanitized = useMemo(() => sanitizeImageUrl(store?.logo_url), [store?.logo_url]);
-
-  const dynamicManifestUrl = useMemo(() => {
-    if (!store) return undefined;
-    const icons = storeLogoSanitized
-      ? [
-          { src: storeLogoSanitized, sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: storeLogoSanitized, sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: storeLogoSanitized, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ]
-      : [];
-    const manifest = {
-      name: store.name,
-      short_name: store.name.slice(0, 12),
-      description: `Cardápio online - ${store.name}`,
-      start_url: `/${cleanSlug}`,
-      scope: `/${cleanSlug}`,
-      display: 'standalone',
-      background_color: store.primary_color || '#0a0a0a',
-      theme_color: store.primary_color || '#f59e0b',
-      orientation: 'portrait-primary',
-      icons,
-      lang: 'pt-BR',
-      id: `/${cleanSlug}`,
-    };
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    return URL.createObjectURL(blob);
-  }, [store?.name, store?.primary_color, storeLogoSanitized, cleanSlug]);
-
   const handlePurchase = () => {
     if (window.fbq && facebookPixelId) {
       window.fbq('track', 'Purchase');
@@ -403,7 +372,8 @@ export default function Shop() {
 
   const ogTitle = store.name;
   const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
-  const ogImage = storeLogoSanitized ? (storeLogoSanitized.includes('?') ? `${storeLogoSanitized}&v=100` : `${storeLogoSanitized}?v=100`) : '';
+  const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
+  const ogImage = storeLogoSanitized || `${window.location.origin}/logo.png`;
   const ogUrl = `https://sistemadeliveryads.site/${cleanSlug}`;
 
   return (
@@ -412,17 +382,12 @@ export default function Shop() {
         <title>{ogTitle}</title>
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
-        {ogImage && <meta property="og:image" content={ogImage} />}
+        <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content={ogTitle} />
+        <meta property="og:site_name" content="Sistema Delivery ADS" />
         <meta name="description" content={ogDescription} />
-        <meta name="apple-mobile-web-app-title" content={ogTitle} />
-        <meta name="application-name" content={ogTitle} />
-        <meta name="theme-color" content={store.primary_color || '#f59e0b'} />
-        {storeLogoSanitized && <link rel="icon" type="image/png" href={storeLogoSanitized} />}
-        {storeLogoSanitized && <link rel="apple-touch-icon" href={storeLogoSanitized} />}
-        <link rel="manifest" href={dynamicManifestUrl || '/manifest.json'} />
+        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
@@ -571,8 +536,6 @@ export default function Shop() {
 
           <CartSheet
             storeId={store.id}
-            storeSlug={cleanSlug}
-            storeName={store.name}
             whatsapp={paymentData?.whatsapp || ''}
             deliveryFee={store.delivery_fee || 0}
             pixKey={paymentData?.pix_key || undefined}
@@ -580,7 +543,6 @@ export default function Shop() {
             onOpen={handleCartOpen}
             isStoreOpen={storeIsOpen}
           />
-          <InstallPWA storeName={store.name} />
         </div>
       </CartProvider>
     </StoreThemeProvider>

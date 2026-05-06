@@ -34,8 +34,9 @@ export default function Auth() {
     
     setCheckingStore(true);
     
-    // Check if user is master admin via server-side RPC
-    const { data: isMasterAdmin } = await supabase.rpc('is_master_admin');
+    // Check if user is master admin - redirect directly to super-admin
+    // Master admin bypasses all other checks
+    const isMasterAdmin = user.email === 'igormoises.ads@gmail.com';
     if (isMasterAdmin) {
       navigate('/super-admin', { replace: true });
       setCheckingStore(false);
@@ -164,7 +165,7 @@ export default function Auth() {
           {/* Welcome Text */}
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl tracking-wide text-slate-100">
-              Painel do Lojista
+              Sistema Delivery ADS
             </h1>
             <p className="text-slate-400 mt-2 text-sm">
               Acesse sua conta para gerenciar sua loja

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle, LocateFixed } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,8 +28,6 @@ const checkoutSchema = z.object({
 
 interface CartSheetProps {
   storeId?: string;
-  storeSlug?: string;
-  storeName?: string;
   whatsapp?: string;
   deliveryFee?: number;
   pixKey?: string;
@@ -44,9 +41,8 @@ interface StoreUpsellConfig {
   upsell_blocking_categories: string[];
 }
 
-export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
+export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [upsellOpen, setUpsellOpen] = useState(false);
@@ -164,6 +160,12 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
   const grandTotal = subtotal + deliveryAmount;
 
+  // Generate order ID
+  const generateOrderId = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${timestamp}-${random}`;
+  };
 
   useEffect(() => {
     if (open && onOpen) {
@@ -223,7 +225,69 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
       if (referencePoint) addressStr += ` | Ref: ${referencePoint}`;
     }
 
-    // 1) Save order to DB FIRST — then redirect to WhatsApp
+    const orderId = generateOrderId();
+
+    // Build items list with modifiers and observations
+    const itemsList = items
+      .map((item) => {
+        const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
+        const itemTotal = (item.price + modifiersTotal) * item.quantity;
+        
+        let itemText = `• ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
+        
+        if (item.modifiers && item.modifiers.length > 0) {
+          const modifiersList = item.modifiers.map((m) => `  ↳ ${m.name} (+R$ ${m.price.toFixed(2).replace('.', ',')})`).join('\n');
+          itemText += `\n${modifiersList}`;
+        }
+        
+        if (item.observation) {
+          itemText += `\n  📝 ${item.observation}`;
+        }
+        
+        return itemText;
+      })
+      .join('\n');
+
+    let message = `🛵 *PEDIDO #${orderId}*\n\n`;
+    message += `*Cliente:* ${name}\n`;
+    message += `*Telefone:* ${phone}\n\n`;
+    message += `*Tipo:* ${orderType === 'delivery' ? '🚚 Entrega' : '🏪 Retirada na Loja'}\n\n`;
+    message += `*Itens:*\n${itemsList}\n\n`;
+    message += `*Subtotal:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
+    
+    if (orderType === 'delivery') {
+      message += `*Taxa de Entrega:* R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
+    }
+    
+    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
+    message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
+    
+    if (paymentMethod === 'cash' && changeFor) {
+      message += ` (Troco para R$ ${changeFor})`;
+    }
+    
+    if (paymentMethod === 'pix' && pixKey) {
+      message += `\n*Chave PIX:* ${pixKey}`;
+    }
+
+    if (orderType === 'delivery') {
+      message += `\n\n*📍 Endereço de Entrega:*\n`;
+      message += `${street}, ${number}`;
+      if (complement) message += ` - ${complement}`;
+      message += `\n${neighborhood}`;
+      if (zipCode) message += ` - CEP: ${zipCode}`;
+      if (referencePoint) message += `\n*Ponto de Ref:* ${referencePoint}`;
+    }
+
+    const encodedMessage = encodeURIComponent(message);
+    const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+    // CRITICAL: Open WhatsApp IMMEDIATELY in the synchronous user-gesture context
+    // This MUST happen before any async calls (DB insert, etc.) to avoid popup blockers
+    window.location.href = whatsappUrl;
+
+    // Save order to database in background (after redirect is triggered)
     if (storeId) {
       try {
         const orderItems = items.map((item) => ({
@@ -235,11 +299,7 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
           observation: item.observation || null,
         }));
 
-        // Generate UUID client-side so we know the order ID without needing SELECT back
-        const orderId = crypto.randomUUID();
-
-        const { error: orderError } = await supabase.from('orders').insert([{
-          id: orderId,
+        supabase.from('orders').insert([{
           store_id: storeId,
           customer_name: name,
           customer_phone: phone,
@@ -247,88 +307,23 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
           total: grandTotal,
           address: addressStr || null,
           payment_method: paymentMethod,
-        }]);
-
-        if (orderError) {
-          console.error('Order save error:', orderError.message);
-          setSubmitting(false);
-          setErrors({ submit: 'Erro ao salvar pedido. Tente novamente.' });
-          return;
-        }
-
-        // Order saved successfully!
-        // Note: session token is generated server-side by trigger, but we can't read it
-        // due to RLS. The customer can still view via the order-status page if we store a placeholder.
-        // For now, we fetch it via the get_order_details RPC won't work without token.
-        // Best approach: read back via RPC or store a known token.
-        // Workaround: fetch the token using a quick anon-safe method
-        // Actually the trigger generates the token — let's read it back using the owner's RPC
-        // For the customer, we'll skip token-based tracking and rely on the link being shared.
-        
-        // Store orderId for potential future use
-        localStorage.setItem(`order_id_${orderId}`, orderId);
-        deleteAbandonedCart();
-
-        // Fire Meta Pixel Purchase event
-        if (typeof window !== 'undefined' && (window as any).fbq) {
-          (window as any).fbq('track', 'Purchase', {
-            value: grandTotal,
-            currency: 'BRL',
-            content_name: name,
-            num_items: itemCount,
-          });
-        }
-
-        onPurchase?.();
-        clearCart();
-        setOpen(false);
-        setSubmitting(false);
-
-        // Build WhatsApp URL
-        const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
-        const orderStatusUrl = `${window.location.origin}/order-status/${orderId}`;
-        const displayName = storeName || 'sua loja';
-        const msgText = [
-          `Olá! Acabei de fazer um pedido na ${displayName}.`,
-          '',
-          `Nome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}`,
-          '',
-          `Acompanhe aqui: ${orderStatusUrl}`,
-        ].join('\n');
-        const waUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(msgText)}`;
-
-        // Redirect to WhatsApp (sync with user gesture for mobile)
-        if (phoneNumber) {
-          window.location.href = waUrl;
-        } else {
-          navigate(`/order-status/${orderId}`);
-        }
+        }]).then(({ error: orderError }) => {
+          if (orderError) {
+            console.error('Order save error:', orderError.message);
+          } else {
+            deleteAbandonedCart();
+          }
+        });
       } catch (err) {
         console.error('Order save exception:', err);
-        setSubmitting(false);
-        setErrors({ submit: 'Erro ao processar pedido. Tente novamente.' });
       }
-    } else {
-      fallbackWhatsApp(addressStr);
     }
-  };
 
-  // Fallback: direct WhatsApp redirect (clean message, no item summary)
-  function fallbackWhatsApp(addressStr: string) {
-    const displayName = storeName || 'sua loja';
-    const message = [
-      `Olá! Acabei de fazer um pedido na ${displayName}.`,
-      '',
-      `Nome: ${name} | Total: R$ ${grandTotal.toFixed(2).replace('.', ',')}`,
-    ].join('\n');
-
-    const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
-    window.location.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     onPurchase?.();
     clearCart();
     setSubmitting(false);
     setOpen(false);
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -522,46 +517,9 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
               {/* Address Fields - Only show for delivery */}
               {orderType === 'delivery' && (
                 <div className="space-y-3 p-4 glass-card rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      <Label className="text-foreground font-medium">Endereço de Entrega</Label>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 text-xs"
-                      onClick={async () => {
-                        if (!navigator.geolocation) {
-                          setErrors({ address: 'Geolocalização não suportada neste navegador' });
-                          return;
-                        }
-                        navigator.geolocation.getCurrentPosition(
-                          async (pos) => {
-                            try {
-                              const res = await fetch(
-                                `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`,
-                                { headers: { 'Accept-Language': 'pt-BR' } }
-                              );
-                              const data = await res.json();
-                              if (data.address) {
-                                setStreet(data.address.road || data.address.pedestrian || '');
-                                setNeighborhood(data.address.suburb || data.address.neighbourhood || '');
-                                setZipCode(data.address.postcode || '');
-                              }
-                            } catch {
-                              setErrors({ address: 'Erro ao buscar endereço' });
-                            }
-                          },
-                          () => setErrors({ address: 'Permissão de localização negada' }),
-                          { enableHighAccuracy: true, timeout: 10000 }
-                        );
-                      }}
-                    >
-                      <LocateFixed className="w-3 h-3" />
-                      Usar localização
-                    </Button>
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <Label className="text-foreground font-medium">Endereço de Entrega</Label>
                   </div>
                   
                   {errors.address && <p className="text-destructive text-sm">{errors.address}</p>}
@@ -681,13 +639,6 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
                 </div>
               )}
 
-              {errors.submit && (
-                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg mb-3">
-                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
-                  <p className="text-sm text-destructive">{errors.submit}</p>
-                </div>
-              )}
-
               <Button
                 onClick={() => {
                   hapticSuccess();
@@ -697,7 +648,7 @@ export function CartSheet({ storeId, storeSlug, storeName, whatsapp, deliveryFee
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                {isStoreOpen ? 'CONFIRMAR PEDIDO E ACOMPANHAR' : 'Loja Fechada'}
+                {isStoreOpen ? 'Confirmar Pedido via WhatsApp' : 'Loja Fechada'}
               </Button>
             </div>
           </div>

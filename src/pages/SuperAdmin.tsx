@@ -51,7 +51,7 @@ import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 
-// Master admin status is checked via server-side RPC
+const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
 interface AdminStore {
   id: string;
@@ -118,26 +118,8 @@ export default function SuperAdmin() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<{ id: string; email: string | null } | null>(null);
 
-  // Check if current user is master admin via server-side RPC
-  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
-
-  useEffect(() => {
-    async function checkMasterAdmin() {
-      if (!user) {
-        setIsMasterAdmin(false);
-        return;
-      }
-      try {
-        const { data } = await supabase.rpc('is_master_admin');
-        setIsMasterAdmin(Boolean(data));
-      } catch {
-        setIsMasterAdmin(false);
-      }
-    }
-    if (!authLoading) {
-      checkMasterAdmin();
-    }
-  }, [user, authLoading]);
+  // Check if current user is master admin
+  const isMasterAdmin = user?.email === MASTER_EMAIL;
 
   useEffect(() => {
     if (!authLoading && !user) {

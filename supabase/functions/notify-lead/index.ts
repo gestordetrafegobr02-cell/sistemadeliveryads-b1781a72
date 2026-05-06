@@ -12,22 +12,6 @@ interface LeadNotification {
   segment?: string;
 }
 
-// Simple in-memory rate limiter (per edge function instance)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 5; // max requests per window
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT_MAX;
-}
-
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -68,14 +52,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Rate limit by email to prevent spam
-    if (isRateLimited(email)) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Sanitize control characters
     const sanitize = (str: string) => str.replace(/[\x00-\x1F\x7F]/g, '');
     const cleanStoreName = sanitize(storeName);
@@ -85,8 +61,42 @@ Deno.serve(async (req: Request) => {
 
     console.log('[notify-lead] Received lead notification request:', { storeName: cleanStoreName, email: cleanEmail, segment: cleanSegment });
 
-    // Log the lead for analytics/tracking (server-side only)
-    console.log('[notify-lead] SUCCESS - Lead logged:', {
+    // Get the owner WhatsApp number from global settings
+    const { data: ownerWhatsApp, error: settingsError } = await supabase.rpc('get_global_setting', {
+      setting_key: 'owner_whatsapp'
+    });
+
+    if (settingsError) {
+      console.error('[notify-lead] Error fetching owner WhatsApp:', settingsError);
+    }
+
+    const targetWhatsApp = ownerWhatsApp || '5511999999999';
+    console.log('[notify-lead] Target WhatsApp:', targetWhatsApp);
+
+    // Format the notification message
+    const message = `🔔 *NOVO LEAD CADASTRADO!*
+
+📍 *Loja:* ${cleanStoreName}
+📧 *E-mail:* ${cleanEmail}
+📱 *Telefone:* ${cleanPhone || 'Não informado'}
+🏪 *Segmento:* ${cleanSegment}
+
+---
+_Notificação automática do Sistema Delivery ADS_`;
+
+    // Create WhatsApp link (for logging/reference)
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${targetWhatsApp}?text=${encodedMessage}`;
+
+    console.log('[notify-lead] Lead notification prepared:', {
+      targetWhatsApp,
+      storeName: cleanStoreName,
+      email: cleanEmail,
+      whatsappUrl: whatsappUrl.substring(0, 100) + '...'
+    });
+
+    // Log the lead for analytics/tracking
+    console.log('[notify-lead] SUCCESS - Lead ready for notification:', {
       storeName: cleanStoreName,
       email: cleanEmail,
       phone: cleanPhone || 'N/A',
@@ -94,11 +104,12 @@ Deno.serve(async (req: Request) => {
       timestamp: new Date().toISOString()
     });
 
-    // Return success without exposing any internal data (no whatsappUrl)
+    // Return the WhatsApp URL for the frontend to open
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Lead notification processed successfully'
+        whatsappUrl,
+        message: 'Lead notification prepared successfully'
       }),
       { 
         status: 200, 
@@ -110,7 +121,7 @@ Deno.serve(async (req: Request) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[notify-lead] Error processing request:', errorMessage);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

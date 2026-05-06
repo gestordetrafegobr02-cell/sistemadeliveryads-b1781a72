@@ -19,7 +19,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
-
+import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
@@ -30,8 +30,6 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
-import { AdminDashboardCards } from '@/components/AdminDashboardCards';
-import { NewOrderAlert } from '@/components/NewOrderAlert';
 
 interface StoreData {
   id: string;
@@ -338,16 +336,6 @@ export default function Admin() {
       category_id: productCategory || null,
     };
 
-    // Validate that the selected category belongs to this store (avoid FK/orphan issues)
-    if (productData.category_id) {
-      const categoryBelongs = categories.some((c) => c.id === productData.category_id);
-      if (!categoryBelongs) {
-        toast.error('Categoria inválida. Recarregando lista...');
-        await fetchData();
-        return;
-      }
-    }
-
     if (editingProduct) {
       const { error } = await supabase
         .from('products')
@@ -355,11 +343,10 @@ export default function Admin() {
         .eq('id', editingProduct.id);
 
       if (error) {
-        console.error('[products.update] code:', error.code, 'msg:', error.message);
-        toast.error(`Erro ao atualizar produto: ${error.message}`);
-        return;
+        toast.error('Erro ao atualizar produto');
+      } else {
+        toast.success('Produto atualizado!');
       }
-      toast.success('Produto atualizado!');
     } else {
       const { error } = await supabase.from('products').insert({
         ...productData,
@@ -367,11 +354,10 @@ export default function Admin() {
       });
 
       if (error) {
-        console.error('[products.insert] code:', error.code, 'msg:', error.message, 'store_id:', productData.store_id, 'category_id:', productData.category_id);
-        toast.error(`Erro ao criar produto: ${error.message}`);
-        return;
+        toast.error('Erro ao criar produto');
+      } else {
+        toast.success('Produto criado!');
       }
-      toast.success('Produto criado!');
     }
 
     setProductDialogOpen(false);
@@ -901,21 +887,6 @@ export default function Admin() {
 
           {/* Orders Tab */}
           <TabsContent value="orders">
-            {/* Dashboard Cards */}
-            {store && <AdminDashboardCards orders={orders} />}
-
-            {/* Sound Alert for new pending orders */}
-            {store && (
-              <NewOrderAlert
-                pendingOrderIds={orders.filter((o) => o.status === 'pending').map((o) => o.id)}
-                onAccept={async (orderId) => {
-                  await supabase.from('orders').update({ status: 'preparing' }).eq('id', orderId);
-                  toast.success('Pedido aceito!');
-                  fetchData();
-                }}
-              />
-            )}
-
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="font-display text-xl">Pedidos Recentes</CardTitle>
@@ -983,7 +954,7 @@ export default function Admin() {
                                 if (error) {
                                   toast.error('Erro ao atualizar status');
                                 } else {
-                                  toast.success('Status atualizado! O cliente será notificado automaticamente.');
+                                  toast.success('Status atualizado!');
                                   fetchData();
                                 }
                               }}
@@ -1000,7 +971,13 @@ export default function Admin() {
                               </SelectContent>
                             </Select>
                             
-                            
+                            <WhatsAppNotifyButton
+                              orderId={order.id}
+                              customerName={order.customer_name}
+                              customerPhone={order.customer_phone}
+                              status={order.status}
+                              storeName={store?.name || 'Loja'}
+                            />
                             
                             <Button
                               size="icon"

@@ -15,13 +15,10 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["robots.txt"],
+      includeAssets: ["logo.png", "robots.txt"],
       manifest: false, // Using our own manifest.json
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,svg,woff,woff2}"],
-        navigateFallback: null,
-        // Force SW update by changing this version string
-        additionalManifestEntries: [{ url: '/cache-bust-v100', revision: 'v100' }],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

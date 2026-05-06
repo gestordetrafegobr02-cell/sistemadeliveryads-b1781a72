@@ -7,26 +7,25 @@
 /* Minimalist Clean Theme - Apple Style */
 @layer base {
   :root {
-    /* Black Premium Theme — IGOR MOISÉS ADS */
-    --background: 0 0% 4%;            /* #0A0A0A piano black */
-    --foreground: 0 0% 97%;           /* #F8F8F8 ice white */
+    --background: 0 0% 100%;
+    --foreground: 220 20% 20%;
 
-    --card: 0 0% 7%;                  /* #111 dark card */
-    --card-foreground: 0 0% 97%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 97%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
 
-    --primary: 210 100% 56%;          /* #1E90FF tech blue */
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 92%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 20%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 62%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 210 100% 56%;
+    --accent: 25 95% 53%;
     --accent-foreground: 0 0% 100%;
 
     --emerald: 145 63% 49%;
@@ -35,20 +34,20 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 210 100% 56%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 25 95% 53%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 88%;
-    --sidebar-primary: 210 100% 56%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 9%;
-    --sidebar-accent-foreground: 210 100% 70%;
-    --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 210 100% 56%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 25 95% 53%;
   }
 
   .dark {
@@ -188,49 +187,3 @@
     animation: pulse-glow 2s ease-in-out infinite;
   }
 }
-
-/* ============================================================
-   BLACK PREMIUM — Glassmorphism layer (LP, Auth, Admin, SuperAdmin)
-   Activated by `body.theme-bp` (set by GlobalBackground)
-   ============================================================ */
-@layer components {
-  body.theme-bp {
-    background-color: #000 !important;
-  }
-
-  /* Make app shells transparent so the global video/image shows through */
-  body.theme-bp #root,
-  body.theme-bp main,
-  body.theme-bp [data-app-shell] {
-    background-color: transparent !important;
-  }
-
-  /* Glass surfaces: cards, sidebars, navbars, dialogs, popovers */
-  body.theme-bp .bg-card,
-  body.theme-bp [data-glass],
-  body.theme-bp aside[data-sidebar],
-  body.theme-bp nav,
-  body.theme-bp [role="dialog"] > div,
-  body.theme-bp [data-radix-popper-content-wrapper] > * {
-    background-color: rgba(10, 10, 10, 0.7) !important;
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  /* Helper utility class for explicit glass elements */
-  .glass-bp {
-    background-color: rgba(10, 10, 10, 0.7) !important;
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  /* Brand glow text */
-  .brand-glow {
-    text-shadow:
-      0 0 12px rgba(30, 144, 255, 0.55),
-      0 0 24px rgba(30, 144, 255, 0.25);
-  }
-}
-
