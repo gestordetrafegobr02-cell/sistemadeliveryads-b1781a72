@@ -202,12 +202,12 @@ export default function Auth() {
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-md">
         <div 
-          className="rounded-2xl border border-slate-700/50 p-8 shadow-2xl"
+          className="rounded-2xl border border-white/10 p-8 shadow-2xl"
           style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
+            background: 'rgba(10, 10, 12, 0.72)',
+            backdropFilter: 'blur(28px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+            boxShadow: '0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06) inset'
           }}
         >
           {/* Welcome Text */}
