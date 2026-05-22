@@ -9,10 +9,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { z } from 'zod';
 import { Loader2, Mail, Lock } from 'lucide-react';
 
+import { Loader2, Mail, Lock } from 'lucide-react';
+import authBurger from '@/assets/auth-burger.jpg';
+import authPizza from '@/assets/auth-pizza.jpg';
+import authAcai from '@/assets/auth-acai.jpg';
+import authDelivery from '@/assets/auth-delivery.jpg';
+import authIngredients from '@/assets/auth-ingredients.jpg';
+import authFries from '@/assets/auth-fries.jpg';
+import demoBurger from '@/assets/demo-burger.jpg';
+import demoPizza from '@/assets/demo-pizza.jpg';
+import demoAcai from '@/assets/demo-acai.jpg';
+import demoHortifruti from '@/assets/demo-hortifruti.jpg';
+
+const FOOD_IMAGES = [
+  authBurger, authPizza, authAcai, authDelivery, authIngredients, authFries,
+  demoBurger, demoPizza, demoAcai, demoHortifruti,
+];
+
+// Build 4 shuffled columns for parallax scroll
+const buildColumn = (offset: number) => {
+  const arr = [...FOOD_IMAGES];
+  // simple rotation per column for variety
+  return [...arr.slice(offset), ...arr.slice(0, offset)];
+};
+const COLUMNS = [buildColumn(0), buildColumn(3), buildColumn(6), buildColumn(8)];
+
 const authSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
 });
+
 
 export default function Auth() {
   const navigate = useNavigate();
