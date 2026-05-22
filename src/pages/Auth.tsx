@@ -137,44 +137,67 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 bg-slate-900">
-      {/* Background */}
-      <div className="absolute inset-0 bg-slate-900" />
-      
-      {/* Abstract Decorative Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Large blurred sphere - top right */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/30 to-accent/20 blur-3xl animate-pulse" />
-        
-        {/* Medium sphere - bottom left */}
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-accent/25 to-primary/15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        
-        {/* Small floating orbs */}
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-primary/20 blur-2xl animate-float" />
-        <div className="absolute bottom-1/3 right-1/4 w-24 h-24 rounded-full bg-accent/25 blur-2xl animate-float" style={{ animationDelay: '1.5s' }} />
-        
-        {/* Geometric lines */}
-        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="hsl(38, 92%, 50%)" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="hsl(25, 95%, 53%)" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-          <line x1="0" y1="100%" x2="100%" y2="0" stroke="url(#lineGradient)" strokeWidth="1" />
-          <line x1="20%" y1="100%" x2="100%" y2="20%" stroke="url(#lineGradient)" strokeWidth="0.5" />
-          <line x1="0" y1="80%" x2="80%" y2="0" stroke="url(#lineGradient)" strokeWidth="0.5" />
-        </svg>
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 bg-black">
+      {/* Keyframes for Netflix-style infinite scroll */}
+      <style>{`
+        @keyframes auth-scroll-up {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(0, -50%, 0); }
+        }
+        @keyframes auth-scroll-down {
+          0% { transform: translate3d(0, -50%, 0); }
+          100% { transform: translate3d(0, 0, 0); }
+        }
+        .auth-col-up { animation: auth-scroll-up 60s linear infinite; }
+        .auth-col-down { animation: auth-scroll-down 75s linear infinite; }
+        .auth-col-up-fast { animation: auth-scroll-up 50s linear infinite; }
+        .auth-col-down-slow { animation: auth-scroll-down 85s linear infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .auth-col-up, .auth-col-down, .auth-col-up-fast, .auth-col-down-slow { animation: none; }
+        }
+      `}</style>
 
-        {/* Grid pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(hsl(38, 92%, 50%) 1px, transparent 1px), linear-gradient(90deg, hsl(38, 92%, 50%) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }}
+      {/* Netflix-style scrolling food image grid */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-3 opacity-90">
+          {COLUMNS.map((col, i) => {
+            const animClass = ['auth-col-up', 'auth-col-down', 'auth-col-up-fast', 'auth-col-down-slow'][i % 4];
+            const hideClass = i === 2 ? 'hidden sm:flex' : i === 3 ? 'hidden md:flex' : 'flex';
+            return (
+              <div key={i} className={`${hideClass} flex-col overflow-hidden`}>
+                <div className={`flex flex-col gap-3 ${animClass}`}>
+                  {[...col, ...col].map((src, idx) => (
+                    <div
+                      key={idx}
+                      className="w-full aspect-[3/4] rounded-2xl overflow-hidden flex-shrink-0 bg-slate-900"
+                    >
+                      <img
+                        src={src}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Heavy backdrop blur + dark premium gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
         />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/70 to-black/90" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.3)_0%,_rgba(0,0,0,0.85)_85%)]" />
+
+        {/* Premium ambient accents */}
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-accent/15 to-primary/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
+
 
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-md">
