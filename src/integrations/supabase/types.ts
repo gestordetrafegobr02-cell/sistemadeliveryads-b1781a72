@@ -578,6 +578,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_store_manual: {
+        Args: {
+          p_owner_email: string
+          p_store_name: string
+          p_store_slug: string
+          p_template_slug?: string
+          p_trial_days?: number
+        }
+        Returns: string
+      }
       create_user_store_with_template: {
         Args: {
           p_store_name: string
@@ -631,6 +641,19 @@ export type Database = {
         }[]
       }
       get_global_setting: { Args: { setting_key: string }; Returns: string }
+      get_order_by_id: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          items: Json
+          payment_method: string
+          status: string
+          store_logo_url: string
+          store_name: string
+          total: number
+        }[]
+      }
       get_order_details: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
