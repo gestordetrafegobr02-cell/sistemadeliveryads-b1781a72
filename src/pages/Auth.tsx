@@ -159,7 +159,7 @@ export default function Auth() {
 
       {/* Netflix-style scrolling food image grid */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-3 opacity-90">
+        <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-3 opacity-100">
           {COLUMNS.map((col, i) => {
             const animClass = ['auth-col-up', 'auth-col-down', 'auth-col-up-fast', 'auth-col-down-slow'][i % 4];
             const hideClass = i === 2 ? 'hidden sm:flex' : i === 3 ? 'hidden md:flex' : 'flex';
@@ -185,17 +185,17 @@ export default function Auth() {
           })}
         </div>
 
-        {/* Heavy backdrop blur + dark premium gradient overlay */}
+        {/* Light backdrop blur + dark premium gradient overlay */}
         <div
           className="absolute inset-0"
-          style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+          style={{ backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/70 to-black/90" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.3)_0%,_rgba(0,0,0,0.85)_85%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.5)_85%)]" />
 
         {/* Premium ambient accents */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/20 to-accent/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-accent/15 to-primary/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/10 to-accent/5 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-gradient-to-tr from-accent/8 to-primary/5 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
 
@@ -204,7 +204,7 @@ export default function Auth() {
         <div 
           className="rounded-2xl border border-white/10 p-8 shadow-2xl"
           style={{
-            background: 'rgba(10, 10, 12, 0.72)',
+            background: 'rgba(10, 10, 12, 0.88)',
             backdropFilter: 'blur(28px) saturate(140%)',
             WebkitBackdropFilter: 'blur(28px) saturate(140%)',
             boxShadow: '0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06) inset'
