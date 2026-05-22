@@ -204,7 +204,7 @@ export default function Auth() {
         <div 
           className="rounded-2xl border border-white/10 p-8 shadow-2xl"
           style={{
-            background: 'rgba(10, 10, 12, 0.72)',
+            background: 'rgba(10, 10, 12, 0.88)',
             backdropFilter: 'blur(28px) saturate(140%)',
             WebkitBackdropFilter: 'blur(28px) saturate(140%)',
             boxShadow: '0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06) inset'
