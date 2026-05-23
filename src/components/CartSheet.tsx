@@ -154,7 +154,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   async function handleProceedToCheckout() {
     if (!validateCheckoutForm()) return;
 
-    const pendingWhatsAppWindow = window.open('', '_blank', 'noopener,noreferrer');
+    const pendingWhatsAppWindow = window.open('about:blank', '_blank');
     const showUpsell = await shouldShowUpsell();
     if (showUpsell) {
       pendingWhatsAppWindow?.close();
@@ -235,7 +235,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       return;
     }
 
-    const checkoutWindow = pendingWhatsAppWindow ?? window.open('', '_blank', 'noopener,noreferrer');
+    const checkoutWindow = pendingWhatsAppWindow ?? window.open('about:blank', '_blank');
     setSubmitting(true);
 
     // Build address string
@@ -370,20 +370,36 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedMessage}`;
     const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
+    const openWhatsAppTab = () => {
+      try {
+        if (checkoutWindow && !checkoutWindow.closed) {
+          checkoutWindow.location.href = whatsappUrl;
+          checkoutWindow.focus?.();
+          return true;
+        }
+      } catch (error) {
+        console.warn('[Checkout] unable to reuse pre-opened WhatsApp tab:', error);
+      }
+
+      const fallbackWindow = window.open(whatsappUrl, '_blank');
+      fallbackWindow?.focus?.();
+      return Boolean(fallbackWindow);
+    };
 
     onPurchase?.();
     clearCart();
     setSubmitting(false);
     setOpen(false);
 
-    if (checkoutWindow) {
-      checkoutWindow.location.replace(whatsappUrl);
-    } else {
-      window.location.assign(whatsappUrl);
+    const whatsappOpened = openWhatsAppTab();
+    if (!whatsappOpened) {
+      setErrors({ submit: 'Seu navegador bloqueou a abertura do WhatsApp. Libere pop-ups e tente novamente.' });
       return;
     }
 
-    window.location.assign(internalTrackingUrl);
+    window.setTimeout(() => {
+      window.location.assign(internalTrackingUrl);
+    }, 180);
   };
 
 

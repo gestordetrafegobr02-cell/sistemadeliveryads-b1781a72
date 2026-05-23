@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -30,6 +30,8 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
+
+const ORDER_ALERT_TONE = 'data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=';
 
 interface StoreData {
   id: string;
@@ -95,6 +97,8 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -120,71 +124,69 @@ export default function Admin() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
 
+  const ensureAlertAudio = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    if (!alertAudioRef.current) {
+      alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
+      alertAudioRef.current.preload = 'auto';
+      alertAudioRef.current.volume = 0.8;
+    }
+    return alertAudioRef.current;
+  }, []);
+
+  const playOrderAlert = useCallback(async () => {
+    const audio = ensureAlertAudio();
+    if (!audio) return false;
+
+    try {
+      audio.currentTime = 0;
+      await audio.play();
+      setAudioBlocked(false);
+      return true;
+    } catch (error) {
+      console.warn('[Admin] order alert audio blocked:', error);
+      setAudioBlocked(true);
+      return false;
+    }
+  }, [ensureAlertAudio]);
+
+  const enableAudioEvents = useCallback(async () => {
+    const played = await playOrderAlert();
+    if (played) {
+      toast.success('Áudio de novos pedidos ativado.');
+    } else {
+      toast.error('O navegador ainda bloqueou o áudio. Toque novamente após alguma interação na página.');
+    }
+  }, [playOrderAlert]);
+
+  useEffect(() => {
+    const audio = ensureAlertAudio();
+    return () => {
+      audio?.pause();
+    };
+  }, [ensureAlertAudio]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    if (user) fetchData();
-  }, [user]);
+  const fetchData = useCallback(async () => {
+    if (!user) return;
 
-  // Realtime subscription for orders (new-order notification)
-  useEffect(() => {
-    if (!store) return;
-
-    const channel = supabase
-      .channel(`orders-realtime-${store.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `store_id=eq.${store.id}`,
-        },
-        (payload) => {
-          const order = payload.new as { customer_name?: string; total?: number };
-          // Audio alert
-          try {
-            const a = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=');
-            a.volume = 0.7;
-            void a.play().catch(() => {});
-          } catch { /* ignore */ }
-          toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
-            description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
-            duration: 8000,
-          });
-          fetchData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `store_id=eq.${store.id}`,
-        },
-        () => fetchData()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [store?.id]);
-
-
-  async function fetchData() {
     const { data: storeData } = await supabase
       .from('stores')
       .select('*')
-      .eq('owner_id', user!.id)
+      .eq('owner_id', user.id)
       .maybeSingle();
 
     if (storeData) {
+      const themedStoreData = storeData as typeof storeData & {
+        bg_color?: string | null;
+        card_style?: string | null;
+      };
+
       const mappedStore: StoreData = {
         id: storeData.id,
         name: storeData.name,
@@ -210,8 +212,8 @@ export default function Admin() {
       setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
       setLogoUrl(storeData.logo_url || '');
       setCoverUrl(storeData.cover_url || '');
-      setStoreBgColor((storeData as any).bg_color ?? null);
-      setStoreCardStyle((storeData as any).card_style ?? 'rounded');
+      setStoreBgColor(themedStoreData.bg_color ?? null);
+      setStoreCardStyle(themedStoreData.card_style ?? 'rounded');
 
       const [catRes, prodRes, ordersRes] = await Promise.all([
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
@@ -225,7 +227,62 @@ export default function Admin() {
     }
 
     setLoading(false);
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) fetchData();
+  }, [user, fetchData]);
+
+  // Realtime subscription for orders (new-order notification)
+  useEffect(() => {
+    const storeId = store?.id;
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel(`orders-realtime-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+          filter: `store_id=eq.${storeId}`,
+        },
+        async (payload) => {
+          const order = payload.new as { customer_name?: string; total?: number };
+          const played = await playOrderAlert();
+          toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
+            description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
+            duration: 8000,
+            action: !played
+              ? {
+                  label: 'Ativar áudio',
+                  onClick: () => {
+                    void enableAudioEvents();
+                  },
+                }
+              : undefined,
+          });
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [store?.id, enableAudioEvents, fetchData, playOrderAlert]);
+
 
   // Validate Facebook Pixel ID format (15-20 digits only)
   function isValidPixelId(id: string): boolean {
@@ -440,6 +497,18 @@ export default function Admin() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {audioBlocked && (
+          <div className="mb-4 rounded-lg border border-border bg-card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Ative os alertas sonoros de novos pedidos</p>
+              <p className="text-xs text-muted-foreground">O navegador bloqueou o som automático. Toque no botão para liberar os avisos.</p>
+            </div>
+            <Button type="button" onClick={() => void enableAudioEvents()} className="bg-primary text-primary-foreground">
+              Ativar áudio
+            </Button>
+          </div>
+        )}
+
         <Tabs defaultValue="store" className="space-y-6">
           <TabsList className="bg-secondary">
             <TabsTrigger value="store" className="gap-2">
