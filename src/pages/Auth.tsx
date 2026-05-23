@@ -148,10 +148,10 @@ export default function Auth() {
           0% { transform: translate3d(0, -50%, 0); }
           100% { transform: translate3d(0, 0, 0); }
         }
-        .auth-col-up { animation: auth-scroll-up 60s linear infinite; }
-        .auth-col-down { animation: auth-scroll-down 75s linear infinite; }
-        .auth-col-up-fast { animation: auth-scroll-up 50s linear infinite; }
-        .auth-col-down-slow { animation: auth-scroll-down 85s linear infinite; }
+        .auth-col-up { animation: auth-scroll-up 25s linear infinite; }
+        .auth-col-down { animation: auth-scroll-down 30s linear infinite; }
+        .auth-col-up-fast { animation: auth-scroll-up 20s linear infinite; }
+        .auth-col-down-slow { animation: auth-scroll-down 35s linear infinite; }
         @media (prefers-reduced-motion: reduce) {
           .auth-col-up, .auth-col-down, .auth-col-up-fast, .auth-col-down-slow { animation: none; }
         }
@@ -185,13 +185,9 @@ export default function Auth() {
           })}
         </div>
 
-        {/* Light backdrop blur + dark premium gradient overlay */}
-        <div
-          className="absolute inset-0"
-          style={{ backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.5)_85%)]" />
+        {/* Minimal blur + subtle dark overlay so images stay vivid */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-black/35" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.05)_0%,_rgba(0,0,0,0.3)_90%)]" />
 
         {/* Premium ambient accents */}
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/10 to-accent/5 blur-3xl animate-pulse" />
