@@ -97,10 +97,8 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
-  const [audioEnabled, setAudioEnabled] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const alertAudioRef = useRef<HTMLAudioElement | null>(null);
-  const pendingAudioToastIdRef = useRef<string | number | null>(null);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -145,12 +143,10 @@ export default function Admin() {
     try {
       audio.currentTime = 0;
       await audio.play();
-      setAudioEnabled(true);
       setAudioBlocked(false);
       return true;
     } catch (error) {
       console.warn('[Admin] order alert audio blocked:', error);
-      setAudioEnabled(false);
       setAudioBlocked(true);
       return false;
     }
