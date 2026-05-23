@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -30,6 +30,8 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
+
+const ORDER_ALERT_TONE = 'data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=';
 
 interface StoreData {
   id: string;
@@ -95,6 +97,10 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingAudioToastIdRef = useRef<string | number | null>(null);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -120,6 +126,52 @@ export default function Admin() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
 
+  const ensureAlertAudio = useMemo(() => {
+    return () => {
+      if (typeof window === 'undefined') return null;
+      if (!alertAudioRef.current) {
+        alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
+        alertAudioRef.current.preload = 'auto';
+        alertAudioRef.current.volume = 0.8;
+      }
+      return alertAudioRef.current;
+    };
+  }, []);
+
+  async function playOrderAlert() {
+    const audio = ensureAlertAudio();
+    if (!audio) return false;
+
+    try {
+      audio.currentTime = 0;
+      await audio.play();
+      setAudioEnabled(true);
+      setAudioBlocked(false);
+      return true;
+    } catch (error) {
+      console.warn('[Admin] order alert audio blocked:', error);
+      setAudioEnabled(false);
+      setAudioBlocked(true);
+      return false;
+    }
+  }
+
+  async function enableAudioEvents() {
+    const played = await playOrderAlert();
+    if (played) {
+      toast.success('Áudio de novos pedidos ativado.');
+    } else {
+      toast.error('O navegador ainda bloqueou o áudio. Toque novamente após alguma interação na página.');
+    }
+  }
+
+  useEffect(() => {
+    const audio = ensureAlertAudio();
+    return () => {
+      audio?.pause();
+    };
+  }, [ensureAlertAudio]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -144,17 +196,20 @@ export default function Admin() {
           table: 'orders',
           filter: `store_id=eq.${store.id}`,
         },
-        (payload) => {
+        async (payload) => {
           const order = payload.new as { customer_name?: string; total?: number };
-          // Audio alert
-          try {
-            const a = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=');
-            a.volume = 0.7;
-            void a.play().catch(() => {});
-          } catch { /* ignore */ }
+          const played = await playOrderAlert();
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
+            action: !played
+              ? {
+                  label: 'Ativar áudio',
+                  onClick: () => {
+                    void enableAudioEvents();
+                  },
+                }
+              : undefined,
           });
           fetchData();
         }
@@ -440,6 +495,18 @@ export default function Admin() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {audioBlocked && (
+          <div className="mb-4 rounded-lg border border-border bg-card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Ative os alertas sonoros de novos pedidos</p>
+              <p className="text-xs text-muted-foreground">O navegador bloqueou o som automático. Toque no botão para liberar os avisos.</p>
+            </div>
+            <Button type="button" onClick={() => void enableAudioEvents()} className="bg-primary text-primary-foreground">
+              Ativar áudio
+            </Button>
+          </div>
+        )}
+
         <Tabs defaultValue="store" className="space-y-6">
           <TabsList className="bg-secondary">
             <TabsTrigger value="store" className="gap-2">
