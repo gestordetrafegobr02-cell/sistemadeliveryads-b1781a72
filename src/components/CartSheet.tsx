@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
-import { hapticClick, hapticSuccess } from '@/lib/haptics';
+import { hapticSuccess } from '@/lib/haptics';
+import { getOrderTrackingUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
 import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
@@ -39,6 +40,16 @@ interface CartSheetProps {
 interface StoreUpsellConfig {
   upsell_enabled: boolean;
   upsell_blocking_categories: string[];
+}
+
+interface CheckoutOrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  modifiers: { id: string; name: string; price: number }[];
+  observation: string | null;
 }
 
 export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
@@ -141,11 +152,15 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   }
 
   async function handleProceedToCheckout() {
+    if (!validateCheckoutForm()) return;
+
+    const pendingWhatsAppWindow = window.open('', '_blank', 'noopener,noreferrer');
     const showUpsell = await shouldShowUpsell();
     if (showUpsell) {
+      pendingWhatsAppWindow?.close();
       setUpsellOpen(true);
     } else {
-      handleCheckout();
+      handleCheckout(pendingWhatsAppWindow);
     }
   }
 
@@ -178,8 +193,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     }
   }, [open, onOpen]);
 
-  const handleCheckout = async () => {
-    // Build validation schema dynamically based on order type
+  const validateCheckoutForm = () => {
     const validationData = {
       name,
       phone,
@@ -196,28 +210,32 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       ...(paymentMethod === 'cash' && { changeFor }),
     };
 
-    // Validate required delivery fields
-    if (orderType === 'delivery') {
-      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
-        setErrors({
-          address: 'Preencha rua, número e bairro para entrega',
-        });
-        return;
-      }
+    if (orderType === 'delivery' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
+      setErrors({ address: 'Preencha rua, número e bairro para entrega' });
+      return false;
     }
 
     const result = checkoutSchema.safeParse(validationData);
-    
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
         if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
       });
       setErrors(fieldErrors);
-      return;
+      return false;
     }
 
     setErrors({});
+    return true;
+  };
+
+  const handleCheckout = async (pendingWhatsAppWindow?: Window | null) => {
+    if (!validateCheckoutForm()) {
+      pendingWhatsAppWindow?.close();
+      return;
+    }
+
+    const checkoutWindow = pendingWhatsAppWindow ?? window.open('', '_blank', 'noopener,noreferrer');
     setSubmitting(true);
 
     // Build address string
@@ -231,116 +249,141 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     }
 
     const orderId = generateOrderId();
+    const phoneDigits = phone.replace(/\D/g, '');
+    const storePhoneDigits = whatsapp?.replace(/\D/g, '') || '';
+    const orderItems: CheckoutOrderItem[] = items.map((item) => {
+      const modifiers = (item.modifiers || []).map((modifier) => ({
+        id: modifier.id,
+        name: modifier.name,
+        price: modifier.price,
+      }));
+      const modifiersTotal = modifiers.reduce((sum, modifier) => sum + modifier.price, 0);
+      const lineTotal = (item.price + modifiersTotal) * item.quantity;
 
-    // Build items list with modifiers and observations
-    const itemsList = items
-      .map((item) => {
-        const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
-        const itemTotal = (item.price + modifiersTotal) * item.quantity;
-        let itemText = `• ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
-        if (item.modifiers && item.modifiers.length > 0) {
-          const modifiersList = item.modifiers.map((m) => `  ↳ ${m.name} (+R$ ${m.price.toFixed(2).replace('.', ',')})`).join('\n');
-          itemText += `\n${modifiersList}`;
-        }
-        if (item.observation) itemText += `\n  📝 ${item.observation}`;
-        return itemText;
-      })
-      .join('\n');
+      return {
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        lineTotal,
+        modifiers,
+        observation: item.observation || null,
+      };
+    });
 
-     // Persist order FIRST, get back id + session token, then redirect
     let trackingUrl = '';
     let savedOrderId = orderId;
     let sessionToken: string | null = null;
 
     if (storeId) {
       try {
-         const cartId = await saveImmediately();
-        const orderItems = items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          modifiers: item.modifiers || [],
-          observation: item.observation || null,
-        }));
+        const cartId = await saveImmediately();
 
-         const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
-           p_order_id: orderId,
-           p_store_id: storeId,
-           p_customer_name: name,
-           p_customer_phone: phone,
-           p_items: orderItems as unknown as import('@/integrations/supabase/types').Json,
-           p_address: addressStr || null,
-           p_payment_method: paymentMethod,
-           p_client_total: grandTotal,
-           p_cart_id: cartId || undefined,
-         });
+        const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
+          p_order_id: orderId,
+          p_store_id: storeId,
+          p_customer_name: name,
+          p_customer_phone: phoneDigits || phone,
+          p_items: orderItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            modifiers: item.modifiers,
+            observation: item.observation,
+          })) as unknown as import('@/integrations/supabase/types').Json,
+          p_address: addressStr || null,
+          p_payment_method: paymentMethod,
+          p_client_total: grandTotal,
+          p_cart_id: cartId || undefined,
+        });
 
-         if (orderError || !createdOrder?.[0]) {
-           console.error('[Order] insert error:', orderError);
-           setErrors({ submit: `Erro ao salvar pedido: ${orderError?.message || 'pedido não retornou confirmação'}` });
+        if (orderError || !createdOrder?.[0]) {
+          console.error('[Order] insert error:', orderError);
+          setErrors({ submit: `Erro ao salvar pedido: ${orderError?.message || 'pedido não retornou confirmação'}` });
+          checkoutWindow?.close();
           setSubmitting(false);
           return;
         }
 
-         savedOrderId = createdOrder[0].order_id;
-         sessionToken = createdOrder[0].customer_session_token;
-         trackingUrl = `${window.location.origin}/order-status/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
-         await markAsConverted(savedOrderId);
+        savedOrderId = createdOrder[0].order_id;
+        sessionToken = createdOrder[0].customer_session_token;
+        trackingUrl = getOrderTrackingUrl(savedOrderId, sessionToken);
+        await markAsConverted(savedOrderId);
 
       } catch (err) {
         console.error('[Order] save exception:', err);
         setErrors({ submit: 'Erro inesperado ao salvar pedido.' });
+        checkoutWindow?.close();
         setSubmitting(false);
         return;
       }
     }
 
-    // Build simplified WhatsApp message with tracking link
     const shortId = savedOrderId.slice(0, 8).toUpperCase();
-    let message = `🛵 *PEDIDO #${shortId}*\n\n`;
+    const itemLines = orderItems
+      .map((item) => {
+        const modifierLines = item.modifiers.length > 0
+          ? `\n${item.modifiers.map((modifier) => `   ↳ ${modifier.name} (+R$ ${modifier.price.toFixed(2).replace('.', ',')})`).join('\n')}`
+          : '';
+        const observationLine = item.observation ? `\n   📝 ${item.observation}` : '';
+        return `• ${item.quantity}x ${item.name} — R$ ${item.lineTotal.toFixed(2).replace('.', ',')}${modifierLines}${observationLine}`;
+      })
+      .join('\n');
+
+    let message = `🧾 *COMANDA DELIVERY ADS*\n`;
+    message += `🏪 *Pedido #${shortId}*\n\n`;
     message += `*Cliente:* ${name}\n`;
-    message += `*Telefone:* ${phone}\n\n`;
-    message += `*Tipo:* ${orderType === 'delivery' ? '🚚 Entrega' : '🏪 Retirada na Loja'}\n\n`;
-    message += `*Itens:*\n${itemsList}\n\n`;
-    message += `*Subtotal:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
+    message += `*Telefone:* ${phoneDigits || phone}\n`;
+    message += `*Tipo:* ${orderType === 'delivery' ? 'Entrega' : 'Retirada'}\n\n`;
+    message += `*Itens do Pedido:*\n${itemLines}\n\n`;
+    message += `*Resumo:*\n`;
+    message += `Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
     if (orderType === 'delivery') {
-      message += `*Taxa de Entrega:* R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
+      message += `Taxa de entrega: R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
     }
     message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
     message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
-    if (paymentMethod === 'cash' && changeFor) message += ` (Troco para R$ ${changeFor})`;
+    if (paymentMethod === 'cash' && changeFor) message += ` (troco para R$ ${changeFor})`;
     if (paymentMethod === 'pix' && pixKey) message += `\n*Chave PIX:* ${pixKey}`;
 
     if (orderType === 'delivery') {
-      message += `\n\n*📍 Endereço de Entrega:*\n`;
+      message += `\n\n*Endereço de Entrega:*\n`;
       message += `${street}, ${number}`;
       if (complement) message += ` - ${complement}`;
       message += `\n${neighborhood}`;
-      if (zipCode) message += ` - CEP: ${zipCode}`;
-      if (referencePoint) message += `\n*Ponto de Ref:* ${referencePoint}`;
+      if (zipCode) message += `\nCEP: ${zipCode}`;
+      if (referencePoint) message += `\nReferência: ${referencePoint}`;
     }
 
     if (trackingUrl) {
-      message += `\n\n*🔎 Acompanhe seu pedido:*\n${trackingUrl}`;
+      message += `\n\n*Rastreamento ao vivo:*\n${trackingUrl}`;
+    }
+
+    if (!storePhoneDigits) {
+      setErrors({ submit: 'A loja ainda não configurou o WhatsApp para receber pedidos.' });
+      checkoutWindow?.close();
+      setSubmitting(false);
+      return;
     }
 
     const encodedMessage = encodeURIComponent(message);
-    const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedMessage}`;
+    const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
 
     onPurchase?.();
     clearCart();
     setSubmitting(false);
     setOpen(false);
 
-    // Redirect customer to their order tracking page; open WA in new tab
-    if (trackingUrl) {
-      window.open(whatsappUrl, '_blank');
-      window.location.href = `/order-status/${savedOrderId}${sessionToken ? `?token=${sessionToken}` : ''}`;
+    if (checkoutWindow) {
+      checkoutWindow.location.replace(whatsappUrl);
     } else {
-      window.location.href = whatsappUrl;
+      window.location.assign(whatsappUrl);
+      return;
     }
+
+    window.location.assign(internalTrackingUrl);
   };
 
 
@@ -655,6 +698,13 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
                   <p className="text-sm text-destructive">
                     A loja está fechada no momento. Não é possível finalizar pedidos.
                   </p>
+                </div>
+              )}
+
+              {errors.submit && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">{errors.submit}</p>
                 </div>
               )}
 
