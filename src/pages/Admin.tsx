@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -124,19 +124,17 @@ export default function Admin() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
 
-  const ensureAlertAudio = useMemo(() => {
-    return () => {
-      if (typeof window === 'undefined') return null;
-      if (!alertAudioRef.current) {
-        alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
-        alertAudioRef.current.preload = 'auto';
-        alertAudioRef.current.volume = 0.8;
-      }
-      return alertAudioRef.current;
-    };
+  const ensureAlertAudio = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    if (!alertAudioRef.current) {
+      alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
+      alertAudioRef.current.preload = 'auto';
+      alertAudioRef.current.volume = 0.8;
+    }
+    return alertAudioRef.current;
   }, []);
 
-  async function playOrderAlert() {
+  const playOrderAlert = useCallback(async () => {
     const audio = ensureAlertAudio();
     if (!audio) return false;
 
@@ -150,16 +148,16 @@ export default function Admin() {
       setAudioBlocked(true);
       return false;
     }
-  }
+  }, [ensureAlertAudio]);
 
-  async function enableAudioEvents() {
+  const enableAudioEvents = useCallback(async () => {
     const played = await playOrderAlert();
     if (played) {
       toast.success('Áudio de novos pedidos ativado.');
     } else {
       toast.error('O navegador ainda bloqueou o áudio. Toque novamente após alguma interação na página.');
     }
-  }
+  }, [playOrderAlert]);
 
   useEffect(() => {
     const audio = ensureAlertAudio();
@@ -174,9 +172,66 @@ export default function Admin() {
     }
   }, [user, authLoading, navigate]);
 
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+
+    const { data: storeData } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    if (storeData) {
+      const themedStoreData = storeData as typeof storeData & {
+        bg_color?: string | null;
+        card_style?: string | null;
+      };
+
+      const mappedStore: StoreData = {
+        id: storeData.id,
+        name: storeData.name,
+        slug: storeData.slug,
+        whatsapp: storeData.whatsapp,
+        pix_key: storeData.pix_key,
+        facebook_pixel_id: storeData.facebook_pixel_id,
+        delivery_fee: storeData.delivery_fee,
+        is_open_manual: storeData.is_open_manual ?? true,
+        logo_url: storeData.logo_url,
+        cover_url: storeData.cover_url ?? null,
+        opening_hours: storeData.opening_hours as OpeningHours | null,
+        recovery_message_template: storeData.recovery_message_template,
+        primary_color: storeData.primary_color ?? null,
+        store_template_style: storeData.store_template_style ?? 'default',
+      };
+      setStore(mappedStore);
+      setStoreName(storeData.name);
+      setStoreSlug(storeData.slug);
+      setWhatsapp(storeData.whatsapp || '');
+      setPixKey(storeData.pix_key || '');
+      setPixelId(storeData.facebook_pixel_id || '');
+      setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
+      setLogoUrl(storeData.logo_url || '');
+      setCoverUrl(storeData.cover_url || '');
+      setStoreBgColor(themedStoreData.bg_color ?? null);
+      setStoreCardStyle(themedStoreData.card_style ?? 'rounded');
+
+      const [catRes, prodRes, ordersRes] = await Promise.all([
+        supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
+        supabase.from('products').select('*').eq('store_id', storeData.id).order('sort_order'),
+        supabase.from('orders').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
+      ]);
+
+      setCategories(catRes.data || []);
+      setProducts(prodRes.data || []);
+      setOrders(ordersRes.data || []);
+    }
+
+    setLoading(false);
+  }, [user]);
+
   useEffect(() => {
     if (user) fetchData();
-  }, [user]);
+  }, [user, fetchData]);
 
   // Realtime subscription for orders (new-order notification)
   useEffect(() => {
@@ -227,56 +282,6 @@ export default function Admin() {
     };
   }, [store?.id]);
 
-
-  async function fetchData() {
-    const { data: storeData } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('owner_id', user!.id)
-      .maybeSingle();
-
-    if (storeData) {
-      const mappedStore: StoreData = {
-        id: storeData.id,
-        name: storeData.name,
-        slug: storeData.slug,
-        whatsapp: storeData.whatsapp,
-        pix_key: storeData.pix_key,
-        facebook_pixel_id: storeData.facebook_pixel_id,
-        delivery_fee: storeData.delivery_fee,
-        is_open_manual: storeData.is_open_manual ?? true,
-        logo_url: storeData.logo_url,
-        cover_url: storeData.cover_url ?? null,
-        opening_hours: storeData.opening_hours as OpeningHours | null,
-        recovery_message_template: storeData.recovery_message_template,
-        primary_color: storeData.primary_color ?? null,
-        store_template_style: storeData.store_template_style ?? 'default',
-      };
-      setStore(mappedStore);
-      setStoreName(storeData.name);
-      setStoreSlug(storeData.slug);
-      setWhatsapp(storeData.whatsapp || '');
-      setPixKey(storeData.pix_key || '');
-      setPixelId(storeData.facebook_pixel_id || '');
-      setDeliveryFee(storeData.delivery_fee ? String(storeData.delivery_fee) : '');
-      setLogoUrl(storeData.logo_url || '');
-      setCoverUrl(storeData.cover_url || '');
-      setStoreBgColor((storeData as any).bg_color ?? null);
-      setStoreCardStyle((storeData as any).card_style ?? 'rounded');
-
-      const [catRes, prodRes, ordersRes] = await Promise.all([
-        supabase.from('categories').select('*').eq('store_id', storeData.id).order('sort_order'),
-        supabase.from('products').select('*').eq('store_id', storeData.id).order('sort_order'),
-        supabase.from('orders').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
-      ]);
-
-      setCategories(catRes.data || []);
-      setProducts(prodRes.data || []);
-      setOrders(ordersRes.data || []);
-    }
-
-    setLoading(false);
-  }
 
   // Validate Facebook Pixel ID format (15-20 digits only)
   function isValidPixelId(id: string): boolean {
