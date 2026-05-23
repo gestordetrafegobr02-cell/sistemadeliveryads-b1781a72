@@ -263,7 +263,9 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           observation: item.observation || null,
         }));
 
-        const { data: inserted, error: orderError } = await supabase
+        // Anon SELECT on orders is blocked by RLS, so we insert without .select()
+        // and rely on the client-generated UUID for tracking via SECURITY DEFINER RPC.
+        const { error: orderError } = await supabase
           .from('orders')
           .insert([{
             id: orderId,
@@ -274,9 +276,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
             total: grandTotal,
             address: addressStr || null,
             payment_method: paymentMethod,
-          }])
-          .select('id, customer_session_token')
-          .single();
+          }]);
 
         if (orderError) {
           console.error('[Order] insert error:', orderError);
@@ -285,10 +285,10 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           return;
         }
 
-        savedOrderId = inserted?.id ?? orderId;
-        sessionToken = inserted?.customer_session_token ?? null;
-        trackingUrl = `${window.location.origin}/order-status/${savedOrderId}${sessionToken ? `?token=${sessionToken}` : ''}`;
+        savedOrderId = orderId;
+        trackingUrl = `${window.location.origin}/order-status/${savedOrderId}`;
         deleteAbandonedCart();
+
       } catch (err) {
         console.error('[Order] save exception:', err);
         setErrors({ submit: 'Erro inesperado ao salvar pedido.' });
