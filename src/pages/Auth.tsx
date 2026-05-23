@@ -94,7 +94,8 @@ export default function Auth() {
 
   const handleSubmit = async (type: 'login' | 'signup') => {
     setError('');
-    
+    setSignupSuccess(false);
+
     const result = authSchema.safeParse({ email, password });
     if (!result.success) {
       setError(result.error.errors[0].message);
@@ -106,17 +107,22 @@ export default function Auth() {
     if (type === 'signup') {
       const { error } = await signUp(email, password);
       if (error) {
-        if (error.message.includes('already registered')) {
-          setError('Este email já está cadastrado');
+        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
+          setError('Este email já está cadastrado. Faça login ou recupere sua senha.');
         } else {
           setError(error.message);
         }
+      } else {
+        setSignupSuccess(true);
+        setPassword('');
       }
     } else {
       const { error } = await signIn(email, password);
       if (error) {
         if (error.message.includes('Invalid login')) {
           setError('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+          setError('Confirme seu email antes de entrar. Verifique sua caixa de entrada.');
         } else {
           setError(error.message);
         }
