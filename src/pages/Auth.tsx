@@ -45,6 +45,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingStore, setCheckingStore] = useState(false);
 
@@ -93,7 +94,8 @@ export default function Auth() {
 
   const handleSubmit = async (type: 'login' | 'signup') => {
     setError('');
-    
+    setSignupSuccess(false);
+
     const result = authSchema.safeParse({ email, password });
     if (!result.success) {
       setError(result.error.errors[0].message);
@@ -105,17 +107,22 @@ export default function Auth() {
     if (type === 'signup') {
       const { error } = await signUp(email, password);
       if (error) {
-        if (error.message.includes('already registered')) {
-          setError('Este email já está cadastrado');
+        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
+          setError('Este email já está cadastrado. Faça login ou recupere sua senha.');
         } else {
           setError(error.message);
         }
+      } else {
+        setSignupSuccess(true);
+        setPassword('');
       }
     } else {
       const { error } = await signIn(email, password);
       if (error) {
         if (error.message.includes('Invalid login')) {
           setError('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+          setError('Confirme seu email antes de entrar. Verifique sua caixa de entrada.');
         } else {
           setError(error.message);
         }
@@ -324,6 +331,15 @@ export default function Auth() {
                 </div>
               </div>
               
+              {signupSuccess && (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-sm space-y-1">
+                  <p className="font-semibold">Conta criada! 📩</p>
+                  <p className="text-emerald-200/80 text-xs">
+                    Enviamos um link de confirmação para <strong>{email}</strong>. Confirme seu email para ativar a conta e fazer login.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
                   {error}
