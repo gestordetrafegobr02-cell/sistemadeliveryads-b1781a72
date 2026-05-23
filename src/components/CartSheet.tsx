@@ -152,11 +152,15 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   }
 
   async function handleProceedToCheckout() {
+    if (!validateCheckoutForm()) return;
+
+    const pendingWhatsAppWindow = window.open('', '_blank', 'noopener,noreferrer');
     const showUpsell = await shouldShowUpsell();
     if (showUpsell) {
+      pendingWhatsAppWindow?.close();
       setUpsellOpen(true);
     } else {
-      handleCheckout();
+      handleCheckout(pendingWhatsAppWindow);
     }
   }
 
