@@ -28,7 +28,7 @@ export function useAbandonedCartTracking(
   const currentCartIdRef = useRef<string | null>(null);
 
   // Save cart via secure RPC
-  const saveAbandonedCart = useCallback(async (data: AbandonedCartData) => {
+  const saveAbandonedCart = useCallback(async (data: AbandonedCartData): Promise<string | null> => {
     if (!data.storeId || data.items.length === 0) return;
     if (!data.customerName.trim() && !data.customerPhone.trim()) return;
 
@@ -38,7 +38,7 @@ export function useAbandonedCartTracking(
       phone: data.customerPhone,
     });
 
-    if (lastSavedRef.current === cartSignature) return;
+    if (lastSavedRef.current === cartSignature) return currentCartIdRef.current;
 
     try {
       const formattedItems = data.items.map(item => ({
@@ -59,14 +59,17 @@ export function useAbandonedCartTracking(
       if (!error && cartId) {
         currentCartIdRef.current = cartId;
         lastSavedRef.current = cartSignature;
+        return cartId;
       }
     } catch (err) {
       console.error('Error saving abandoned cart:', err);
     }
+
+    return currentCartIdRef.current;
   }, []);
 
   // Immediate save function (for blur/unload events)
-  const saveImmediately = useCallback(() => {
+  const saveImmediately = useCallback(async (): Promise<string | null> => {
     if (!storeId || items.length === 0) return;
     if (!customerName.trim() && !customerPhone.trim()) return;
 
@@ -75,7 +78,7 @@ export function useAbandonedCartTracking(
       saveTimeoutRef.current = null;
     }
 
-    saveAbandonedCart({
+    return saveAbandonedCart({
       storeId,
       customerName,
       customerPhone,
