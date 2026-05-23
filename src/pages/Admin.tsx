@@ -235,17 +235,18 @@ export default function Admin() {
 
   // Realtime subscription for orders (new-order notification)
   useEffect(() => {
-    if (!store) return;
+    const storeId = store?.id;
+    if (!storeId) return;
 
     const channel = supabase
-      .channel(`orders-realtime-${store.id}`)
+      .channel(`orders-realtime-${storeId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'orders',
-          filter: `store_id=eq.${store.id}`,
+          filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
           const order = payload.new as { customer_name?: string; total?: number };
@@ -271,7 +272,7 @@ export default function Admin() {
           event: 'UPDATE',
           schema: 'public',
           table: 'orders',
-          filter: `store_id=eq.${store.id}`,
+          filter: `store_id=eq.${storeId}`,
         },
         () => fetchData()
       )
