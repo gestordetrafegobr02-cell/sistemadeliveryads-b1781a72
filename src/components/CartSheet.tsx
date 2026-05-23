@@ -285,7 +285,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
 
          savedOrderId = createdOrder[0].order_id;
          sessionToken = createdOrder[0].customer_session_token;
-        trackingUrl = `${window.location.origin}/order-status/${savedOrderId}`;
+         trackingUrl = `${window.location.origin}/order-status/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
          await markAsConverted(savedOrderId);
 
       } catch (err) {
