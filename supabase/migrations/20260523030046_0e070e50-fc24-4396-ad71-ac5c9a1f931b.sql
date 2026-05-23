@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS validate_order_before_insert ON public.orders;
