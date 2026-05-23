@@ -331,6 +331,15 @@ export default function Auth() {
                 </div>
               </div>
               
+              {signupSuccess && (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-sm space-y-1">
+                  <p className="font-semibold">Conta criada! 📩</p>
+                  <p className="text-emerald-200/80 text-xs">
+                    Enviamos um link de confirmação para <strong>{email}</strong>. Confirme seu email para ativar a conta e fazer login.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
                   {error}
