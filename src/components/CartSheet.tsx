@@ -160,12 +160,17 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
   const grandTotal = subtotal + deliveryAmount;
 
-  // Generate order ID
+  // Generate proper UUID for order (server-side trigger validates and enriches)
   const generateOrderId = () => {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${timestamp}-${random}`;
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    // Fallback RFC4122 v4
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   };
+
 
   useEffect(() => {
     if (open && onOpen) {
@@ -232,62 +237,21 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       .map((item) => {
         const modifiersTotal = item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0;
         const itemTotal = (item.price + modifiersTotal) * item.quantity;
-        
         let itemText = `• ${item.quantity}x ${item.name} - R$ ${itemTotal.toFixed(2).replace('.', ',')}`;
-        
         if (item.modifiers && item.modifiers.length > 0) {
           const modifiersList = item.modifiers.map((m) => `  ↳ ${m.name} (+R$ ${m.price.toFixed(2).replace('.', ',')})`).join('\n');
           itemText += `\n${modifiersList}`;
         }
-        
-        if (item.observation) {
-          itemText += `\n  📝 ${item.observation}`;
-        }
-        
+        if (item.observation) itemText += `\n  📝 ${item.observation}`;
         return itemText;
       })
       .join('\n');
 
-    let message = `🛵 *PEDIDO #${orderId}*\n\n`;
-    message += `*Cliente:* ${name}\n`;
-    message += `*Telefone:* ${phone}\n\n`;
-    message += `*Tipo:* ${orderType === 'delivery' ? '🚚 Entrega' : '🏪 Retirada na Loja'}\n\n`;
-    message += `*Itens:*\n${itemsList}\n\n`;
-    message += `*Subtotal:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-    
-    if (orderType === 'delivery') {
-      message += `*Taxa de Entrega:* R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
-    }
-    
-    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
-    message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
-    
-    if (paymentMethod === 'cash' && changeFor) {
-      message += ` (Troco para R$ ${changeFor})`;
-    }
-    
-    if (paymentMethod === 'pix' && pixKey) {
-      message += `\n*Chave PIX:* ${pixKey}`;
-    }
+    // Persist order FIRST, get back id + session token, then redirect
+    let trackingUrl = '';
+    let savedOrderId = orderId;
+    let sessionToken: string | null = null;
 
-    if (orderType === 'delivery') {
-      message += `\n\n*📍 Endereço de Entrega:*\n`;
-      message += `${street}, ${number}`;
-      if (complement) message += ` - ${complement}`;
-      message += `\n${neighborhood}`;
-      if (zipCode) message += ` - CEP: ${zipCode}`;
-      if (referencePoint) message += `\n*Ponto de Ref:* ${referencePoint}`;
-    }
-
-    const encodedMessage = encodeURIComponent(message);
-    const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-
-    // CRITICAL: Open WhatsApp IMMEDIATELY in the synchronous user-gesture context
-    // This MUST happen before any async calls (DB insert, etc.) to avoid popup blockers
-    window.location.href = whatsappUrl;
-
-    // Save order to database in background (after redirect is triggered)
     if (storeId) {
       try {
         const orderItems = items.map((item) => ({
@@ -299,31 +263,87 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           observation: item.observation || null,
         }));
 
-        supabase.from('orders').insert([{
-          store_id: storeId,
-          customer_name: name,
-          customer_phone: phone,
-          items: orderItems as unknown as import('@/integrations/supabase/types').Json,
-          total: grandTotal,
-          address: addressStr || null,
-          payment_method: paymentMethod,
-        }]).then(({ error: orderError }) => {
-          if (orderError) {
-            console.error('Order save error:', orderError.message);
-          } else {
-            deleteAbandonedCart();
-          }
-        });
+        // Anon SELECT on orders is blocked by RLS, so we insert without .select()
+        // and rely on the client-generated UUID for tracking via SECURITY DEFINER RPC.
+        const { error: orderError } = await supabase
+          .from('orders')
+          .insert([{
+            id: orderId,
+            store_id: storeId,
+            customer_name: name,
+            customer_phone: phone,
+            items: orderItems as unknown as import('@/integrations/supabase/types').Json,
+            total: grandTotal,
+            address: addressStr || null,
+            payment_method: paymentMethod,
+          }]);
+
+        if (orderError) {
+          console.error('[Order] insert error:', orderError);
+          setErrors({ submit: `Erro ao salvar pedido: ${orderError.message}` });
+          setSubmitting(false);
+          return;
+        }
+
+        savedOrderId = orderId;
+        trackingUrl = `${window.location.origin}/order-status/${savedOrderId}`;
+        deleteAbandonedCart();
+
       } catch (err) {
-        console.error('Order save exception:', err);
+        console.error('[Order] save exception:', err);
+        setErrors({ submit: 'Erro inesperado ao salvar pedido.' });
+        setSubmitting(false);
+        return;
       }
     }
+
+    // Build simplified WhatsApp message with tracking link
+    const shortId = savedOrderId.slice(0, 8).toUpperCase();
+    let message = `🛵 *PEDIDO #${shortId}*\n\n`;
+    message += `*Cliente:* ${name}\n`;
+    message += `*Telefone:* ${phone}\n\n`;
+    message += `*Tipo:* ${orderType === 'delivery' ? '🚚 Entrega' : '🏪 Retirada na Loja'}\n\n`;
+    message += `*Itens:*\n${itemsList}\n\n`;
+    message += `*Subtotal:* R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
+    if (orderType === 'delivery') {
+      message += `*Taxa de Entrega:* R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
+    }
+    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
+    message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
+    if (paymentMethod === 'cash' && changeFor) message += ` (Troco para R$ ${changeFor})`;
+    if (paymentMethod === 'pix' && pixKey) message += `\n*Chave PIX:* ${pixKey}`;
+
+    if (orderType === 'delivery') {
+      message += `\n\n*📍 Endereço de Entrega:*\n`;
+      message += `${street}, ${number}`;
+      if (complement) message += ` - ${complement}`;
+      message += `\n${neighborhood}`;
+      if (zipCode) message += ` - CEP: ${zipCode}`;
+      if (referencePoint) message += `\n*Ponto de Ref:* ${referencePoint}`;
+    }
+
+    if (trackingUrl) {
+      message += `\n\n*🔎 Acompanhe seu pedido:*\n${trackingUrl}`;
+    }
+
+    const encodedMessage = encodeURIComponent(message);
+    const phoneNumber = whatsapp?.replace(/\D/g, '') || '';
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
     onPurchase?.();
     clearCart();
     setSubmitting(false);
     setOpen(false);
+
+    // Redirect customer to their order tracking page; open WA in new tab
+    if (trackingUrl) {
+      window.open(whatsappUrl, '_blank');
+      window.location.href = `/order-status/${savedOrderId}${sessionToken ? `?token=${sessionToken}` : ''}`;
+    } else {
+      window.location.href = whatsappUrl;
+    }
   };
+
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
