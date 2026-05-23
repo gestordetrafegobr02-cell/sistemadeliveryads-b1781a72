@@ -13,6 +13,7 @@ import Admin from "./pages/Admin";
 import SuperAdmin from "./pages/SuperAdmin";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import OrderStatus from "./pages/OrderStatus";
 
 const queryClient = new QueryClient();
 
