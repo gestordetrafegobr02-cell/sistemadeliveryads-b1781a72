@@ -70,7 +70,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     quantity: item.quantity,
   }));
   
-  const { deleteAbandonedCart, saveImmediately } = useAbandonedCartTracking(
+  const { markAsConverted, saveImmediately } = useAbandonedCartTracking(
     storeId,
     cartItemsForTracking,
     total,
@@ -247,13 +247,14 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       })
       .join('\n');
 
-    // Persist order FIRST, get back id + session token, then redirect
+     // Persist order FIRST, get back id + session token, then redirect
     let trackingUrl = '';
     let savedOrderId = orderId;
     let sessionToken: string | null = null;
 
     if (storeId) {
       try {
+         const cartId = await saveImmediately();
         const orderItems = items.map((item) => ({
           id: item.id,
           name: item.name,
@@ -263,31 +264,29 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
           observation: item.observation || null,
         }));
 
-        // Anon SELECT on orders is blocked by RLS, so we insert without .select()
-        // and rely on the client-generated UUID for tracking via SECURITY DEFINER RPC.
-        const { error: orderError } = await supabase
-          .from('orders')
-          .insert([{
-            id: orderId,
-            store_id: storeId,
-            customer_name: name,
-            customer_phone: phone,
-            items: orderItems as unknown as import('@/integrations/supabase/types').Json,
-            total: grandTotal,
-            address: addressStr || null,
-            payment_method: paymentMethod,
-          }]);
+         const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
+           p_order_id: orderId,
+           p_store_id: storeId,
+           p_customer_name: name,
+           p_customer_phone: phone,
+           p_items: orderItems as unknown as import('@/integrations/supabase/types').Json,
+           p_address: addressStr || null,
+           p_payment_method: paymentMethod,
+           p_client_total: grandTotal,
+           p_cart_id: cartId || undefined,
+         });
 
-        if (orderError) {
-          console.error('[Order] insert error:', orderError);
-          setErrors({ submit: `Erro ao salvar pedido: ${orderError.message}` });
+         if (orderError || !createdOrder?.[0]) {
+           console.error('[Order] insert error:', orderError);
+           setErrors({ submit: `Erro ao salvar pedido: ${orderError?.message || 'pedido não retornou confirmação'}` });
           setSubmitting(false);
           return;
         }
 
-        savedOrderId = orderId;
+         savedOrderId = createdOrder[0].order_id;
+         sessionToken = createdOrder[0].customer_session_token;
         trackingUrl = `${window.location.origin}/order-status/${savedOrderId}`;
-        deleteAbandonedCart();
+         await markAsConverted(savedOrderId);
 
       } catch (err) {
         console.error('[Order] save exception:', err);
