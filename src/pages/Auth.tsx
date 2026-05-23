@@ -185,9 +185,13 @@ export default function Auth() {
           })}
         </div>
 
-        {/* Minimal blur + subtle dark overlay so images stay vivid */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-black/35" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.05)_0%,_rgba(0,0,0,0.3)_90%)]" />
+        {/* Subtle blur + dark overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/55" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.5)_90%)] " />
 
         {/* Premium ambient accents */}
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-primary/10 to-accent/5 blur-3xl animate-pulse" />
