@@ -569,6 +569,23 @@ export type Database = {
       }
     }
     Functions: {
+      create_public_order: {
+        Args: {
+          p_address?: string
+          p_cart_id?: string
+          p_client_total?: number
+          p_customer_name: string
+          p_customer_phone?: string
+          p_items?: Json
+          p_order_id: string
+          p_payment_method?: string
+          p_store_id: string
+        }
+        Returns: {
+          customer_session_token: string
+          order_id: string
+        }[]
+      }
       create_store_from_template: {
         Args: {
           p_owner_id: string
