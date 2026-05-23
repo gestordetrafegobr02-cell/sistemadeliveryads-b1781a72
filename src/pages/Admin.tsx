@@ -130,24 +130,44 @@ export default function Admin() {
     if (user) fetchData();
   }, [user]);
 
-  // Realtime subscription for orders
+  // Realtime subscription for orders (new-order notification)
   useEffect(() => {
     if (!store) return;
 
     const channel = supabase
-      .channel('orders-realtime')
+      .channel(`orders-realtime-${store.id}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'orders',
           filter: `store_id=eq.${store.id}`,
         },
-        () => {
-          // Refresh orders when any change happens
+        (payload) => {
+          const order = payload.new as { customer_name?: string; total?: number };
+          // Audio alert
+          try {
+            const a = new Audio('data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=');
+            a.volume = 0.7;
+            void a.play().catch(() => {});
+          } catch { /* ignore */ }
+          toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
+            description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
+            duration: 8000,
+          });
           fetchData();
         }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `store_id=eq.${store.id}`,
+        },
+        () => fetchData()
       )
       .subscribe();
 
@@ -155,6 +175,7 @@ export default function Admin() {
       supabase.removeChannel(channel);
     };
   }, [store?.id]);
+
 
   async function fetchData() {
     const { data: storeData } = await supabase
