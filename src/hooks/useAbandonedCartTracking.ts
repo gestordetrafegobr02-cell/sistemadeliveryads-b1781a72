@@ -29,8 +29,8 @@ export function useAbandonedCartTracking(
 
   // Save cart via secure RPC
   const saveAbandonedCart = useCallback(async (data: AbandonedCartData): Promise<string | null> => {
-    if (!data.storeId || data.items.length === 0) return;
-    if (!data.customerName.trim() && !data.customerPhone.trim()) return;
+    if (!data.storeId || data.items.length === 0) return null;
+    if (!data.customerName.trim() && !data.customerPhone.trim()) return null;
 
     const cartSignature = JSON.stringify({
       items: data.items.map(i => ({ id: i.id, qty: i.quantity })),
@@ -70,8 +70,8 @@ export function useAbandonedCartTracking(
 
   // Immediate save function (for blur/unload events)
   const saveImmediately = useCallback(async (): Promise<string | null> => {
-    if (!storeId || items.length === 0) return;
-    if (!customerName.trim() && !customerPhone.trim()) return;
+    if (!storeId || items.length === 0) return null;
+    if (!customerName.trim() && !customerPhone.trim()) return null;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
