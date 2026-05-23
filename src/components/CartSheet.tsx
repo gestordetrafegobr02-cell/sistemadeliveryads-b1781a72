@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
-import { hapticClick, hapticSuccess } from '@/lib/haptics';
+import { hapticSuccess } from '@/lib/haptics';
 import { getOrderTrackingUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
@@ -229,6 +229,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     }
 
     setErrors({});
+    const pendingWhatsAppWindow = window.open('', '_blank', 'noopener,noreferrer');
     setSubmitting(true);
 
     // Build address string
@@ -294,6 +295,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
         if (orderError || !createdOrder?.[0]) {
           console.error('[Order] insert error:', orderError);
           setErrors({ submit: `Erro ao salvar pedido: ${orderError?.message || 'pedido não retornou confirmação'}` });
+          pendingWhatsAppWindow?.close();
           setSubmitting(false);
           return;
         }
@@ -306,6 +308,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       } catch (err) {
         console.error('[Order] save exception:', err);
         setErrors({ submit: 'Erro inesperado ao salvar pedido.' });
+        pendingWhatsAppWindow?.close();
         setSubmitting(false);
         return;
       }
@@ -353,6 +356,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
 
     if (!storePhoneDigits) {
       setErrors({ submit: 'A loja ainda não configurou o WhatsApp para receber pedidos.' });
+      pendingWhatsAppWindow?.close();
       setSubmitting(false);
       return;
     }
@@ -366,8 +370,9 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     setSubmitting(false);
     setOpen(false);
 
-    const waWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-    if (!waWindow) {
+    if (pendingWhatsAppWindow) {
+      pendingWhatsAppWindow.location.replace(whatsappUrl);
+    } else {
       window.location.assign(whatsappUrl);
       return;
     }
@@ -687,6 +692,13 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
                   <p className="text-sm text-destructive">
                     A loja está fechada no momento. Não é possível finalizar pedidos.
                   </p>
+                </div>
+              )}
+
+              {errors.submit && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive">{errors.submit}</p>
                 </div>
               )}
 
