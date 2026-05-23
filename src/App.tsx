@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/super-admin" element={<SuperAdmin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/order-status/:id" element={<OrderStatus />} />
+            <Route path="/pedido/:id" element={<OrderStatus />} />
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
