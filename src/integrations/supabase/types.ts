@@ -717,6 +717,7 @@ export type Database = {
           created_at: string
           delivery_fee: number
           id: string
+          is_active: boolean
           is_open_manual: boolean
           is_trial_expired: boolean
           logo_url: string
@@ -745,7 +746,10 @@ export type Database = {
         }[]
       }
       get_store_pixel_by_slug: { Args: { store_slug: string }; Returns: string }
-      get_store_stats: { Args: { p_store_id: string }; Returns: Json }
+      get_store_stats: {
+        Args: { p_end_date?: string; p_start_date?: string; p_store_id: string }
+        Returns: Json
+      }
       get_upsell_products: {
         Args: { p_limit?: number; p_store_id: string }
         Returns: {
