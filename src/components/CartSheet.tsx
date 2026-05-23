@@ -189,8 +189,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     }
   }, [open, onOpen]);
 
-  const handleCheckout = async () => {
-    // Build validation schema dynamically based on order type
+  const validateCheckoutForm = () => {
     const validationData = {
       name,
       phone,
@@ -207,29 +206,32 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       ...(paymentMethod === 'cash' && { changeFor }),
     };
 
-    // Validate required delivery fields
-    if (orderType === 'delivery') {
-      if (!street.trim() || !number.trim() || !neighborhood.trim()) {
-        setErrors({
-          address: 'Preencha rua, número e bairro para entrega',
-        });
-        return;
-      }
+    if (orderType === 'delivery' && (!street.trim() || !number.trim() || !neighborhood.trim())) {
+      setErrors({ address: 'Preencha rua, número e bairro para entrega' });
+      return false;
     }
 
     const result = checkoutSchema.safeParse(validationData);
-    
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
         if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
       });
       setErrors(fieldErrors);
-      return;
+      return false;
     }
 
     setErrors({});
-    const pendingWhatsAppWindow = window.open('', '_blank', 'noopener,noreferrer');
+    return true;
+  };
+
+  const handleCheckout = async (pendingWhatsAppWindow?: Window | null) => {
+    if (!validateCheckoutForm()) {
+      pendingWhatsAppWindow?.close();
+      return;
+    }
+
+    const checkoutWindow = pendingWhatsAppWindow ?? window.open('', '_blank', 'noopener,noreferrer');
     setSubmitting(true);
 
     // Build address string
@@ -295,7 +297,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
         if (orderError || !createdOrder?.[0]) {
           console.error('[Order] insert error:', orderError);
           setErrors({ submit: `Erro ao salvar pedido: ${orderError?.message || 'pedido não retornou confirmação'}` });
-          pendingWhatsAppWindow?.close();
+          checkoutWindow?.close();
           setSubmitting(false);
           return;
         }
@@ -308,7 +310,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       } catch (err) {
         console.error('[Order] save exception:', err);
         setErrors({ submit: 'Erro inesperado ao salvar pedido.' });
-        pendingWhatsAppWindow?.close();
+        checkoutWindow?.close();
         setSubmitting(false);
         return;
       }
@@ -356,7 +358,7 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
 
     if (!storePhoneDigits) {
       setErrors({ submit: 'A loja ainda não configurou o WhatsApp para receber pedidos.' });
-      pendingWhatsAppWindow?.close();
+      checkoutWindow?.close();
       setSubmitting(false);
       return;
     }
@@ -370,8 +372,8 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
     setSubmitting(false);
     setOpen(false);
 
-    if (pendingWhatsAppWindow) {
-      pendingWhatsAppWindow.location.replace(whatsappUrl);
+    if (checkoutWindow) {
+      checkoutWindow.location.replace(whatsappUrl);
     } else {
       window.location.assign(whatsappUrl);
       return;
