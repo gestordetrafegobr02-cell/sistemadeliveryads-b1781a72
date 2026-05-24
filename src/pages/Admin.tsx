@@ -1171,6 +1171,7 @@ export default function Admin() {
                   label="Imagem do Produto"
                 />
               )}
+              <MenuImagePicker value={productImage} onSelect={setProductImage} />
               <div>
                 <Label>Categoria</Label>
                 <Select 
