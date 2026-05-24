@@ -97,74 +97,13 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
-  const [audioBlocked, setAudioBlocked] = useState(false);
-  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Pending orders trigger the looping alert + flashing border.
+  const pendingCount = orders.filter(
+    (o) => !o.status || o.status === 'pending'
+  ).length;
+  const { unlocked: alertsUnlocked, unlock: unlockAlerts } = usePendingOrderAlert(pendingCount);
 
   // Store form
-  const [storeName, setStoreName] = useState('');
-  const [storeSlug, setStoreSlug] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [pixKey, setPixKey] = useState('');
-  const [pixelId, setPixelId] = useState('');
-  const [deliveryFee, setDeliveryFee] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [coverUrl, setCoverUrl] = useState('');
-  const [storeBgColor, setStoreBgColor] = useState<string | null>(null);
-  const [storeCardStyle, setStoreCardStyle] = useState<string | null>('rounded');
-  // Product dialog
-  const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productName, setProductName] = useState('');
-  const [productDescription, setProductDescription] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productImage, setProductImage] = useState('');
-  const [productCategory, setProductCategory] = useState<string>('');
-
-  // Category dialog
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
-
-  const ensureAlertAudio = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    if (!alertAudioRef.current) {
-      alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
-      alertAudioRef.current.preload = 'auto';
-      alertAudioRef.current.volume = 0.8;
-    }
-    return alertAudioRef.current;
-  }, []);
-
-  const playOrderAlert = useCallback(async () => {
-    const audio = ensureAlertAudio();
-    if (!audio) return false;
-
-    try {
-      audio.currentTime = 0;
-      await audio.play();
-      setAudioBlocked(false);
-      return true;
-    } catch (error) {
-      console.warn('[Admin] order alert audio blocked:', error);
-      setAudioBlocked(true);
-      return false;
-    }
-  }, [ensureAlertAudio]);
-
-  const enableAudioEvents = useCallback(async () => {
-    const played = await playOrderAlert();
-    if (played) {
-      toast.success('Áudio de novos pedidos ativado.');
-    } else {
-      toast.error('O navegador ainda bloqueou o áudio. Toque novamente após alguma interação na página.');
-    }
-  }, [playOrderAlert]);
-
-  useEffect(() => {
-    const audio = ensureAlertAudio();
-    return () => {
-      audio?.pause();
-    };
-  }, [ensureAlertAudio]);
 
   useEffect(() => {
     if (!authLoading && !user) {
