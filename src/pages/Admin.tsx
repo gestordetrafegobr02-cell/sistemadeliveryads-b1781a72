@@ -458,18 +458,54 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {audioBlocked && (
-          <div className="mb-4 rounded-lg border border-border bg-card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Ative os alertas sonoros de novos pedidos</p>
-              <p className="text-xs text-muted-foreground">O navegador bloqueou o som automático. Toque no botão para liberar os avisos.</p>
+      {/* Persistent overlay: blocks until merchant unlocks audio alerts */}
+      {!alertsUnlocked && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
+              <BellRing className="h-7 w-7 text-primary" />
             </div>
-            <Button type="button" onClick={() => void enableAudioEvents()} className="bg-primary text-primary-foreground">
-              Ativar áudio
+            <h2 className="font-display text-2xl text-foreground">Ativar Alertas Sonoros</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Para receber novos pedidos em tempo real com som contínuo, libere os alertas de áudio.
+              Eles tocarão até você aceitar o pedido.
+            </p>
+            <Button
+              size="lg"
+              className="mt-5 w-full bg-primary text-primary-foreground"
+              onClick={() => void unlockAlerts()}
+            >
+              <BellRing className="mr-2 h-4 w-4" /> Ativar Alertas Sonoros
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Flashing red border while there are pending orders */}
+      {pendingCount > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-[90] border-[6px] border-destructive animate-pulse"
+        />
+      )}
+
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        {pendingCount > 0 && (
+          <div className="mb-4 rounded-lg border-2 border-destructive bg-destructive/10 p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3">
+              <BellRing className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-sm font-semibold text-destructive">
+                  {pendingCount} pedido{pendingCount > 1 ? 's' : ''} aguardando aceitação
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O alerta sonoro continuará até você aceitar (mude o status para "Preparando").
+                </p>
+              </div>
+            </div>
+          </div>
         )}
+
 
         <Tabs defaultValue="store" className="space-y-6">
           <TabsList className="bg-secondary">
