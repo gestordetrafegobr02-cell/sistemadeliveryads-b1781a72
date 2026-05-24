@@ -104,6 +104,30 @@ export default function Admin() {
   const { unlocked: alertsUnlocked, unlock: unlockAlerts } = usePendingOrderAlert(pendingCount);
 
   // Store form
+  const [storeName, setStoreName] = useState('');
+  const [storeSlug, setStoreSlug] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [pixKey, setPixKey] = useState('');
+  const [pixelId, setPixelId] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [storeBgColor, setStoreBgColor] = useState<string | null>(null);
+  const [storeCardStyle, setStoreCardStyle] = useState<string | null>('rounded');
+
+  // Product dialog
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productName, setProductName] = useState('');
+  const [productDescription, setProductDescription] = useState('');
+  const [productPrice, setProductPrice] = useState('');
+  const [productImage, setProductImage] = useState('');
+  const [productCategory, setProductCategory] = useState<string>('');
+
+  // Category dialog
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+
 
   useEffect(() => {
     if (!authLoading && !user) {
