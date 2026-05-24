@@ -213,15 +213,14 @@ export default function Admin() {
         },
         async (payload) => {
           const order = payload.new as { customer_name?: string; total?: number };
-          const played = await playOrderAlert();
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
-            action: !played
+            action: !alertsUnlocked
               ? {
-                  label: 'Ativar áudio',
+                  label: 'Ativar alertas',
                   onClick: () => {
-                    void enableAudioEvents();
+                    void unlockAlerts();
                   },
                 }
               : undefined,
