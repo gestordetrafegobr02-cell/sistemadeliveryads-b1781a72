@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
+import { MenuImagePicker } from '@/components/MenuImagePicker';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
@@ -30,8 +31,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
-
-const ORDER_ALERT_TONE = 'data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=';
+import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
 
 interface StoreData {
   id: string;
@@ -97,8 +97,11 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
-  const [audioBlocked, setAudioBlocked] = useState(false);
-  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Pending orders trigger the looping alert + flashing border.
+  const pendingCount = orders.filter(
+    (o) => !o.status || o.status === 'pending'
+  ).length;
+  const { unlocked: alertsUnlocked, unlock: unlockAlerts } = usePendingOrderAlert(pendingCount);
 
   // Store form
   const [storeName, setStoreName] = useState('');
@@ -111,6 +114,7 @@ export default function Admin() {
   const [coverUrl, setCoverUrl] = useState('');
   const [storeBgColor, setStoreBgColor] = useState<string | null>(null);
   const [storeCardStyle, setStoreCardStyle] = useState<string | null>('rounded');
+
   // Product dialog
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -124,47 +128,6 @@ export default function Admin() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
 
-  const ensureAlertAudio = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    if (!alertAudioRef.current) {
-      alertAudioRef.current = new Audio(ORDER_ALERT_TONE);
-      alertAudioRef.current.preload = 'auto';
-      alertAudioRef.current.volume = 0.8;
-    }
-    return alertAudioRef.current;
-  }, []);
-
-  const playOrderAlert = useCallback(async () => {
-    const audio = ensureAlertAudio();
-    if (!audio) return false;
-
-    try {
-      audio.currentTime = 0;
-      await audio.play();
-      setAudioBlocked(false);
-      return true;
-    } catch (error) {
-      console.warn('[Admin] order alert audio blocked:', error);
-      setAudioBlocked(true);
-      return false;
-    }
-  }, [ensureAlertAudio]);
-
-  const enableAudioEvents = useCallback(async () => {
-    const played = await playOrderAlert();
-    if (played) {
-      toast.success('Áudio de novos pedidos ativado.');
-    } else {
-      toast.error('O navegador ainda bloqueou o áudio. Toque novamente após alguma interação na página.');
-    }
-  }, [playOrderAlert]);
-
-  useEffect(() => {
-    const audio = ensureAlertAudio();
-    return () => {
-      audio?.pause();
-    };
-  }, [ensureAlertAudio]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -250,15 +213,14 @@ export default function Admin() {
         },
         async (payload) => {
           const order = payload.new as { customer_name?: string; total?: number };
-          const played = await playOrderAlert();
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
-            action: !played
+            action: !alertsUnlocked
               ? {
-                  label: 'Ativar áudio',
+                  label: 'Ativar alertas',
                   onClick: () => {
-                    void enableAudioEvents();
+                    void unlockAlerts();
                   },
                 }
               : undefined,
@@ -281,7 +243,7 @@ export default function Admin() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [store?.id, enableAudioEvents, fetchData, playOrderAlert]);
+  }, [store?.id, alertsUnlocked, unlockAlerts, fetchData]);
 
 
   // Validate Facebook Pixel ID format (15-20 digits only)
@@ -496,18 +458,54 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {audioBlocked && (
-          <div className="mb-4 rounded-lg border border-border bg-card p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Ative os alertas sonoros de novos pedidos</p>
-              <p className="text-xs text-muted-foreground">O navegador bloqueou o som automático. Toque no botão para liberar os avisos.</p>
+      {/* Persistent overlay: blocks until merchant unlocks audio alerts */}
+      {!alertsUnlocked && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/85 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full rounded-2xl border border-border bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
+              <BellRing className="h-7 w-7 text-primary" />
             </div>
-            <Button type="button" onClick={() => void enableAudioEvents()} className="bg-primary text-primary-foreground">
-              Ativar áudio
+            <h2 className="font-display text-2xl text-foreground">Ativar Alertas Sonoros</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Para receber novos pedidos em tempo real com som contínuo, libere os alertas de áudio.
+              Eles tocarão até você aceitar o pedido.
+            </p>
+            <Button
+              size="lg"
+              className="mt-5 w-full bg-primary text-primary-foreground"
+              onClick={() => void unlockAlerts()}
+            >
+              <BellRing className="mr-2 h-4 w-4" /> Ativar Alertas Sonoros
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Flashing red border while there are pending orders */}
+      {pendingCount > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-[90] border-[6px] border-destructive animate-pulse"
+        />
+      )}
+
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        {pendingCount > 0 && (
+          <div className="mb-4 rounded-lg border-2 border-destructive bg-destructive/10 p-4 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3">
+              <BellRing className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-sm font-semibold text-destructive">
+                  {pendingCount} pedido{pendingCount > 1 ? 's' : ''} aguardando aceitação
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O alerta sonoro continuará até você aceitar (mude o status para "Preparando").
+                </p>
+              </div>
+            </div>
+          </div>
         )}
+
 
         <Tabs defaultValue="store" className="space-y-6">
           <TabsList className="bg-secondary">
@@ -1173,6 +1171,7 @@ export default function Admin() {
                   label="Imagem do Produto"
                 />
               )}
+              <MenuImagePicker value={productImage} onSelect={setProductImage} />
               <div>
                 <Label>Categoria</Label>
                 <Select 
