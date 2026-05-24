@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
+import { MenuImagePicker } from '@/components/MenuImagePicker';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
@@ -30,8 +31,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
-
-const ORDER_ALERT_TONE = 'data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YS4AAAA=';
+import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
 
 interface StoreData {
   id: string;
