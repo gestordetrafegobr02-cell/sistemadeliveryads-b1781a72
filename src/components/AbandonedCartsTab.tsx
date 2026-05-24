@@ -118,7 +118,7 @@ export function AbandonedCartsTab({
 
     // Realtime subscription
     const channel = supabase
-      .channel('abandoned-carts-realtime')
+      .channel(`abandoned-carts-realtime-${storeId}`)
       .on(
         'postgres_changes',
         {
