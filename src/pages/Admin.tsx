@@ -243,7 +243,7 @@ export default function Admin() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [store?.id, enableAudioEvents, fetchData, playOrderAlert]);
+  }, [store?.id, alertsUnlocked, unlockAlerts, fetchData]);
 
 
   // Validate Facebook Pixel ID format (15-20 digits only)
