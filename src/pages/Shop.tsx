@@ -445,9 +445,12 @@ export default function Shop() {
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Sistema Delivery ADS" />
+        <meta property="og:site_name" content={store.name} />
         <meta name="description" content={ogDescription} />
+        <meta name="apple-mobile-web-app-title" content={store.name} />
+        <meta name="application-name" content={store.name} />
         <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=2'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
