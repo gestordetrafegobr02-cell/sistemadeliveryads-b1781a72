@@ -198,31 +198,47 @@ export default function Onboarding() {
         setStep(3);
         toast.success('Loja criada com sucesso! Acesse seu painel abaixo.');
       } else {
-        // Create new store with template
-        const { error } = await supabase.rpc('create_user_store_with_template', {
+        // Create new store with template via SECURITY DEFINER RPC
+        const payload = {
           p_store_name: storeName.trim(),
           p_store_slug: storeSlug.trim().toLowerCase(),
           p_template_slug: selectedTemplate,
-        });
+        };
+        console.info('[Onboarding] Creating store:', payload);
+
+        const { data, error } = await supabase.rpc('create_user_store_with_template', payload);
 
         if (error) {
-          if (error.message.includes('already in use') || error.message.includes('Slug')) {
+          console.error('[Onboarding] RPC error creating store:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+          const msg = error.message || '';
+          if (msg.includes('already in use') || msg.includes('Slug already')) {
             toast.error('Este slug já está em uso. Escolha outro.');
-          } else if (error.message.includes('already has a store')) {
+          } else if (msg.includes('already has a store')) {
             toast.error('Você já possui uma loja.');
             navigate('/admin');
+          } else if (msg.includes('Not authenticated')) {
+            toast.error('Sessão expirada. Faça login novamente.');
+            navigate('/auth');
           } else {
-            toast.error('Erro ao criar loja: ' + error.message);
+            toast.error(`Erro ao criar loja: ${msg}`);
           }
           return;
         }
 
+        console.info('[Onboarding] Store created. id:', data);
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
         toast.success('Loja criada com sucesso! Acesse seu painel abaixo.');
       }
     } catch (err) {
-      toast.error('Erro inesperado ao criar loja');
+      const e = err as { message?: string; code?: string };
+      console.error('[Onboarding] Unexpected error creating store:', e);
+      toast.error(`Erro inesperado ao criar loja${e?.message ? `: ${e.message}` : ''}`);
     } finally {
       setCreating(false);
     }
