@@ -344,6 +344,55 @@ export default function Shop() {
     return products.filter((p) => p.is_featured);
   }, [products]);
 
+  // Inject per-store PWA manifest so "Add to Home Screen" installs only this store
+  useEffect(() => {
+    if (!store || !cleanSlug) return;
+    const icon = sanitizeImageUrl(store.logo_url) || `${window.location.origin}/logo.png`;
+    const manifest = {
+      name: store.name,
+      short_name: store.name.slice(0, 12),
+      description: `Cardápio digital — ${store.name}`,
+      start_url: `/${cleanSlug}`,
+      id: `/${cleanSlug}`,
+      scope: `/${cleanSlug}`,
+      display: 'standalone',
+      orientation: 'portrait-primary',
+      background_color: '#0a0a0a',
+      theme_color: store.primary_color || '#f59e0b',
+      icons: [
+        { src: icon, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Remove any existing manifest link (including the static /manifest.json)
+    document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = blobUrl;
+    link.setAttribute('data-store-manifest', cleanSlug);
+    document.head.appendChild(link);
+
+    // Theme color matches store
+    let themeMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!themeMeta) {
+      themeMeta = document.createElement('meta');
+      themeMeta.name = 'theme-color';
+      document.head.appendChild(themeMeta);
+    }
+    const previousTheme = themeMeta.content;
+    themeMeta.content = store.primary_color || '#f59e0b';
+
+    return () => {
+      URL.revokeObjectURL(blobUrl);
+      link.remove();
+      if (themeMeta) themeMeta.content = previousTheme;
+    };
+  }, [store, cleanSlug]);
+
   const handlePurchase = () => {
     if (window.fbq && facebookPixelId) {
       window.fbq('track', 'Purchase');
@@ -445,9 +494,12 @@ export default function Shop() {
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Sistema Delivery ADS" />
+        <meta property="og:site_name" content={store.name} />
         <meta name="description" content={ogDescription} />
+        <meta name="apple-mobile-web-app-title" content={store.name} />
+        <meta name="application-name" content={store.name} />
         <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=2'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
