@@ -150,10 +150,29 @@ export default function Index() {
 
       navigate('/admin');
     } catch (error: any) {
-      console.error('Signup error:', error);
+      console.error('Signup error:', error, {
+        message: error?.message,
+        status: error?.status,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      const raw = (error?.message || '').toLowerCase();
       let message = 'Erro ao criar conta. Tente novamente.';
-      if (error.message?.includes('already registered')) {
+      if (raw.includes('already registered') || raw.includes('already been registered') || raw.includes('user already')) {
         message = 'Este e-mail já está cadastrado. Faça login.';
+      } else if (raw.includes('pwned') || raw.includes('weak') || raw.includes('compromised') || raw.includes('leaked')) {
+        message = 'Esta senha é muito comum / vazada. Escolha uma senha mais forte (8+ caracteres, com números e símbolos).';
+      } else if (raw.includes('password') && raw.includes('short')) {
+        message = 'A senha é muito curta. Use pelo menos 6 caracteres.';
+      } else if (raw.includes('invalid') && raw.includes('email')) {
+        message = 'E-mail inválido.';
+      } else if (raw.includes('slug') || raw.includes('already in use')) {
+        message = 'O nome dessa loja gerou um link em uso. Tente um nome ligeiramente diferente.';
+      } else if (raw.includes('rate')) {
+        message = 'Muitas tentativas. Aguarde alguns segundos e tente novamente.';
+      } else if (error?.message) {
+        message = `Erro: ${error.message}`;
       }
       toast({ title: message, variant: 'destructive' });
     } finally {
