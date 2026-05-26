@@ -118,6 +118,19 @@ export default function Index() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('Erro ao criar conta');
 
+      // If signUp didn't return a session (email confirmation required),
+      // sign in immediately so the RPC call below is authenticated.
+      if (!authData.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) {
+          console.warn('[Signup] auto sign-in after signup failed:', signInError);
+          throw new Error('Conta criada, mas não conseguimos iniciar sessão automaticamente. Faça login.');
+        }
+      }
+
       const slug = generateSlug(storeName.trim());
       const { data: storeId, error: storeError } = await supabase.rpc('create_user_store_with_template', {
         p_store_name: storeName.trim(),
