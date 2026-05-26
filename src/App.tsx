@@ -26,14 +26,14 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/demo/:slug" element={<Demo />} />
-            <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/order-status/:id" element={<OrderStatus />} />
             <Route path="/pedido/:id" element={<OrderStatus />} />
+            {/* Public store menu — catch-all root slug. MUST be last before 404 */}
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
