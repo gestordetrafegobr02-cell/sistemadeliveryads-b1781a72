@@ -102,8 +102,9 @@ function loadFacebookPixel(pixelId: string) {
 }
 
 export default function Shop() {
-  const { slug } = useParams<{ slug: string }>();
+  const params = useParams<{ slug?: string; storeSlug?: string }>();
   const location = useLocation();
+  const slug = params.slug ?? params.storeSlug ?? '';
   const [store, setStore] = useState<StorePublic | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [facebookPixelId, setFacebookPixelId] = useState<string | null>(null);
@@ -119,29 +120,50 @@ export default function Shop() {
     let raw = (slug ?? '').trim().toLowerCase();
     if (!raw) {
       // Fallback: extract slug from pathname (e.g. /my-store)
-      const segments = window.location.pathname.split('/').filter(Boolean);
+      const segments = location.pathname.split('/').filter(Boolean);
       // Skip known system routes
-      const systemRoutes = ['admin', 'auth', 'onboarding', 'super-admin', 'demo'];
+      const systemRoutes = ['admin', 'auth', 'onboarding', 'super-admin', 'demo', 'order-status', 'pedido'];
       if (segments.length >= 1 && !systemRoutes.includes(segments[0])) {
         raw = segments[0].toLowerCase();
       }
     }
     // Strip query/hash, remove invisible unicode chars (mobile keyboards)
     return raw.split(/[?#]/)[0].replace(/[\u200B-\u200D\uFEFF\s]/g, '');
-  }, [slug]);
+  }, [location.pathname, slug]);
 
   useEffect(() => {
     let retryCount = 0;
     const MAX_RETRIES = 3;
     let cancelled = false;
+    let retryTimeout: number | null = null;
+
+    setLoading(true);
+    setError(null);
+    setStore(null);
+    setPaymentData(null);
+    setFacebookPixelId(null);
+    setCategories([]);
+    setProducts([]);
+    setActiveCategory(null);
 
     async function doFetch() {
       if (cancelled) return;
+      let retryScheduled = false;
+      const normalizedSlug = cleanSlug.toLowerCase();
       
-      console.log('[Shop] cleanSlug:', JSON.stringify(cleanSlug), '| raw slug param:', JSON.stringify(slug), '| pathname:', window.location.pathname);
+      console.info('[Shop] Starting public store fetch', {
+        rawSlugParam: slug,
+        normalizedSlug,
+        pathname: location.pathname,
+      });
 
-      if (!cleanSlug) {
+      if (!normalizedSlug) {
+        console.error('[Shop] Missing store slug for public menu route', {
+          rawSlugParam: slug,
+          pathname: location.pathname,
+        });
         setError('URL inválida — slug vazio. Verifique o link.');
+        setStore(null);
         setLoading(false);
         return;
       }
@@ -149,118 +171,156 @@ export default function Shop() {
       try {
         // 1) Fetch store via secure RPC function (excludes sensitive data)
         const { data: storeResult, error: storeError } = await supabase
-          .rpc('get_public_store_by_slug', { store_slug: cleanSlug.toLowerCase() });
+          .rpc('get_public_store_by_slug', { store_slug: normalizedSlug });
 
-        console.log('[Shop] RPC result:', { storeError, resultCount: storeResult?.length ?? 0 });
+        console.info('[Shop] Public store RPC response', {
+          normalizedSlug,
+          resultCount: storeResult?.length ?? 0,
+          hasError: Boolean(storeError),
+        });
 
         if (cancelled) return;
 
         if (storeError) {
-          console.error('[Shop] Supabase RPC error:', storeError);
+          console.error('[Shop] Public store RPC failed', {
+            normalizedSlug,
+            pathname: location.pathname,
+            error: storeError,
+          });
           if (retryCount < MAX_RETRIES) {
             retryCount++;
-            setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
+            retryScheduled = true;
+            retryTimeout = window.setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
             return;
           }
           setError(`Erro de conexão: ${storeError.message}`);
+          setStore(null);
           setLoading(false);
           return;
         }
 
         if (!storeResult || storeResult.length === 0) {
+          console.warn('[Shop] Public store lookup returned no rows', {
+            normalizedSlug,
+            pathname: location.pathname,
+          });
           if (retryCount < MAX_RETRIES) {
             retryCount++;
-            setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
+            retryScheduled = true;
+            retryTimeout = window.setTimeout(doFetch, Math.min(1000 * retryCount, 3000));
             return;
           }
-          setError(`Loja "${cleanSlug}" não encontrada. Verifique se o link está correto.`);
+          setError(`Loja "${normalizedSlug}" não encontrada. Verifique se o link está correto.`);
+          setStore(null);
           setLoading(false);
           return;
         }
 
-          const storeData = storeResult[0];
-          const mappedStore: StorePublic = {
-            id: storeData.id,
-            name: storeData.name,
-            logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
-            cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
-            delivery_fee: storeData.delivery_fee,
-            opening_hours: storeData.opening_hours as OpeningHours | null,
-            is_open_manual: storeData.is_open_manual ?? true,
-            is_trial_expired: storeData.is_trial_expired ?? false,
-            primary_color: storeData.primary_color ?? null,
-            store_template_style: (storeData as any).store_template_style ?? null,
-            bg_color: (storeData as any).bg_color ?? null,
-            card_style: (storeData as any).card_style ?? null,
-          };
-          setStore(mappedStore);
+        const storeData = storeResult[0];
+        const mappedStore: StorePublic = {
+          id: storeData.id,
+          name: storeData.name,
+          logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
+          cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
+          delivery_fee: storeData.delivery_fee,
+          opening_hours: storeData.opening_hours as OpeningHours | null,
+          is_open_manual: storeData.is_open_manual ?? true,
+          is_trial_expired: storeData.is_trial_expired ?? false,
+          primary_color: storeData.primary_color ?? null,
+          store_template_style: (storeData as any).store_template_style ?? null,
+          bg_color: (storeData as any).bg_color ?? null,
+          card_style: (storeData as any).card_style ?? null,
+        };
+        setStore(mappedStore);
+        setError(null);
 
-          // 2) Fetch payment data via secure RPC (pix_key + whatsapp)
-          const { data: paymentResult } = await supabase
-            .rpc('get_store_payment_data', { store_slug: cleanSlug });
-          
-          if (paymentResult && paymentResult.length > 0) {
-            setPaymentData(paymentResult[0]);
-          }
+        const [paymentResponse, pixelResponse, categoriesResponse, productsResponse] = await Promise.all([
+          supabase.rpc('get_store_payment_data', { store_slug: normalizedSlug }),
+          supabase.rpc('get_store_pixel_by_slug', { store_slug: normalizedSlug }),
+          supabase.from('categories').select('*').eq('store_id', mappedStore.id).order('sort_order'),
+          supabase.from('products').select('*').eq('store_id', mappedStore.id).eq('is_available', true).order('sort_order'),
+        ]);
 
-          // 3) Fetch Facebook Pixel ID via secure RPC
-          const { data: pixelId } = await supabase
-            .rpc('get_store_pixel_by_slug', { store_slug: cleanSlug });
-          
-          if (pixelId) {
-            setFacebookPixelId(pixelId);
-            loadFacebookPixel(pixelId);
-            setTimeout(() => {
-              if (window.fbq) window.fbq('track', 'ViewContent');
-            }, 100);
-          }
+        if (paymentResponse.error) {
+          console.error('[Shop] Payment data RPC failed', {
+            normalizedSlug,
+            error: paymentResponse.error,
+          });
+        } else if (paymentResponse.data && paymentResponse.data.length > 0) {
+          setPaymentData(paymentResponse.data[0]);
+        }
 
-          // 4) Fetch categories by store_id
-          const { data: catData } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('store_id', mappedStore.id)
-            .order('sort_order');
+        if (pixelResponse.error) {
+          console.error('[Shop] Pixel RPC failed', {
+            normalizedSlug,
+            error: pixelResponse.error,
+          });
+        } else if (pixelResponse.data) {
+          setFacebookPixelId(pixelResponse.data);
+          loadFacebookPixel(pixelResponse.data);
+          window.setTimeout(() => {
+            if (window.fbq) window.fbq('track', 'ViewContent');
+          }, 100);
+        }
 
-          setCategories(catData ?? []);
+        if (categoriesResponse.error) {
+          console.error('[Shop] Categories query failed', {
+            storeId: mappedStore.id,
+            error: categoriesResponse.error,
+          });
+        }
+        setCategories(categoriesResponse.data ?? []);
 
-          // 5) Fetch products by store_id
-          const { data: prodData } = await supabase
-            .from('products')
-            .select('*')
-            .eq('store_id', mappedStore.id)
-            .eq('is_available', true)
-            .order('sort_order');
+        if (productsResponse.error) {
+          console.error('[Shop] Products query failed', {
+            storeId: mappedStore.id,
+            error: productsResponse.error,
+          });
+        }
 
-          const sanitizedProducts: Product[] = (prodData ?? []).map((p) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            price: Number(p.price),
-            image_url: sanitizeImageUrl(p.image_url) ?? null,
-            category_id: p.category_id,
-            is_featured: p.is_featured ?? false,
-          }));
+        const sanitizedProducts: Product[] = (productsResponse.data ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: Number(p.price),
+          image_url: sanitizeImageUrl(p.image_url) ?? null,
+          category_id: p.category_id,
+          is_featured: p.is_featured ?? false,
+        }));
 
-          setProducts(sanitizedProducts);
-      } catch {
+        setProducts(sanitizedProducts);
+      } catch (fetchError) {
+        console.error('[Shop] Unexpected error while loading public menu', {
+          normalizedSlug,
+          pathname: location.pathname,
+          error: fetchError,
+        });
         if (cancelled) return;
         if (retryCount < MAX_RETRIES) {
           retryCount++;
-          setTimeout(doFetch, 1000 * retryCount);
+          retryScheduled = true;
+          retryTimeout = window.setTimeout(doFetch, 1000 * retryCount);
           return;
         }
         setError('Erro inesperado ao carregar dados');
+        setStore(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !retryScheduled) {
+          setLoading(false);
+        }
       }
     }
 
     // Start fetching immediately — no artificial delay
-    doFetch();
+    void doFetch();
 
-    return () => { cancelled = true; };
-  }, [cleanSlug]);
+    return () => {
+      cancelled = true;
+      if (retryTimeout !== null) {
+        window.clearTimeout(retryTimeout);
+      }
+    };
+  }, [cleanSlug, location.pathname, slug]);
 
   // Check if store is open
   const storeIsOpen = useMemo(() => {
