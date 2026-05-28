@@ -41,17 +41,14 @@ function getNowInSaoPaulo(): Date {
  * If is_open_manual is FALSE, store is ALWAYS closed (overrides schedule)
  */
 export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boolean): boolean {
-  // Manual toggle takes precedence:
-  // - TRUE = store is open regardless of schedule
-  // - FALSE = store is closed regardless of schedule
-  if (!isOpenManual) {
-    return false;
-  }
-
-  // If is_open_manual is TRUE, store is open
-  // Opening hours are informational only - they don't close the store automatically
-  return true;
+  // Manual toggle FALSE = always closed (hard override)
+  if (!isOpenManual) return false;
+  // If no schedule configured, fall back to manual flag (open)
+  if (!openingHours) return true;
+  // Manual TRUE still requires schedule to allow current time
+  return isWithinScheduledHours(openingHours);
 }
+
 
 /**
  * Check if store is within scheduled hours (informational only)

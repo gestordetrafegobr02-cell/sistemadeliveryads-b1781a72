@@ -1,9 +1,16 @@
 /**
  * Configuração global do site.
- * BASE_URL é o domínio oficial usado para gerar links de lojas,
- * e-mails, redirecionamentos, etc.
+ * Usa a origem atual do navegador para que os links funcionem
+ * em qualquer domínio onde a aplicação está publicada (Lovable, custom domain, etc.).
  */
-export const SITE_URL = 'https://sistemadeliveryads.site';
+function getOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'https://sistemadeliveryads.lovable.app';
+}
+
+export const SITE_URL = getOrigin();
 
 function sanitizePathSegment(value: string): string {
   return value
@@ -13,16 +20,16 @@ function sanitizePathSegment(value: string): string {
 }
 
 /**
- * Gera o link público de uma loja a partir do slug.
- * Formato: https://sistemadeliveryads.site/{slug}
+ * Gera o link público de uma loja a partir do slug, usando o domínio atual.
  */
 export function getStoreUrl(slug: string): string {
   const cleanSlug = sanitizePathSegment(slug);
-  return `${SITE_URL}/${cleanSlug}`;
+  return `${getOrigin()}/${cleanSlug}`;
 }
 
 export function getOrderTrackingUrl(orderId: string, sessionToken?: string | null): string {
   const cleanOrderId = sanitizePathSegment(orderId);
   const query = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : '';
-  return `${SITE_URL}/pedido/${cleanOrderId}${query}`;
+  return `${getOrigin()}/pedido/${cleanOrderId}${query}`;
 }
+
