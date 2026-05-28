@@ -347,14 +347,17 @@ export default function Shop() {
   // Inject per-store PWA manifest so "Add to Home Screen" installs only this store
   useEffect(() => {
     if (!store || !cleanSlug) return;
-    const icon = sanitizeImageUrl(store.logo_url) || `${window.location.origin}/logo.png`;
+    const origin = window.location.origin;
+    const startUrl = `${origin}/${cleanSlug}`;
+    const icon = sanitizeImageUrl(store.logo_url) || `${origin}/logo.png`;
+    const shortName = store.name.length > 12 ? store.name.slice(0, 12) : store.name;
     const manifest = {
       name: store.name,
-      short_name: store.name.slice(0, 12),
-      description: `Cardápio digital — ${store.name}`,
-      start_url: `/${cleanSlug}`,
-      id: `/${cleanSlug}`,
-      scope: `/${cleanSlug}`,
+      short_name: shortName,
+      description: `Cardápio — ${store.name}`,
+      start_url: startUrl,
+      id: startUrl,
+      scope: startUrl,
       display: 'standalone',
       orientation: 'portrait-primary',
       background_color: '#0a0a0a',
@@ -368,7 +371,6 @@ export default function Shop() {
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
     const blobUrl = URL.createObjectURL(blob);
 
-    // Remove any existing manifest link (including the static /manifest.json)
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
     const link = document.createElement('link');
     link.rel = 'manifest';
@@ -376,20 +378,40 @@ export default function Shop() {
     link.setAttribute('data-store-manifest', cleanSlug);
     document.head.appendChild(link);
 
-    // Theme color matches store
-    let themeMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    if (!themeMeta) {
-      themeMeta = document.createElement('meta');
-      themeMeta.name = 'theme-color';
-      document.head.appendChild(themeMeta);
-    }
-    const previousTheme = themeMeta.content;
-    themeMeta.content = store.primary_color || '#f59e0b';
+    const setLink = (rel: string, href: string) => {
+      document.querySelectorAll(`link[rel="${rel}"]`).forEach((el) => el.remove());
+      const l = document.createElement('link');
+      l.rel = rel;
+      l.href = href;
+      document.head.appendChild(l);
+      return l;
+    };
+    const appleIcon = setLink('apple-touch-icon', icon);
+    const favicon = setLink('icon', icon);
+
+    const setMeta = (name: string, content: string) => {
+      let m = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!m) {
+        m = document.createElement('meta');
+        m.name = name;
+        document.head.appendChild(m);
+      }
+      const prev = m.content;
+      m.content = content;
+      return { el: m, prev };
+    };
+    const appleTitle = setMeta('apple-mobile-web-app-title', store.name);
+    const appName = setMeta('application-name', store.name);
+    const themeMeta = setMeta('theme-color', store.primary_color || '#f59e0b');
 
     return () => {
       URL.revokeObjectURL(blobUrl);
       link.remove();
-      if (themeMeta) themeMeta.content = previousTheme;
+      appleIcon.remove();
+      favicon.remove();
+      appleTitle.el.content = appleTitle.prev;
+      appName.el.content = appName.prev;
+      themeMeta.el.content = themeMeta.prev;
     };
   }, [store, cleanSlug]);
 
