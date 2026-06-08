@@ -333,7 +333,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       })
       .join('\n');
 
-    let message = `🧾 *COMANDA DELIVERY ADS*\n`;
+    const safeStoreName = storeName || 'Restaurante';
+    const storeLink = storeSlug
+      ? `${window.location.origin}/${storeSlug}`
+      : window.location.origin;
+    let message = `🧾 *COMANDA ${safeStoreName.toUpperCase()}*\n`;
     message += `🏪 *Pedido #${shortId}*\n\n`;
     message += `*Cliente:* ${name}\n`;
     message += `*Telefone:* ${phoneDigits || phone}\n`;
