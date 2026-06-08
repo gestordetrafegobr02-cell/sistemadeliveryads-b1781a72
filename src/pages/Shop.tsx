@@ -22,6 +22,7 @@ const DEMO_SLUGS = ['demo-hamburgueria', 'demo-pizzaria', 'demo-acaiteria', 'dem
 interface StorePublic {
   id: string;
   name: string;
+  description?: string | null;
   logo_url: string | null;
   cover_url: string | null;
   delivery_fee: number | null;
@@ -220,6 +221,9 @@ export default function Shop() {
         const mappedStore: StorePublic = {
           id: storeData.id,
           name: storeData.name,
+          description: typeof (storeData as { description?: unknown }).description === 'string'
+            ? (storeData as { description?: string }).description ?? null
+            : null,
           logo_url: sanitizeImageUrl(storeData.logo_url) ?? null,
           cover_url: sanitizeImageUrl(storeData.cover_url) ?? null,
           delivery_fee: storeData.delivery_fee,
@@ -525,23 +529,36 @@ export default function Shop() {
   const uncategorizedProducts = products.filter((p) => !p.category_id);
   const showCategorySections = activeCategory === null;
 
+  const categorySummary = categories
+    .map((category) => category.name.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(' • ');
   const ogTitle = store.name;
-  const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
+  const ogDescription = store.description?.trim()
+    || (categorySummary
+      ? `${categorySummary} • Faça seu pedido online em ${store.name}`
+      : `Faça seu pedido online agora em ${store.name}`);
   const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
-  const ogImage = storeLogoSanitized || `${window.location.origin}/logo.png`;
-  const ogUrl = `${window.location.origin}/${cleanSlug}`;
+  const ogImage = storeLogoSanitized || sanitizeImageUrl(store.cover_url) || `${window.location.origin}/logo.png`;
+  const ogUrl = `https://${window.location.hostname}/${cleanSlug}`;
 
   return (
     <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null} bgColor={store.bg_color ?? null} cardStyle={store.card_style ?? null}>
       <Helmet>
         <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:image:alt" content={store.name} />
         <meta property="og:url" content={ogUrl} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content={store.name} />
-        <meta name="description" content={ogDescription} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+        <meta name="twitter:image" content={ogImage} />
         <meta name="apple-mobile-web-app-title" content={store.name} />
         <meta name="application-name" content={store.name} />
         <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />

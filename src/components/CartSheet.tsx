@@ -8,7 +8,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticSuccess } from '@/lib/haptics';
-import { getOrderTrackingUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
 import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
@@ -276,6 +275,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     let trackingUrl = '';
     let savedOrderId = orderId;
     let sessionToken: string | null = null;
+    const activeHost = typeof window !== 'undefined'
+      ? `https://${window.location.hostname}`
+      : '';
 
     if (storeId) {
       try {
@@ -310,7 +312,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
         savedOrderId = createdOrder[0].order_id;
         sessionToken = createdOrder[0].customer_session_token;
-        trackingUrl = getOrderTrackingUrl(savedOrderId, sessionToken);
+        const trackingQuery = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : '';
+        trackingUrl = `${activeHost}/pedido/${savedOrderId}${trackingQuery}`;
         await markAsConverted(savedOrderId);
 
       } catch (err) {
@@ -333,8 +336,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       })
       .join('\n');
 
-    const safeStoreName = storeName || 'Restaurante';
-    let message = `🧾 *COMANDA ${safeStoreName.toUpperCase()}*\n`;
+    const safeStoreName = storeName?.trim() || 'Restaurante';
+    let message = `🧾 *COMANDA ${safeStoreName}*\n`;
     message += `🏪 *Pedido #${shortId}*\n\n`;
     message += `*Cliente:* ${name}\n`;
     message += `*Telefone:* ${phoneDigits || phone}\n`;
