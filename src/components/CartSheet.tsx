@@ -29,6 +29,8 @@ const checkoutSchema = z.object({
 
 interface CartSheetProps {
   storeId?: string;
+  storeName?: string;
+  storeSlug?: string;
   whatsapp?: string;
   deliveryFee?: number;
   pixKey?: string;
