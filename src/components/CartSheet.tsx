@@ -54,7 +54,7 @@ interface CheckoutOrderItem {
   observation: string | null;
 }
 
-export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
+export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
