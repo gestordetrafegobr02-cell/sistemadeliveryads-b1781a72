@@ -334,9 +334,6 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       .join('\n');
 
     const safeStoreName = storeName || 'Restaurante';
-    const storeLink = storeSlug
-      ? `${window.location.origin}/${storeSlug}`
-      : window.location.origin;
     let message = `🧾 *COMANDA ${safeStoreName.toUpperCase()}*\n`;
     message += `🏪 *Pedido #${shortId}*\n\n`;
     message += `*Cliente:* ${name}\n`;
