@@ -273,11 +273,19 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     });
 
     let trackingUrl = '';
+    let storeShareUrl = '';
     let savedOrderId = orderId;
     let sessionToken: string | null = null;
     const activeHost = typeof window !== 'undefined'
       ? `https://${window.location.hostname}`
       : '';
+    const cleanStoreSlug = storeSlug
+      ? storeSlug.trim().toLowerCase().replace(/[\u200B-\u200D\uFEFF\s]/g, '')
+      : '';
+
+    if (activeHost && cleanStoreSlug) {
+      storeShareUrl = `${activeHost}/${cleanStoreSlug}`;
+    }
 
     if (storeId) {
       try {
@@ -360,6 +368,10 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       message += `\n${neighborhood}`;
       if (zipCode) message += `\nCEP: ${zipCode}`;
       if (referencePoint) message += `\nReferência: ${referencePoint}`;
+    }
+
+    if (storeShareUrl) {
+      message += `\n\n*Loja:*\n${storeShareUrl}`;
     }
 
     if (trackingUrl) {
