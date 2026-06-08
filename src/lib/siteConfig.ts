@@ -22,23 +22,18 @@ const FALLBACK_ORIGIN = 'https://sistemadeliveryads.lovable.app';
 function getOrigin(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     const host = window.location.hostname;
-    // Se o usuário já está em um domínio canônico, usa ele.
-    if (CANONICAL_HOSTS.includes(host)) {
-      return window.location.origin;
-    }
-    // Aceita previews e qualquer subdomínio lovable.app (cobre múltiplos previews).
-    if (host.endsWith('.lovable.app')) {
-      return FALLBACK_ORIGIN;
-    }
-    // Domínio desconhecido (custom domain do cliente, etc.) — usa o origin atual.
-    // Evita só o domínio Vercel antigo que está quebrado.
+    // Domínio antigo do Vercel está quebrado — força fallback canônico.
     if (host.endsWith('sistemadeliveryads.site')) {
       return FALLBACK_ORIGIN;
     }
+    // Em qualquer outro caso (custom domain do cliente, lovable.app publicado,
+    // ou preview do editor) usa o origin atual do navegador para que o link
+    // compartilhado abra exatamente no domínio onde o cliente já está.
     return window.location.origin;
   }
   return FALLBACK_ORIGIN;
 }
+
 
 export const SITE_URL = FALLBACK_ORIGIN;
 

@@ -345,11 +345,16 @@ export default function Shop() {
   }, [products]);
 
   // Inject per-store PWA manifest so "Add to Home Screen" installs only this store
+  // with the merchant's exact name + logo (white-label, never the platform brand).
   useEffect(() => {
     if (!store || !cleanSlug) return;
     const origin = window.location.origin;
-    const startUrl = `${origin}/${cleanSlug}`;
-    const icon = sanitizeImageUrl(store.logo_url) || `${origin}/logo.png`;
+    const startUrl = `${origin}/${cleanSlug}/`;
+    const scopeUrl = `${origin}/${cleanSlug}/`;
+    const logoFromStore = sanitizeImageUrl(store.logo_url);
+    // Force the store logo. Only fall back to platform asset if the merchant
+    // has not uploaded any logo at all.
+    const icon = logoFromStore || `${origin}/logo.png`;
     const shortName = store.name.length > 12 ? store.name.slice(0, 12) : store.name;
     const manifest = {
       name: store.name,
@@ -357,7 +362,7 @@ export default function Shop() {
       description: `Cardápio — ${store.name}`,
       start_url: startUrl,
       id: startUrl,
-      scope: startUrl,
+      scope: scopeUrl,
       display: 'standalone',
       orientation: 'portrait-primary',
       background_color: '#0a0a0a',
@@ -371,6 +376,9 @@ export default function Shop() {
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
     const blobUrl = URL.createObjectURL(blob);
 
+    // Remove ANY existing manifest link (including the static /manifest.json
+    // shipped in index.html) so the browser only sees the store-specific one
+    // when the install prompt fires.
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
     const link = document.createElement('link');
     link.rel = 'manifest';
@@ -378,16 +386,30 @@ export default function Shop() {
     link.setAttribute('data-store-manifest', cleanSlug);
     document.head.appendChild(link);
 
-    const setLink = (rel: string, href: string) => {
-      document.querySelectorAll(`link[rel="${rel}"]`).forEach((el) => el.remove());
+    // Wipe ALL existing icon / touch-icon links so the platform logo never
+    // leaks into the install prompt, then install store-specific ones.
+    document
+      .querySelectorAll('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"], link[rel="icon"], link[rel="shortcut icon"]')
+      .forEach((el) => el.remove());
+
+    const addLink = (rel: string, href: string, sizes?: string) => {
       const l = document.createElement('link');
       l.rel = rel;
       l.href = href;
+      if (sizes) l.setAttribute('sizes', sizes);
+      l.setAttribute('data-store-icon', cleanSlug);
       document.head.appendChild(l);
       return l;
     };
-    const appleIcon = setLink('apple-touch-icon', icon);
-    const favicon = setLink('icon', icon);
+    const addedLinks = [
+      addLink('icon', icon),
+      addLink('shortcut icon', icon),
+      addLink('apple-touch-icon', icon),
+      addLink('apple-touch-icon', icon, '152x152'),
+      addLink('apple-touch-icon', icon, '167x167'),
+      addLink('apple-touch-icon', icon, '180x180'),
+      addLink('apple-touch-icon-precomposed', icon),
+    ];
 
     const setMeta = (name: string, content: string) => {
       let m = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -403,17 +425,19 @@ export default function Shop() {
     const appleTitle = setMeta('apple-mobile-web-app-title', store.name);
     const appName = setMeta('application-name', store.name);
     const themeMeta = setMeta('theme-color', store.primary_color || '#f59e0b');
+    const msTile = setMeta('msapplication-TileImage', icon);
 
     return () => {
       URL.revokeObjectURL(blobUrl);
       link.remove();
-      appleIcon.remove();
-      favicon.remove();
+      addedLinks.forEach((l) => l.remove());
       appleTitle.el.content = appleTitle.prev;
       appName.el.content = appName.prev;
       themeMeta.el.content = themeMeta.prev;
+      msTile.el.content = msTile.prev;
     };
   }, [store, cleanSlug]);
+
 
   const handlePurchase = () => {
     if (window.fbq && facebookPixelId) {
