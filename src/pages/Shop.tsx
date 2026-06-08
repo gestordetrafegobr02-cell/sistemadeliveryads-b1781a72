@@ -529,7 +529,7 @@ export default function Shop() {
   const ogDescription = `Faça seu pedido online agora! | ${store.name}`;
   const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
   const ogImage = storeLogoSanitized || `${window.location.origin}/logo.png`;
-  const ogUrl = `https://sistemadeliveryads.site/${cleanSlug}`;
+  const ogUrl = `${window.location.origin}/${cleanSlug}`;
 
   return (
     <StoreThemeProvider primaryColor={store.primary_color ?? null} templateStyle={store.store_template_style ?? null} bgColor={store.bg_color ?? null} cardStyle={store.card_style ?? null}>
@@ -694,6 +694,8 @@ export default function Shop() {
 
           <CartSheet
             storeId={store.id}
+            storeName={store.name}
+            storeSlug={cleanSlug}
             whatsapp={paymentData?.whatsapp || ''}
             deliveryFee={store.delivery_fee || 0}
             pixKey={paymentData?.pix_key || undefined}

@@ -29,6 +29,8 @@ const checkoutSchema = z.object({
 
 interface CartSheetProps {
   storeId?: string;
+  storeName?: string;
+  storeSlug?: string;
   whatsapp?: string;
   deliveryFee?: number;
   pixKey?: string;
@@ -52,7 +54,7 @@ interface CheckoutOrderItem {
   observation: string | null;
 }
 
-export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
+export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -331,7 +333,8 @@ export function CartSheet({ storeId, whatsapp, deliveryFee = 0, pixKey, onPurcha
       })
       .join('\n');
 
-    let message = `🧾 *COMANDA DELIVERY ADS*\n`;
+    const safeStoreName = storeName || 'Restaurante';
+    let message = `🧾 *COMANDA ${safeStoreName.toUpperCase()}*\n`;
     message += `🏪 *Pedido #${shortId}*\n\n`;
     message += `*Cliente:* ${name}\n`;
     message += `*Telefone:* ${phoneDigits || phone}\n`;
