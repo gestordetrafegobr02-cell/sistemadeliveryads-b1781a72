@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticSuccess } from '@/lib/haptics';
+import { getOrderTrackingUrl, getStoreUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
 import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
@@ -276,15 +277,12 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     let storeShareUrl = '';
     let savedOrderId = orderId;
     let sessionToken: string | null = null;
-    const activeHost = typeof window !== 'undefined'
-      ? `https://${window.location.hostname}`
-      : '';
     const cleanStoreSlug = storeSlug
       ? storeSlug.trim().toLowerCase().replace(/[\u200B-\u200D\uFEFF\s]/g, '')
       : '';
 
-    if (activeHost && cleanStoreSlug) {
-      storeShareUrl = `${activeHost}/${cleanStoreSlug}`;
+    if (cleanStoreSlug) {
+      storeShareUrl = getStoreUrl(cleanStoreSlug);
     }
 
     if (storeId) {
@@ -320,8 +318,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
         savedOrderId = createdOrder[0].order_id;
         sessionToken = createdOrder[0].customer_session_token;
-        const trackingQuery = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : '';
-        trackingUrl = `${activeHost}/pedido/${savedOrderId}${trackingQuery}`;
+        trackingUrl = getOrderTrackingUrl(savedOrderId, sessionToken);
         await markAsConverted(savedOrderId);
 
       } catch (err) {
