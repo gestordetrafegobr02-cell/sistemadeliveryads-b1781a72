@@ -1,21 +1,6 @@
 /**
- * Configuração global do site.
- *
- * Para links que serão compartilhados (WhatsApp, rastreamento, etc.) usamos
- * SEMPRE um domínio canônico publicado e válido, porque a origem atual do
- * navegador pode ser:
- *  - um preview iframe inacessível externamente
- *  - um domínio antigo desativado (ex.: sistemadeliveryads.site → 404)
- *
- * Domínios canônicos aceitos (ordem de prioridade quando detectados via
- * window.location): custom domain → lovable.app publicado → fallback.
+ * Configuração global para URLs públicas white-label.
  */
-
-const CANONICAL_HOSTS = [
-  'www.sistemaimctrack.shop',
-  'sistemaimctrack.shop',
-  'sistemadeliveryads.lovable.app',
-];
 
 const FALLBACK_ORIGIN = 'https://sistemadeliveryads.lovable.app';
 
