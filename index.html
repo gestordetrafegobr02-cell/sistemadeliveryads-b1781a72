@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
-    <title>Sistema Delivery ADS - Admin</title>
-    <meta name="description" content="Sistema Delivery ADS - Plataforma completa de gestão para delivery" />
-    <meta name="author" content="Sistema Delivery ADS" />
+    <title>Cardápio Digital</title>
+    <meta name="description" content="Cardápio digital white-label para pedidos online" />
+    <meta name="author" content="Cardápio Digital" />
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#f59e0b" />
@@ -14,9 +14,148 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Cardápio Digital" />
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+
+    <script>
+      (function () {
+        const SYSTEM_ROUTES = new Set(['', 'auth', 'admin', 'super-admin', 'onboarding', 'demo', 'order-status', 'pedido']);
+        const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+        const slug = (path.split('/')[0] || '').toLowerCase();
+        const isStoreRoute = slug && !SYSTEM_ROUTES.has(slug);
+        const origin = window.location.origin;
+        const defaultIcon = origin + '/logo.png?v=2';
+
+        function setMeta(selector, attr, value) {
+          let el = document.head.querySelector(selector);
+          if (!el) {
+            el = document.createElement('meta');
+            const pair = selector.match(/meta\[(name|property)="([^"]+)"\]/);
+            if (pair) el.setAttribute(pair[1], pair[2]);
+            document.head.appendChild(el);
+          }
+          el.setAttribute(attr, value);
+        }
+
+        function setLink(rel, href, sizes) {
+          let el = document.head.querySelector('link[rel="' + rel + '"]' + (sizes ? '[sizes="' + sizes + '"]' : ''));
+          if (!el) {
+            el = document.createElement('link');
+            el.setAttribute('rel', rel);
+            if (sizes) el.setAttribute('sizes', sizes);
+            document.head.appendChild(el);
+          }
+          el.setAttribute('href', href);
+        }
+
+        function setManifest(manifest) {
+          const href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+          let link = document.head.querySelector('link[rel="manifest"]');
+          if (!link) {
+            link = document.createElement('link');
+            link.setAttribute('rel', 'manifest');
+            document.head.appendChild(link);
+          }
+          link.setAttribute('href', href);
+        }
+
+        if (!isStoreRoute) {
+          setManifest({
+            name: 'Cardápio Digital',
+            short_name: 'Cardápio',
+            description: 'Cardápio digital white-label para pedidos online',
+            start_url: '/',
+            scope: '/',
+            display: 'standalone',
+            background_color: '#0a0a0a',
+            theme_color: '#f59e0b',
+            icons: [
+              { src: defaultIcon, sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: defaultIcon, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+            ]
+          });
+          return;
+        }
+
+        const storeUrl = origin + '/' + slug;
+        setManifest({
+          name: slug,
+          short_name: slug,
+          description: 'Cardápio digital da loja',
+          start_url: '/' + slug,
+          id: '/' + slug,
+          scope: '/' + slug + '/',
+          display: 'standalone',
+          background_color: '#0a0a0a',
+          theme_color: '#f59e0b',
+          icons: [
+            { src: defaultIcon, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: defaultIcon, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          ]
+        });
+
+        const SUPABASE_URL = '%VITE_SUPABASE_URL%';
+        const SUPABASE_ANON_KEY = '%VITE_SUPABASE_PUBLISHABLE_KEY%';
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.startsWith('%')) return;
+
+        fetch(SUPABASE_URL + '/rest/v1/rpc/get_public_store_by_slug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ store_slug: slug }),
+        })
+          .then(function (res) { return res.ok ? res.json() : []; })
+          .then(function (rows) {
+            const store = Array.isArray(rows) ? rows[0] : null;
+            if (!store || !store.name) return;
+            const icon = store.logo_url || defaultIcon;
+            const title = store.name;
+            const description = 'Faça seu pedido online em ' + store.name;
+
+            document.title = title;
+            setMeta('meta[name="description"]', 'content', description);
+            setMeta('meta[name="application-name"]', 'content', title);
+            setMeta('meta[name="apple-mobile-web-app-title"]', 'content', title);
+            setMeta('meta[name="theme-color"]', 'content', store.primary_color || '#f59e0b');
+            setMeta('meta[name="msapplication-TileImage"]', 'content', icon);
+            setMeta('meta[property="og:title"]', 'content', title);
+            setMeta('meta[property="og:description"]', 'content', description);
+            setMeta('meta[property="og:image"]', 'content', icon);
+            setMeta('meta[property="og:url"]', 'content', storeUrl);
+            setMeta('meta[property="og:site_name"]', 'content', title);
+            setMeta('meta[name="twitter:title"]', 'content', title);
+            setMeta('meta[name="twitter:description"]', 'content', description);
+            setMeta('meta[name="twitter:image"]', 'content', icon);
+
+            setLink('icon', icon);
+            setLink('shortcut icon', icon);
+            setLink('apple-touch-icon', icon);
+            setLink('apple-touch-icon', icon, '152x152');
+            setLink('apple-touch-icon', icon, '167x167');
+            setLink('apple-touch-icon', icon, '180x180');
+
+            setManifest({
+              name: title,
+              short_name: title,
+              description: description,
+              start_url: '/' + slug,
+              id: '/' + slug,
+              scope: '/' + slug + '/',
+              display: 'standalone',
+              orientation: 'portrait-primary',
+              background_color: '#0a0a0a',
+              theme_color: store.primary_color || '#f59e0b',
+              icons: [
+                { src: icon, sizes: '192x192', type: 'image/png', purpose: 'any' },
+                { src: icon, sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: icon, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+              ]
+            });
+          })
+          .catch(function () {});
+      })();
+    </script>
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png?v=2" />
@@ -34,9 +173,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <!-- Open Graph (defaults, overridden dynamically per store) -->
-    <meta property="og:title" content="Sistema Delivery ADS" />
-    <meta property="og:description" content="Plataforma completa de gestão para delivery" />
+    <meta property="og:title" content="Cardápio Digital" />
+    <meta property="og:description" content="Cardápio digital white-label para pedidos online" />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sistemadeliveryads.lovable.app" />
     <meta property="og:image" content="/logo.png?v=2" />
   </head>
 
