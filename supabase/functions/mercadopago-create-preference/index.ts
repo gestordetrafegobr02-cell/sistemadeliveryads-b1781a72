@@ -244,10 +244,11 @@ Deno.serve(async (req) => {
     });
 
     if (!mpRes.ok) {
-      throw new Error(
-        typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.',
-        { cause: mpJson },
+      err = new Error(
+        typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.'
       );
+      (err as Error & { cause?: unknown }).cause = mpJson;
+      throw err;
     }
 
     const status = typeof mpJson?.status === 'string' ? mpJson.status : '';
