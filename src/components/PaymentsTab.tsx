@@ -27,7 +27,6 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
     async function load() {
       const { data, error } = await supabase
         .from('stores')
-        // @ts-expect-error new columns not yet in generated types
         .select('checkout_type, mercadopago_public_key, mercadopago_access_token')
         .eq('id', storeId)
         .maybeSingle();
@@ -64,7 +63,6 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
     setSaving(true);
     const { error } = await supabase
       .from('stores')
-      // @ts-expect-error new columns
       .update({
         checkout_type: checkoutType,
         mercadopago_public_key: publicKey.trim() || null,
