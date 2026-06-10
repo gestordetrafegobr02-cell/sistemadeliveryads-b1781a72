@@ -354,15 +354,42 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       setOpen(false);
 
       if (isMpOnDelivery) {
+        // Fire merchant WhatsApp alert (on-delivery doesn't redirect through WA)
+        try {
+          if (storePhoneDigits) {
+            const alertMsg = encodeURIComponent(
+              '🚨 *Novo Pedido Recebido!* Mais um pedido foi gerado no seu Cardápio Digital. Acesse seu painel administrativo para iniciar o preparo!'
+            );
+            window.open(`https://wa.me/${storePhoneDigits}?text=${alertMsg}`, '_blank');
+          }
+        } catch (e) {
+          console.warn('[merchant-alert] failed', e);
+        }
         setSubmitting(false);
         window.location.assign(internalTrackingUrl);
         return;
       }
 
-      // Online payment via Mercado Pago
+      // Online payment via Mercado Pago — stash data so the tracking page can
+      // open the customer's WhatsApp with the live tracking link once they
+      // return from the approved payment.
+      try {
+        if (phoneDigits) {
+          localStorage.setItem(
+            `mp_paid_stash_${savedOrderId}`,
+            JSON.stringify({
+              phone: phoneDigits,
+              trackingUrl: `${window.location.origin}/${cleanStoreSlug}/pedido/${savedOrderId}`,
+              storePhone: storePhoneDigits || '',
+            }),
+          );
+        }
+      } catch (_) { /* ignore */ }
+
       try {
         const origin = window.location.origin;
-        const successUrl = `${origin}${internalTrackingUrl}`;
+        const successBase = `${origin}${internalTrackingUrl}`;
+        const successUrl = successBase + (successBase.includes('?') ? '&' : '?') + 'mp_paid=1';
         const failureUrl = `${origin}${cleanStoreSlug ? '/' + cleanStoreSlug : '/'}`;
         const mpItems = orderItems.map((it) => ({
           title: it.name,
