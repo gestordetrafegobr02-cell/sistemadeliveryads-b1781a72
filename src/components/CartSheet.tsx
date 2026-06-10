@@ -71,6 +71,23 @@ interface CartSheetProps {
   checkoutType?: 'whatsapp' | 'direct_cardapio';
 }
 
+interface PixGatewayResponse {
+  payment_id?: string | number;
+  status?: string;
+  status_detail?: string;
+  transaction_amount?: number;
+  gateway_response?: unknown;
+  point_of_interaction?: {
+    transaction_data?: {
+      qr_code?: string | null;
+      qr_code_base64?: string | null;
+      ticket_url?: string | null;
+    };
+  };
+  error?: string;
+  message?: string;
+}
+
 interface StoreUpsellConfig {
   upsell_enabled: boolean;
   upsell_blocking_categories: string[];
@@ -122,6 +139,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     sessionToken: string | null;
     qrCode: string;
     qrCodeBase64: string;
+    amount: number;
   } | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
   const pollRef = useRef<number | null>(null);
@@ -550,29 +568,33 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         });
         console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
-        if (mpError) return fail('Erro ao processar pagamento. Tente novamente.');
+        if (mpError) {
+          return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
+        }
         if (!mpData || (mpData as { error?: string }).error) {
-          return fail((mpData as { message?: string })?.message || 'Erro ao processar pagamento.');
+          return fail((mpData as { message?: string })?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
         }
 
-        const resp = mpData as {
-          status?: string;
-          qr_code?: string;
-          qr_code_base64?: string;
-          payment_id?: string;
-        };
+        const resp = mpData as PixGatewayResponse;
+        console.log('[MP] gateway raw payload', resp.gateway_response ?? resp);
 
         // PIX → render QR modal + start polling
         if (onlineMethod === 'pix') {
-          if (!resp.qr_code || !resp.qr_code_base64) {
-            return fail('Não foi possível gerar o PIX. Tente novamente.');
+          const transactionData = resp.point_of_interaction?.transaction_data;
+          const qrCode = transactionData?.qr_code?.trim();
+          const qrCodeBase64 = transactionData?.qr_code_base64?.trim();
+
+          if (!qrCode || !qrCodeBase64) {
+            return fail('Falha ao gerar pagamento real. Tente novamente.');
           }
+
           setPixData({
             paymentId: String(resp.payment_id || ''),
             orderId: savedOrderId,
             sessionToken,
-            qrCode: resp.qr_code,
-            qrCodeBase64: resp.qr_code_base64,
+            qrCode,
+            qrCodeBase64,
+            amount: grandTotal,
           });
           setPixModalOpen(true);
           setSubmitting(false);
@@ -1208,7 +1230,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             )}
 
             <div className="flex items-center justify-center gap-2 text-2xl font-display text-primary">
-              R$ {grandTotal.toFixed(2).replace('.', ',')}
+              R$ {(pixData?.amount ?? grandTotal).toFixed(2).replace('.', ',')}
             </div>
 
             <Button

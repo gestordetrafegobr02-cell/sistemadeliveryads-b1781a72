@@ -1,52 +1,43 @@
-// Edge function: NATIVE Mercado Pago Transparent Checkout.
-// Two flows, both via /v1/payments:
-//   - PIX:  returns qr_code + qr_code_base64 to render inside our own modal.
-//   - CARD: receives a client-tokenized card token (created in browser via
-//           MercadoPago.js) plus installments + payment_method_id and charges it.
-//
-// We synthesize the payer email/first_name/last_name from the simple
-// (Nome + Telefone) form the customer filled out — they never see those fields.
-// The full order payload is stashed in `pending_orders`; the webhook (or, for
-// instantly-approved cards, this function) promotes it into a real order.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const OrderItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  quantity: z.number().int().positive(),
+  price: z.number().nonnegative(),
+  modifiers: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    price: z.number().nonnegative(),
+  })).optional(),
+  observation: z.string().nullable().optional(),
+});
 
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  modifiers?: Array<{ id: string; name: string; price: number }>;
-  observation?: string | null;
-}
+const BodySchema = z.object({
+  storeId: z.string().uuid(),
+  orderId: z.string().uuid(),
+  amount: z.number().positive(),
+  payerName: z.string().trim().min(2).max(120),
+  payerPhone: z.string().trim().min(8).max(30).optional(),
+  description: z.string().trim().max(250).optional(),
+  paymentType: z.enum(['pix', 'card']),
+  cardToken: z.string().trim().min(1).optional(),
+  installments: z.number().int().positive().max(24).optional(),
+  paymentMethodId: z.string().trim().min(1).optional(),
+  issuerId: z.string().trim().optional(),
+  customer: z.object({
+    name: z.string().trim().min(2).max(120),
+    phone: z.string().trim().min(8).max(30),
+    address: z.string().trim().max(500).nullable().optional(),
+    orderItems: z.array(OrderItemSchema).min(1),
+    total: z.number().nonnegative(),
+    cartId: z.string().uuid().nullable().optional(),
+  }).optional(),
+});
 
-interface RequestBody {
-  storeId: string;
-  orderId: string;
-  amount: number;
-  payerName: string;
-  payerPhone?: string;
-  description?: string;
-  paymentType: 'pix' | 'card';
-  // Card flow only:
-  cardToken?: string;
-  installments?: number;
-  paymentMethodId?: string; // e.g. "visa", "master"
-  issuerId?: string;
-  customer?: {
-    name: string;
-    phone: string;
-    address?: string | null;
-    orderItems: OrderItem[];
-    total: number;
-    cartId?: string | null;
-  };
-}
+type RequestBody = z.infer<typeof BodySchema>;
 
 function jsonResp(payload: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -56,26 +47,44 @@ function jsonResp(payload: Record<string, unknown>, status = 200) {
 }
 
 function splitName(full: string): { first: string; last: string } {
-  const clean = (full || 'Cliente').trim().replace(/\s+/g, ' ');
-  const parts = clean.split(' ');
-  if (parts.length === 1) return { first: parts[0].slice(0, 50), last: 'Cliente' };
+  const parts = full.trim().replace(/\s+/g, ' ').split(' ');
   return {
-    first: parts[0].slice(0, 50),
-    last: parts.slice(1).join(' ').slice(0, 50),
+    first: (parts[0] || 'Cliente').slice(0, 50),
+    last: (parts.slice(1).join(' ') || 'Cliente').slice(0, 50),
   };
 }
 
-function fallbackEmail(phone: string, orderId: string): string {
+function fallbackEmail(phone: string | undefined, orderId: string): string {
   const digits = (phone || '').replace(/\D/g, '');
-  const key = digits || orderId.replace(/-/g, '').slice(0, 12);
-  return `${key}@cardapioprivado.com`;
+  return `${digits || orderId.replace(/-/g, '').slice(0, 12)}@cardapioprivado.com`;
+}
+
+function safeJsonParse(raw: string) {
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return { raw_response: raw };
+  }
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
   try {
-    const body = (await req.json()) as RequestBody;
+    const rawBody = await req.json().catch(() => null);
+    const parsed = BodySchema.safeParse(rawBody);
+
+    if (!parsed.success) {
+      return jsonResp({
+        error: 'invalid_payload',
+        message: 'Dados do pedido incompletos.',
+        detail: parsed.error.flatten(),
+      }, 400);
+    }
+
+    const body: RequestBody = parsed.data;
     console.log('[MP] incoming', {
       storeId: body.storeId,
       orderId: body.orderId,
@@ -84,40 +93,43 @@ Deno.serve(async (req) => {
       payerName: body.payerName,
     });
 
-    if (!body.storeId || !body.orderId || !body.amount || body.amount <= 0) {
-      return jsonResp({ error: 'invalid_payload', message: 'Dados do pedido incompletos.' });
-    }
-    if (body.paymentType !== 'pix' && body.paymentType !== 'card') {
-      return jsonResp({ error: 'invalid_payment_type', message: 'Método de pagamento inválido.' });
-    }
     if (body.paymentType === 'card' && (!body.cardToken || !body.paymentMethodId)) {
-      return jsonResp({ error: 'card_data_missing', message: 'Dados do cartão incompletos.' });
+      return jsonResp({
+        error: 'card_data_missing',
+        message: 'Dados do cartão incompletos.',
+      }, 400);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) {
+      return jsonResp({
+        error: 'missing_backend_config',
+        message: 'Configuração do backend indisponível.',
+      }, 500);
+    }
+
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const { data: store, error } = await admin
-      .from('stores')
-      .select('name, slug')
-      .eq('id', body.storeId)
-      .maybeSingle();
-    if (error || !store) {
-      return jsonResp({ error: 'store_not_found', message: 'Loja não encontrada.' });
+    const [{ data: store, error: storeError }, { data: secret, error: secretError }] = await Promise.all([
+      admin.from('stores').select('name, slug').eq('id', body.storeId).maybeSingle(),
+      admin.from('store_secrets').select('mercadopago_access_token').eq('store_id', body.storeId).maybeSingle(),
+    ]);
+
+    if (storeError || !store) {
+      return jsonResp({ error: 'store_not_found', message: 'Loja não encontrada.' }, 404);
     }
 
-    const { data: secret } = await admin
-      .from('store_secrets')
-      .select('mercadopago_access_token')
-      .eq('store_id', body.storeId)
-      .maybeSingle();
-    const token = (secret as { mercadopago_access_token?: string | null } | null)?.mercadopago_access_token;
-    if (!token) {
-      return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' });
+    if (secretError) {
+      console.error('[MP] token lookup error', secretError);
+      return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' }, 500);
     }
 
-    // Stash full order so webhook (or our post-approval branch) can promote it.
+    const accessToken = (secret as { mercadopago_access_token?: string | null } | null)?.mercadopago_access_token?.trim();
+    if (!accessToken) {
+      return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' }, 400);
+    }
+
     if (body.customer) {
       const { error: pendingErr } = await admin
         .from('pending_orders')
@@ -128,91 +140,125 @@ Deno.serve(async (req) => {
           status: 'awaiting_payment',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' });
+
       if (pendingErr) {
         console.error('[MP] pending_orders upsert error', pendingErr);
-        return jsonResp({ error: 'pending_order_failed', message: 'Erro ao preparar o pedido. Tente novamente.', detail: pendingErr.message });
+        return jsonResp({
+          error: 'pending_order_failed',
+          message: 'Erro ao preparar o pedido. Tente novamente.',
+          detail: pendingErr.message,
+        }, 500);
       }
     }
 
-    const storeName = ((store as { name?: string }).name || 'Cardapio').slice(0, 22);
-    const description = (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${storeName}`).slice(0, 250);
     const { first, last } = splitName(body.payerName);
-    const email = fallbackEmail(body.payerPhone || '', body.orderId);
+    const payerEmail = fallbackEmail(body.payerPhone, body.orderId);
     const phoneDigits = (body.payerPhone || '').replace(/\D/g, '');
-    const areaCode = phoneDigits.slice(0, 2) || '11';
-    const phoneNumber = phoneDigits.slice(2) || phoneDigits || '999999999';
-
-    const basePayer = {
-      email,
-      first_name: first,
-      last_name: last,
-      phone: { area_code: areaCode, number: phoneNumber },
-    };
+    const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`;
+    const idempotencyKey = crypto.randomUUID();
 
     const paymentPayload: Record<string, unknown> = body.paymentType === 'pix'
       ? {
           transaction_amount: Number(body.amount.toFixed(2)),
-          description,
+          description: 'Pedido no Cardapio Digital',
           payment_method_id: 'pix',
           external_reference: body.orderId,
-          notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
-          statement_descriptor: storeName,
+          notification_url: webhookUrl,
           metadata: { order_id: body.orderId, store_id: body.storeId },
-          payer: basePayer,
+          payer: {
+            email: payerEmail,
+            first_name: first,
+            last_name: last,
+          },
         }
       : {
           transaction_amount: Number(body.amount.toFixed(2)),
-          description,
+          description: (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${store.name || 'Cardapio'}`).slice(0, 250),
           token: body.cardToken,
           installments: body.installments || 1,
           payment_method_id: body.paymentMethodId,
           issuer_id: body.issuerId || undefined,
           external_reference: body.orderId,
-          notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
-          statement_descriptor: storeName,
+          notification_url: webhookUrl,
           metadata: { order_id: body.orderId, store_id: body.storeId },
-          payer: basePayer,
+          payer: {
+            email: payerEmail,
+            first_name: first,
+            last_name: last,
+            phone: {
+              area_code: phoneDigits.slice(0, 2) || '11',
+              number: phoneDigits.slice(2) || phoneDigits || '999999999',
+            },
+          },
         };
 
-    console.log('[MP] /v1/payments payload', { type: body.paymentType, orderId: body.orderId });
+    console.log('[MP] /v1/payments request', {
+      orderId: body.orderId,
+      paymentType: body.paymentType,
+      idempotencyKey,
+      payload: paymentPayload,
+    });
 
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `${body.orderId}-${body.paymentType}`,
+        'X-Idempotency-Key': idempotencyKey,
       },
       body: JSON.stringify(paymentPayload),
     });
-    const mpJson = await mpRes.json();
+
+    const rawGatewayResponse = await mpRes.text();
+    const mpJson = safeJsonParse(rawGatewayResponse);
+
+    console.log('[MP] gateway raw response', {
+      orderId: body.orderId,
+      paymentType: body.paymentType,
+      statusCode: mpRes.status,
+      body: mpJson,
+    });
+
     if (!mpRes.ok) {
-      console.error('[MP] /v1/payments error', mpRes.status, mpJson);
       return jsonResp({
         error: 'mercadopago_error',
-        message: mpJson?.message || 'Erro ao processar pagamento. Tente novamente.',
+        message: typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.',
         detail: mpJson,
-      });
+      }, mpRes.status);
     }
 
-    const status: string = mpJson?.status || '';
-    const statusDetail: string = mpJson?.status_detail || '';
+    const status = typeof mpJson?.status === 'string' ? mpJson.status : '';
+    const statusDetail = typeof mpJson?.status_detail === 'string' ? mpJson.status_detail : '';
 
-    // PIX: return QR data so the client can render it inside our modal.
     if (body.paymentType === 'pix') {
-      const tx = mpJson?.point_of_interaction?.transaction_data || {};
+      const transactionData = mpJson?.point_of_interaction?.transaction_data;
+
+      if (!transactionData?.qr_code || !transactionData?.qr_code_base64) {
+        console.error('[MP] invalid pix gateway payload', mpJson);
+        return jsonResp({
+          error: 'invalid_pix_response',
+          message: 'Falha ao gerar pagamento real. Tente novamente.',
+          detail: mpJson,
+        }, 502);
+      }
+
       return jsonResp({
         payment_id: mpJson.id,
         status,
         status_detail: statusDetail,
-        qr_code: tx.qr_code || null,
-        qr_code_base64: tx.qr_code_base64 || null,
-        ticket_url: tx.ticket_url || null,
+        transaction_amount: Number(mpJson?.transaction_amount ?? body.amount),
+        point_of_interaction: {
+          ...mpJson.point_of_interaction,
+          transaction_data: {
+            qr_code: transactionData.qr_code,
+            qr_code_base64: transactionData.qr_code_base64,
+            ticket_url: transactionData.ticket_url ?? null,
+          },
+        },
+        gateway_response: mpJson,
       });
     }
 
-    // CARD: if already approved, promote the pending order now so the user is
-    // routed to tracking immediately (don't wait for the webhook).
     if (status === 'approved' && body.customer) {
       try {
         const { data: existing } = await admin
@@ -220,6 +266,7 @@ Deno.serve(async (req) => {
           .select('id, payment_status')
           .eq('id', body.orderId)
           .maybeSingle();
+
         if (!existing) {
           const c = body.customer;
           const { error: rpcErr } = await admin.rpc('create_public_order', {
@@ -233,16 +280,18 @@ Deno.serve(async (req) => {
             p_client_total: c.total,
             p_cart_id: c.cartId || undefined,
           });
-          if (rpcErr) console.error('[MP] post-approval create_public_order err', rpcErr);
-          else {
+
+          if (rpcErr) {
+            console.error('[MP] post-approval create_public_order err', rpcErr);
+          } else {
             await admin.from('orders').update({ payment_status: 'Pago' }).eq('id', body.orderId);
             await admin.from('pending_orders').delete().eq('id', body.orderId);
           }
         } else if (existing.payment_status !== 'Pago') {
           await admin.from('orders').update({ payment_status: 'Pago' }).eq('id', body.orderId);
         }
-      } catch (e) {
-        console.error('[MP] post-approval promotion failed', e);
+      } catch (promotionError) {
+        console.error('[MP] post-approval promotion failed', promotionError);
       }
     }
 
@@ -250,6 +299,8 @@ Deno.serve(async (req) => {
       payment_id: mpJson.id,
       status,
       status_detail: statusDetail,
+      transaction_amount: Number(mpJson?.transaction_amount ?? body.amount),
+      gateway_response: mpJson,
     });
   } catch (err) {
     console.error('[MP] unexpected', err);
@@ -257,6 +308,6 @@ Deno.serve(async (req) => {
       error: 'internal_error',
       message: 'Erro inesperado ao processar pagamento. Tente novamente.',
       detail: String(err),
-    });
+    }, 500);
   }
 });
