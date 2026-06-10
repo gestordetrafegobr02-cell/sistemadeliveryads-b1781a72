@@ -77,6 +77,7 @@ interface Order {
   status: string | null;
   address: string | null;
   payment_method: string | null;
+  payment_status: string | null;
   created_at: string;
 }
 
@@ -1003,8 +1004,13 @@ export default function Admin() {
                             <p className="font-medium text-foreground">{order.customer_name}</p>
                             <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <OrderStatusBadge status={order.status} />
+                            {order.payment_status === 'Pago' && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                ✓ Pagamento Confirmado
+                              </span>
+                            )}
                             <span className="text-xs text-muted-foreground">
                               {new Date(order.created_at).toLocaleDateString('pt-BR')}
                             </span>

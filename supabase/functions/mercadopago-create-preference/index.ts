@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
         failure: body.failureUrl,
       },
       auto_return: 'approved',
+      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
       payment_methods: {
         excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
         installments: 12,
