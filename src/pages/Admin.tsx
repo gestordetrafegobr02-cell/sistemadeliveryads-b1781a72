@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle } from 'lucide-react';
-import { PaymentsTab } from '@/components/PaymentsTab';
+
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -188,13 +188,7 @@ export default function Admin() {
 
       setCategories(catRes.data || []);
       setProducts(prodRes.data || []);
-      // Hide Mercado Pago online orders until payment is confirmed ("Pago").
-      // Prevents phantom/abandoned MP orders from polluting the merchant view.
-      const visibleOrders = (ordersRes.data || []).filter((o) => {
-        if (o.payment_method === 'mercadopago_pending' && o.payment_status !== 'Pago') return false;
-        return true;
-      });
-      setOrders(visibleOrders);
+      setOrders(ordersRes.data || []);
     }
 
     setLoading(false);
@@ -220,48 +214,17 @@ export default function Admin() {
           filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
-          const order = payload.new as { customer_name?: string; total?: number; payment_method?: string; payment_status?: string };
-          // Skip notification for online MP orders still awaiting payment confirmation
-          if (order.payment_method === 'mercadopago_pending' && order.payment_status !== 'Pago') {
-            return;
-          }
+          const order = payload.new as { customer_name?: string; total?: number };
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
             action: !alertsUnlocked
               ? {
                   label: 'Ativar alertas',
-                  onClick: () => {
-                    void unlockAlerts();
-                  },
+                  onClick: () => { void unlockAlerts(); },
                 }
               : undefined,
           });
-          fetchData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `store_id=eq.${storeId}`,
-        },
-        (payload) => {
-          const next = payload.new as { payment_method?: string; payment_status?: string; customer_name?: string };
-          const prev = payload.old as { payment_status?: string };
-          // When an online MP order finally settles, surface it like a brand-new order
-          if (
-            next.payment_method === 'mercadopago_pending' &&
-            next.payment_status === 'Pago' &&
-            prev?.payment_status !== 'Pago'
-          ) {
-            toast.success(`✅ Pagamento confirmado — ${next.customer_name ?? 'cliente'}`, {
-              description: 'Pedido pago via Mercado Pago. Pronto para preparo!',
-              duration: 8000,
-            });
-          }
           fetchData();
         }
       )
@@ -560,10 +523,6 @@ export default function Admin() {
                   {abandonedCount > 9 ? '9+' : abandonedCount}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="gap-2">
-              <CreditCard className="w-4 h-4" />
-              Pagamentos
             </TabsTrigger>
             <TabsTrigger value="reports" className="gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -1170,20 +1129,6 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          {/* Payments Tab */}
-          <TabsContent value="payments">
-            {store ? (
-              <PaymentsTab storeId={store.id} />
-            ) : (
-              <Card className="bg-card border-border">
-                <CardContent className="py-8">
-                  <p className="text-muted-foreground text-center">
-                    Crie sua loja primeiro para configurar pagamentos.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
 
           {/* Reports Tab */}
           <TabsContent value="reports">
