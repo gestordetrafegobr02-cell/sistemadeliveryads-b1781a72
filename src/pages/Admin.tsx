@@ -535,6 +535,10 @@ export default function Admin() {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="payments" className="gap-2">
+              <CreditCard className="w-4 h-4" />
+              Pagamentos
+            </TabsTrigger>
             <TabsTrigger value="reports" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Relatórios
@@ -1105,6 +1109,21 @@ export default function Admin() {
                 <CardContent className="py-8">
                   <p className="text-muted-foreground text-center">
                     Crie sua loja primeiro para ver carrinhos abandonados.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments">
+            {store ? (
+              <PaymentsTab storeId={store.id} />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">
+                    Crie sua loja primeiro para configurar pagamentos.
                   </p>
                 </CardContent>
               </Card>
