@@ -244,11 +244,11 @@ Deno.serve(async (req) => {
     });
 
     if (!mpRes.ok) {
-      err = new Error(
+      const gatewayError = new Error(
         typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.'
       );
-      (err as Error & { cause?: unknown }).cause = mpJson;
-      throw err;
+      (gatewayError as Error & { cause?: unknown }).cause = mpJson;
+      throw gatewayError;
     }
 
     const status = typeof mpJson?.status === 'string' ? mpJson.status : '';
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         payment_id: mpJson.id,
         status,
         status_detail: statusDetail,
-          transaction_amount: Number(mpJson?.transaction_amount ?? normalizedAmount),
+        transaction_amount: Number(mpJson?.transaction_amount ?? normalizedAmount),
         point_of_interaction: {
           ...mpJson.point_of_interaction,
           transaction_data: {
