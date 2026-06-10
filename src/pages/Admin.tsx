@@ -220,7 +220,11 @@ export default function Admin() {
           filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
-          const order = payload.new as { customer_name?: string; total?: number };
+          const order = payload.new as { customer_name?: string; total?: number; payment_method?: string; payment_status?: string };
+          // Skip notification for online MP orders still awaiting payment confirmation
+          if (order.payment_method === 'mercadopago_pending' && order.payment_status !== 'Pago') {
+            return;
+          }
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
@@ -244,7 +248,22 @@ export default function Admin() {
           table: 'orders',
           filter: `store_id=eq.${storeId}`,
         },
-        () => fetchData()
+        (payload) => {
+          const next = payload.new as { payment_method?: string; payment_status?: string; customer_name?: string };
+          const prev = payload.old as { payment_status?: string };
+          // When an online MP order finally settles, surface it like a brand-new order
+          if (
+            next.payment_method === 'mercadopago_pending' &&
+            next.payment_status === 'Pago' &&
+            prev?.payment_status !== 'Pago'
+          ) {
+            toast.success(`✅ Pagamento confirmado — ${next.customer_name ?? 'cliente'}`, {
+              description: 'Pedido pago via Mercado Pago. Pronto para preparo!',
+              duration: 8000,
+            });
+          }
+          fetchData();
+        }
       )
       .subscribe();
 
