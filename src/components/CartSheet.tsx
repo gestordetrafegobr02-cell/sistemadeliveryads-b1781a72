@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useCart } from '@/lib/cart';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticSuccess } from '@/lib/haptics';
 import { getOrderTrackingUrl, getStoreUrl } from '@/lib/siteConfig';
