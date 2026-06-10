@@ -153,6 +153,16 @@ Deno.serve(async (req) => {
     if (!accessToken) {
       return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' }, 400);
     }
+    const isProductionToken = accessToken.startsWith('APP_USR-');
+
+    if (body.paymentType === 'pix' && !isProductionToken) {
+      return jsonResp({
+        error: 'production_token_required',
+        message: 'Falha ao gerar pagamento real. Tente novamente.',
+        details: 'Access Token de produção APP_USR- é obrigatório para gerar PIX real.',
+        production_mode: false,
+      }, 400);
+    }
 
     if (body.customer) {
       const { error: pendingErr } = await admin
@@ -220,6 +230,7 @@ Deno.serve(async (req) => {
       orderId: body.orderId,
       paymentType: body.paymentType,
       idempotencyKey,
+      productionToken: isProductionToken,
       payload: paymentPayload,
     });
 
@@ -244,11 +255,20 @@ Deno.serve(async (req) => {
     });
 
     if (!mpRes.ok) {
-      const gatewayError = new Error(
-        typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.'
-      );
-      (gatewayError as Error & { cause?: unknown }).cause = mpJson;
-      throw gatewayError;
+      const gatewayMessage = typeof mpJson?.message === 'string'
+        ? mpJson.message
+        : typeof mpJson?.error_message === 'string'
+          ? mpJson.error_message
+          : 'Erro ao processar pagamento. Tente novamente.';
+
+      return jsonResp({
+        error: 'mercadopago_api_error',
+        message: gatewayMessage,
+        details: mpJson,
+        gateway_status: mpRes.status,
+        gateway_message: gatewayMessage,
+        production_mode: isProductionToken,
+      }, mpRes.status);
     }
 
     const status = typeof mpJson?.status === 'string' ? mpJson.status : '';
@@ -256,6 +276,7 @@ Deno.serve(async (req) => {
 
     if (body.paymentType === 'pix') {
       const transactionData = mpJson?.point_of_interaction?.transaction_data;
+      const liveMode = mpJson?.live_mode === true;
 
       if (!transactionData?.qr_code || !transactionData?.qr_code_base64) {
         console.error('[MP] invalid pix gateway payload', mpJson);
@@ -263,7 +284,30 @@ Deno.serve(async (req) => {
           error: 'invalid_pix_response',
           message: 'Falha ao gerar pagamento real. Tente novamente.',
           detail: mpJson,
+          gateway_status: mpRes.status,
+          production_mode: isProductionToken,
+          live_mode: liveMode,
         }, 502);
+      }
+
+      if (!isProductionToken || !liveMode) {
+        console.error('[MP] pix response rejected: production validation failed', {
+          isProductionToken,
+          liveMode,
+          response: mpJson,
+        });
+        return jsonResp({
+          error: 'invalid_pix_environment',
+          message: 'Falha ao gerar pagamento real. Tente novamente.',
+          details: !isProductionToken
+            ? 'Access Token de produção APP_USR- é obrigatório para gerar PIX real.'
+            : 'Mercado Pago retornou live_mode=false; resposta de sandbox bloqueada.',
+          gateway_status: mpRes.status,
+          gateway_message: !isProductionToken ? 'production_token_required' : 'sandbox_response_rejected',
+          production_mode: isProductionToken,
+          live_mode: liveMode,
+          gateway_response: mpJson,
+        }, 409);
       }
 
       return jsonResp({
@@ -271,6 +315,8 @@ Deno.serve(async (req) => {
         status,
         status_detail: statusDetail,
         transaction_amount: Number(mpJson?.transaction_amount ?? normalizedAmount),
+        production_mode: isProductionToken,
+        live_mode: liveMode,
         point_of_interaction: {
           ...mpJson.point_of_interaction,
           transaction_data: {
