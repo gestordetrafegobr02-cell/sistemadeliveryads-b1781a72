@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
-import { Clock, ChefHat, Truck, CheckCircle } from 'lucide-react';
+import { Clock, ChefHat, Truck, CheckCircle, XCircle } from 'lucide-react';
 
-type OrderStatus = 'pending' | 'preparing' | 'out_for_delivery' | 'completed';
+type OrderStatus = 'pending' | 'preparing' | 'out_for_delivery' | 'completed' | 'cancelled';
 
 interface OrderStatusBadgeProps {
   status: string | null;
@@ -19,7 +19,7 @@ const statusConfig: Record<OrderStatus, { label: string; className: string; icon
     icon: ChefHat,
   },
   out_for_delivery: {
-    label: 'Saiu para Entrega',
+    label: 'A caminho',
     className: 'bg-purple-500/20 text-purple-500 border-purple-500/30',
     icon: Truck,
   },
@@ -28,13 +28,26 @@ const statusConfig: Record<OrderStatus, { label: string; className: string; icon
     className: 'bg-green-500/20 text-green-500 border-green-500/30',
     icon: CheckCircle,
   },
+  cancelled: {
+    label: 'Cancelado',
+    className: 'bg-red-500/20 text-red-500 border-red-500/30',
+    icon: XCircle,
+  },
 };
 
-export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
-  const normalizedStatus = (status || 'pending') as OrderStatus;
-  const config = statusConfig[normalizedStatus] || statusConfig.pending;
-  const Icon = config.icon;
+function normalize(status: string | null): OrderStatus {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'cancelled';
+  if (s === 'a_caminho' || s === 'shipped' || s === 'out_for_delivery') return 'out_for_delivery';
+  if (s === 'concluido' || s === 'entregue' || s === 'completed') return 'completed';
+  if (s === 'preparing' || s === 'preparando') return 'preparing';
+  return 'pending';
+}
 
+export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
+  const normalizedStatus = normalize(status);
+  const config = statusConfig[normalizedStatus];
+  const Icon = config.icon;
   return (
     <Badge variant="outline" className={`gap-1.5 ${config.className}`}>
       <Icon className="w-3 h-3" />
@@ -43,17 +56,28 @@ export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
   );
 }
 
+export function isPaidStatus(orderStatus: string | null, paymentMethod: string | null): boolean {
+  const s = normalize(orderStatus);
+  // Cash/card on delivery becomes paid once the order is on the way or completed
+  if (s === 'out_for_delivery' || s === 'completed') return true;
+  if (paymentMethod === 'mercadopago_paid' || paymentMethod === 'pix_paid') return true;
+  return false;
+}
+
 export function getNextStatus(currentStatus: string | null): OrderStatus {
   const flow: OrderStatus[] = ['pending', 'preparing', 'out_for_delivery', 'completed'];
-  const currentIndex = flow.indexOf((currentStatus || 'pending') as OrderStatus);
-  return flow[Math.min(currentIndex + 1, flow.length - 1)];
+  const current = normalize(currentStatus);
+  if (current === 'cancelled') return 'cancelled';
+  const idx = flow.indexOf(current);
+  return flow[Math.min(idx + 1, flow.length - 1)];
 }
 
 export function getAllStatuses(): { value: OrderStatus; label: string }[] {
   return [
     { value: 'pending', label: 'Pendente' },
     { value: 'preparing', label: 'Preparando' },
-    { value: 'out_for_delivery', label: 'Saiu para Entrega' },
+    { value: 'out_for_delivery', label: 'A caminho' },
     { value: 'completed', label: 'Concluído' },
+    { value: 'cancelled', label: 'Cancelado' },
   ];
 }

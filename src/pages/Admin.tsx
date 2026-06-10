@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle } from 'lucide-react';
+import { PaymentsTab } from '@/components/PaymentsTab';
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -533,6 +534,10 @@ export default function Admin() {
                   {abandonedCount > 9 ? '9+' : abandonedCount}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="gap-2">
+              <CreditCard className="w-4 h-4" />
+              Pagamentos
             </TabsTrigger>
             <TabsTrigger value="reports" className="gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -1104,6 +1109,21 @@ export default function Admin() {
                 <CardContent className="py-8">
                   <p className="text-muted-foreground text-center">
                     Crie sua loja primeiro para ver carrinhos abandonados.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments">
+            {store ? (
+              <PaymentsTab storeId={store.id} />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">
+                    Crie sua loja primeiro para configurar pagamentos.
                   </p>
                 </CardContent>
               </Card>

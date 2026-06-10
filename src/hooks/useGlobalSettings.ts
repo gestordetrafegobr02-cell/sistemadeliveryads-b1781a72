@@ -9,7 +9,7 @@ interface GlobalSettings {
 
 const DEFAULT_SETTINGS: GlobalSettings = {
   owner_whatsapp: '5511999999999',
-  subscription_price: 97,
+  subscription_price: 49.90,
   default_trial_days: 7,
 };
 
@@ -26,25 +26,22 @@ export function useGlobalSettings() {
       const { data, error } = await supabase
         .from('global_settings')
         .select('key, value');
-
       if (error) throw error;
 
       const newSettings: GlobalSettings = { ...DEFAULT_SETTINGS };
-
       data?.forEach((item) => {
         switch (item.key) {
           case 'owner_whatsapp':
             newSettings.owner_whatsapp = item.value;
             break;
           case 'subscription_price':
-            newSettings.subscription_price = parseFloat(item.value) || 97;
+            newSettings.subscription_price = parseFloat(item.value) || 49.90;
             break;
           case 'default_trial_days':
             newSettings.default_trial_days = parseInt(item.value, 10) || 7;
             break;
         }
       });
-
       setSettings(newSettings);
     } catch (err) {
       console.error('Error fetching global settings:', err);
@@ -56,13 +53,11 @@ export function useGlobalSettings() {
   return { settings, loading, refetch: fetchSettings };
 }
 
-// Standalone function to get owner WhatsApp (for use in non-React contexts)
 export async function getOwnerWhatsApp(): Promise<string> {
   try {
     const { data, error } = await supabase.rpc('get_global_setting', {
       setting_key: 'owner_whatsapp',
     });
-
     if (error) throw error;
     return data || '5511999999999';
   } catch {
