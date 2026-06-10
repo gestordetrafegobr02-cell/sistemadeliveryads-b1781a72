@@ -314,7 +314,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             observation: item.observation,
           })) as unknown as import('@/integrations/supabase/types').Json,
           p_address: addressStr || null,
-          p_payment_method: paymentMethod,
+          p_payment_method: isMpOnline ? 'mercadopago_pending' : (isMpOnDelivery ? 'on_delivery' : paymentMethod),
           p_client_total: grandTotal,
           p_cart_id: cartId || undefined,
         });
