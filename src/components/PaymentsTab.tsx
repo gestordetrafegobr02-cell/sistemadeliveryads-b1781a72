@@ -171,12 +171,15 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
             </div>
             <div>
               <Label>Access Token</Label>
+              {hasToken && (
+                <p className="text-xs text-green-500 mt-1">✓ Access Token configurado e armazenado de forma segura no servidor.</p>
+              )}
               <div className="relative mt-1">
                 <Input
                   type={showToken ? 'text' : 'password'}
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
-                  placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  placeholder={hasToken ? 'Deixe vazio para manter o atual' : 'APP_USR-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                   className="bg-background border-border font-mono text-xs pr-10"
                 />
                 <button
@@ -189,7 +192,7 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Armazenado de forma segura. Apenas você (dono da loja) tem acesso.
+                Armazenado em tabela protegida (sem acesso pelo navegador). Usado apenas pelo servidor para processar pagamentos.
               </p>
             </div>
           </div>
