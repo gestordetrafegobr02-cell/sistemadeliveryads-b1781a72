@@ -112,7 +112,51 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // (Native PIX modal removed — Checkout Pro redirects to MP hosted page.)
+  // ===== Native Mercado Pago Transparent Checkout =====
+  const [onlineMethod, setOnlineMethod] = useState<'pix' | 'card'>('pix');
+  // PIX modal state
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<{
+    paymentId: string;
+    orderId: string;
+    sessionToken: string | null;
+    qrCode: string;
+    qrCodeBase64: string;
+  } | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+  const pollRef = useRef<number | null>(null);
+  // Card form state
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState(''); // MM/YY
+  const [cardCvv, setCardCvv] = useState('');
+  const [mpPublicKey, setMpPublicKey] = useState<string | null>(null);
+  const mpRef = useRef<any>(null);
+
+  // Fetch the store's MP public key when needed for card tokenization
+  useEffect(() => {
+    if (checkoutType !== 'direct_cardapio' || !storeSlug || mpPublicKey) return;
+    if (paymentFlow !== 'online' || onlineMethod !== 'card') return;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('get_public_store_by_slug', { store_slug: storeSlug });
+        const pk = (data as any[])?.[0]?.mercadopago_public_key;
+        if (pk) {
+          setMpPublicKey(pk);
+          await loadMpSdk();
+          if (window.MercadoPago) {
+            mpRef.current = new window.MercadoPago(pk, { locale: 'pt-BR' });
+          }
+        }
+      } catch (e) {
+        console.warn('[MP] public key fetch failed', e);
+      }
+    })();
+  }, [checkoutType, storeSlug, mpPublicKey, paymentFlow, onlineMethod]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
+
 
 
   // Abandoned cart tracking
