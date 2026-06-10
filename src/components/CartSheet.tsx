@@ -734,42 +734,73 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 </div>
               )}
 
-              {/* Payment Method */}
-              <div>
-                <Label className="text-foreground">Forma de Pagamento</Label>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as 'cash' | 'card' | 'pix')}
-                  className="mt-2 space-y-2"
-                >
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="pix" id="pix" />
-                    <Label htmlFor="pix" className="cursor-pointer flex-1">PIX</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="card" id="card" />
-                    <Label htmlFor="card" className="cursor-pointer flex-1">Cartão na Entrega</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="cursor-pointer flex-1">Dinheiro</Label>
-                  </div>
-                </RadioGroup>
+              {/* Mercado Pago: choose Online vs On-Delivery */}
+              {checkoutType === 'direct_cardapio' && (
+                <div>
+                  <Label className="text-foreground">Forma de Pagamento</Label>
+                  <RadioGroup
+                    value={paymentFlow}
+                    onValueChange={(v) => setPaymentFlow(v as 'online' | 'on_delivery')}
+                    className="mt-2 space-y-2"
+                  >
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary border border-primary/30">
+                      <RadioGroupItem value="online" id="pf-online" />
+                      <Label htmlFor="pf-online" className="cursor-pointer flex-1">
+                        <span className="font-medium">Pagar Online</span>
+                        <span className="block text-xs text-muted-foreground">Cartão, PIX ou boleto via Mercado Pago</span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="on_delivery" id="pf-on-delivery" />
+                      <Label htmlFor="pf-on-delivery" className="cursor-pointer flex-1">
+                        <span className="font-medium">Pagar na Entrega</span>
+                        <span className="block text-xs text-muted-foreground">Pague ao receber o pedido</span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
 
-                {/* Change For - Only show for cash */}
-                {paymentMethod === 'cash' && (
-                  <div className="mt-3">
-                    <Label htmlFor="changeFor" className="text-foreground">Troco para quanto?</Label>
-                    <Input
-                      id="changeFor"
-                      value={changeFor}
-                      onChange={(e) => setChangeFor(e.target.value)}
-                      placeholder="Ex: 50,00"
-                      className="mt-1 bg-secondary border-border"
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Payment Method (hidden when paying online via MP) */}
+              {!(checkoutType === 'direct_cardapio' && paymentFlow === 'online') && (
+                <div>
+                  <Label className="text-foreground">
+                    {checkoutType === 'direct_cardapio' ? 'Pagamento na Entrega — Como?' : 'Forma de Pagamento'}
+                  </Label>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as 'cash' | 'card' | 'pix')}
+                    className="mt-2 space-y-2"
+                  >
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="pix" id="pix" />
+                      <Label htmlFor="pix" className="cursor-pointer flex-1">PIX</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="card" id="card" />
+                      <Label htmlFor="card" className="cursor-pointer flex-1">Cartão na Entrega</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="cash" id="cash" />
+                      <Label htmlFor="cash" className="cursor-pointer flex-1">Dinheiro</Label>
+                    </div>
+                  </RadioGroup>
+
+                  {/* Change For - Only show for cash */}
+                  {paymentMethod === 'cash' && (
+                    <div className="mt-3">
+                      <Label htmlFor="changeFor" className="text-foreground">Troco para quanto?</Label>
+                      <Input
+                        id="changeFor"
+                        value={changeFor}
+                        onChange={(e) => setChangeFor(e.target.value)}
+                        placeholder="Ex: 50,00"
+                        className="mt-1 bg-secondary border-border"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Totals */}
               <div className="py-4 border-t border-border space-y-2">
