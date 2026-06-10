@@ -73,6 +73,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [complement, setComplement] = useState('');
   const [referencePoint, setReferencePoint] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
+  const [paymentFlow, setPaymentFlow] = useState<'online' | 'on_delivery'>('online');
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
