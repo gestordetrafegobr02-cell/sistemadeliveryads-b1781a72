@@ -80,8 +80,10 @@ interface PixGatewayResponse {
   gateway_status?: number;
   gateway_message?: string;
   details?: unknown;
+  detail?: unknown;
   production_mode?: boolean;
   live_mode?: boolean;
+  token_signature?: string;
   point_of_interaction?: {
     transaction_data?: {
       qr_code?: string | null;
@@ -105,6 +107,16 @@ async function getFunctionInvokeErrorText(error: unknown): Promise<string | null
 
   if (error instanceof Error) return error.message;
   return typeof error === 'string' ? error : null;
+}
+
+function getReadableGatewayError(payload: PixGatewayResponse | null, rawServerError?: string | null) {
+  const gatewayBlock = payload?.details ?? payload?.detail ?? payload?.gateway_response ?? rawServerError ?? null;
+  const readableMessage = payload?.gateway_message || payload?.message || rawServerError || 'Erro ao processar pagamento.';
+
+  return {
+    readableMessage,
+    gatewayBlock,
+  };
 }
 
 interface StoreUpsellConfig {
@@ -591,18 +603,32 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         if (mpError) {
           const rawServerError = await getFunctionInvokeErrorText(mpError);
           console.error('[MP] invoke server response', rawServerError ?? mpError);
-          return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
+          try {
+            const parsedServerError = rawServerError ? JSON.parse(rawServerError) as PixGatewayResponse : null;
+            const { readableMessage, gatewayBlock } = getReadableGatewayError(parsedServerError, rawServerError);
+            console.error('[MP] readable gateway rejection', {
+              gateway_status: parsedServerError?.gateway_status ?? null,
+              token_signature: parsedServerError?.token_signature ?? null,
+              message: readableMessage,
+              gateway: gatewayBlock,
+            });
+            return fail(readableMessage);
+          } catch {
+            return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
+          }
         }
         if (!mpData || (mpData as { error?: string }).error) {
           const payloadError = (mpData ?? null) as PixGatewayResponse | null;
+          const { readableMessage, gatewayBlock } = getReadableGatewayError(payloadError);
           console.error('[MP] invoke error payload', {
             gateway_status: payloadError?.gateway_status ?? null,
             error: payloadError?.error ?? null,
-            message: payloadError?.message ?? null,
+            message: readableMessage,
             gateway_message: payloadError?.gateway_message ?? null,
-            details: payloadError?.details ?? null,
+            token_signature: payloadError?.token_signature ?? null,
+            details: gatewayBlock,
           });
-          return fail(payloadError?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
+          return fail(readableMessage || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
         }
 
         const resp = mpData as PixGatewayResponse;

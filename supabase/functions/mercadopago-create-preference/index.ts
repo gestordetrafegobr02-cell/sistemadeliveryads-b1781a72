@@ -154,6 +154,15 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' }, 400);
     }
     const isProductionToken = accessToken.startsWith('APP_USR-');
+    const tokenSignature = `${accessToken.slice(0, 12)}...${accessToken.slice(-4)}`;
+
+    console.log('[MP] resolved access token', {
+      storeId: body.storeId,
+      paymentType: body.paymentType,
+      isProductionToken,
+      tokenSignature,
+      source: 'store_secrets.mercadopago_access_token',
+    });
 
     if (body.paymentType === 'pix' && !isProductionToken) {
       return jsonResp({
@@ -268,6 +277,7 @@ Deno.serve(async (req) => {
         gateway_status: mpRes.status,
         gateway_message: gatewayMessage,
         production_mode: isProductionToken,
+        token_signature: tokenSignature,
       }, mpRes.status);
     }
 
