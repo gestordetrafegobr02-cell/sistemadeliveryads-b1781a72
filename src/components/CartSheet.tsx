@@ -568,9 +568,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         });
         console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
-        if (mpError) return fail('Erro ao processar pagamento. Tente novamente.');
+        if (mpError) {
+          return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
+        }
         if (!mpData || (mpData as { error?: string }).error) {
-          return fail((mpData as { message?: string })?.message || 'Erro ao processar pagamento.');
+          return fail((mpData as { message?: string })?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
         }
 
         const resp = mpData as PixGatewayResponse;
