@@ -936,76 +936,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         )}
       </SheetContent>
 
-      {/* Native PIX payment modal — keeps the customer inside our app */}
-      <Dialog
-        open={!!pixPayment}
-        onOpenChange={(o) => {
-          if (!o && !pixApproved) {
-            // Allow closing while waiting — pending_orders/webhook will clean up
-            setPixPayment(null);
-          }
-        }}
-      >
-        <DialogContent className="bg-card border-border max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl text-foreground flex items-center gap-2">
-              <QrCode className="w-5 h-5 text-primary" />
-              Pague com PIX
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {pixApproved
-                ? 'Pagamento confirmado! Redirecionando...'
-                : 'Escaneie o QR Code ou copie o código abaixo. Esta tela atualiza automaticamente quando o pagamento for confirmado.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          {pixPayment && (
-            <div className="flex flex-col items-center gap-4 py-2">
-              <div className="rounded-2xl bg-white p-3 shadow-inner">
-                <img
-                  src={`data:image/png;base64,${pixPayment.qrCodeBase64}`}
-                  alt="QR Code PIX"
-                  className="w-56 h-56 object-contain"
-                />
-              </div>
-
-              <div className="w-full text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
-                <p className="text-2xl font-display text-primary">
-                  R$ {pixPayment.amount.toFixed(2).replace('.', ',')}
-                </p>
-              </div>
-
-              <div className="w-full">
-                <p className="text-xs text-muted-foreground mb-1">Código PIX (copia e cola)</p>
-                <div className="rounded-lg bg-secondary border border-border p-2 text-xs text-foreground break-all max-h-20 overflow-y-auto">
-                  {pixPayment.qrCode}
-                </div>
-              </div>
-
-              <Button
-                onClick={copyPixCode}
-                className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-display"
-                disabled={pixApproved}
-              >
-                {pixCopied ? <Check className="w-5 h-5 mr-2" /> : <Copy className="w-5 h-5 mr-2" />}
-                {pixCopied ? 'Código copiado!' : 'Copiar Código PIX'}
-              </Button>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {pixApproved ? (
-                  <Check className="w-4 h-4 text-primary" />
-                ) : (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                )}
-                <span>
-                  {pixApproved ? 'Pagamento aprovado' : 'Aguardando confirmação do pagamento...'}
-                </span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </Sheet>
+
   );
 }
