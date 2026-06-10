@@ -452,7 +452,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedMessage}`;
-    const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
+    // internalTrackingUrl already computed above
     const openWhatsAppTab = () => {
       try {
         if (checkoutWindow && !checkoutWindow.closed) {
