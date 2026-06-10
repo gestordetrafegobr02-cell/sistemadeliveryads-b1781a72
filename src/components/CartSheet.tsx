@@ -281,32 +281,43 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       .join('\n');
 
     const safeStoreName = storeName?.trim() || 'Restaurante';
-    let message = `🧾 *COMANDA ${safeStoreName}*\n`;
-    message += `🏪 *Pedido #${shortId}*\n\n`;
+    const divider = '---------------------------------';
+
+    // Delivery block
+    let deliveryMethodLabel = orderType === 'delivery' ? 'Entrega' : 'Retirada no local';
+    let deliveryAddressLine = '—';
+    if (orderType === 'delivery') {
+      let addr = `${street}, ${number}`;
+      if (complement) addr += ` - ${complement}`;
+      if (neighborhood) addr += `, ${neighborhood}`;
+      if (zipCode) addr += ` (CEP ${zipCode})`;
+      if (referencePoint) addr += ` — Ref: ${referencePoint}`;
+      deliveryAddressLine = addr;
+    }
+    const deliveryFeeText = orderType === 'delivery'
+      ? deliveryAmount.toFixed(2).replace('.', ',')
+      : '0,00';
+
+    // Payment label
+    let paymentLine = paymentLabels[paymentMethod];
+    if (paymentMethod === 'cash' && changeFor) paymentLine += ` (troco para R$ ${changeFor})`;
+    if (paymentMethod === 'pix' && pixKey) paymentLine += ` — Chave: ${pixKey}`;
+
+    let message = `*🍔 NOVO PEDIDO - ${safeStoreName}*\n\n`;
+    message += `${divider}\n\n`;
+    message += `*Pedido:* #${shortId}\n`;
     message += `*Cliente:* ${name}\n`;
-    message += `*Telefone:* ${phoneDigits || phone}\n`;
-    message += `*Tipo:* ${orderType === 'delivery' ? 'Entrega' : 'Retirada'}\n\n`;
-    message += `*Itens do Pedido:*\n${itemLines}\n\n`;
-    message += `*Resumo:*\n`;
-    message += `Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}\n`;
-    if (orderType === 'delivery') {
-      message += `Taxa de entrega: R$ ${deliveryAmount.toFixed(2).replace('.', ',')}\n`;
-    }
-    message += `*TOTAL:* R$ ${grandTotal.toFixed(2).replace('.', ',')}\n\n`;
-    message += `*Pagamento:* ${paymentLabels[paymentMethod]}`;
-    if (paymentMethod === 'cash' && changeFor) message += ` (troco para R$ ${changeFor})`;
-    if (paymentMethod === 'pix' && pixKey) message += `\n*Chave PIX:* ${pixKey}`;
-
-    if (orderType === 'delivery') {
-      message += `\n\n*Endereço de Entrega:*\n${street}, ${number}`;
-      if (complement) message += ` - ${complement}`;
-      message += `\n${neighborhood}`;
-      if (zipCode) message += `\nCEP: ${zipCode}`;
-      if (referencePoint) message += `\nReferência: ${referencePoint}`;
-    }
-
-    if (storeShareUrl) message += `\n\n*Loja:*\n${storeShareUrl}`;
-    if (trackingUrl) message += `\n\n*Rastreamento ao vivo:*\n${trackingUrl}`;
+    message += `*Telefone:* ${phoneDigits || phone}\n\n`;
+    message += `*📌 ITENS DO PEDIDO:*\n${itemLines}\n\n`;
+    message += `*🛵 ENTREGA:*\n`;
+    message += `• Método: ${deliveryMethodLabel}\n`;
+    message += `• Endereço: ${deliveryAddressLine}\n`;
+    message += `• Taxa de Entrega: R$ ${deliveryFeeText}\n\n`;
+    message += `*💰 PAGAMENTO:*\n`;
+    message += `• Forma: ${paymentLine}\n`;
+    message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
+    message += `${divider}\n\n`;
+    message += `👉 _Pedido gerado por Sistema Delivery ADS_`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedMessage}`;
