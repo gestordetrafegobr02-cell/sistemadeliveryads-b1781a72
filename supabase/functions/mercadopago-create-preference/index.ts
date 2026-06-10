@@ -79,6 +79,10 @@ Deno.serve(async (req) => {
         failure: body.failureUrl,
       },
       auto_return: 'approved',
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+        installments: 12,
+      },
       metadata: { order_id: body.orderId, store_id: body.storeId },
     };
 
