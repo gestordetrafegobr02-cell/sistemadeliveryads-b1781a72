@@ -77,6 +77,11 @@ interface PixGatewayResponse {
   status_detail?: string;
   transaction_amount?: number;
   gateway_response?: unknown;
+  gateway_status?: number;
+  gateway_message?: string;
+  details?: unknown;
+  production_mode?: boolean;
+  live_mode?: boolean;
   point_of_interaction?: {
     transaction_data?: {
       qr_code?: string | null;
@@ -86,6 +91,20 @@ interface PixGatewayResponse {
   };
   error?: string;
   message?: string;
+}
+
+async function getFunctionInvokeErrorText(error: unknown): Promise<string | null> {
+  const context = typeof error === 'object' && error !== null && 'context' in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (context instanceof Response) {
+    const rawText = await context.clone().text().catch(() => '');
+    return rawText || `${context.status} ${context.statusText}`.trim() || null;
+  }
+
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : null;
 }
 
 interface StoreUpsellConfig {
@@ -570,12 +589,20 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
         if (mpError) {
-          console.error('[MP] invoke server response', mpError);
+          const rawServerError = await getFunctionInvokeErrorText(mpError);
+          console.error('[MP] invoke server response', rawServerError ?? mpError);
           return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
         }
         if (!mpData || (mpData as { error?: string }).error) {
-          console.error('[MP] invoke error payload', mpData);
-          return fail((mpData as { message?: string })?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
+          const payloadError = (mpData ?? null) as PixGatewayResponse | null;
+          console.error('[MP] invoke error payload', {
+            gateway_status: payloadError?.gateway_status ?? null,
+            error: payloadError?.error ?? null,
+            message: payloadError?.message ?? null,
+            gateway_message: payloadError?.gateway_message ?? null,
+            details: payloadError?.details ?? null,
+          });
+          return fail(payloadError?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
         }
 
         const resp = mpData as PixGatewayResponse;
@@ -586,8 +613,16 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
           const transactionData = resp.point_of_interaction?.transaction_data;
           const qrCode = transactionData?.qr_code?.trim();
           const qrCodeBase64 = transactionData?.qr_code_base64?.trim();
+          const hasValidatedProductionPix = resp.production_mode === true && resp.live_mode === true;
 
-          if (!qrCode || !qrCodeBase64) {
+          if (!hasValidatedProductionPix || !qrCode || !qrCodeBase64) {
+            console.error('[MP] invalid production pix payload', {
+              production_mode: resp.production_mode ?? null,
+              live_mode: resp.live_mode ?? null,
+              gateway_response: resp.gateway_response ?? null,
+            });
+            setPixData(null);
+            setPixModalOpen(false);
             return fail('Falha ao gerar pagamento real. Tente novamente.');
           }
 
@@ -597,7 +632,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             sessionToken,
             qrCode,
             qrCodeBase64,
-            amount: grandTotal,
+            amount: Number(resp.transaction_amount ?? sanitizedGrandTotal),
           });
           setPixModalOpen(true);
           setSubmitting(false);
