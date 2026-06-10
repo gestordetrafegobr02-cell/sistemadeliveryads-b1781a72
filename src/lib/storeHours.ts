@@ -23,45 +23,55 @@ const dayMap: Record<number, keyof OpeningHours> = {
   6: 'saturday',
 };
 
+const weekdayShortMap: Record<string, number> = {
+  Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+};
+
 /**
- * Get current time in São Paulo timezone
+ * Get current hour/minute/day in São Paulo timezone using Intl.DateTimeFormat
+ * (avoids the toLocaleString/new Date double-shift bug).
  */
-function getNowInSaoPaulo(): Date {
-  // Create a date string in São Paulo timezone and parse it
-  const saoPauloTime = new Date().toLocaleString('en-US', { 
-    timeZone: 'America/Sao_Paulo' 
-  });
-  return new Date(saoPauloTime);
+function getNowInSaoPaulo(): { hour: number; minute: number; day: number } {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
+    const minute = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
+    const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
+    return {
+      hour: hour === 24 ? 0 : hour,
+      minute,
+      day: weekdayShortMap[weekday] ?? 0,
+    };
+  } catch {
+    const d = new Date();
+    return { hour: d.getHours(), minute: d.getMinutes(), day: d.getDay() };
+  }
 }
 
 /**
- * Check if the store is currently open based on hours and manual toggle
- * 
- * IMPORTANT: If is_open_manual is TRUE, store is ALWAYS open (overrides schedule)
- * If is_open_manual is FALSE, store is ALWAYS closed (overrides schedule)
+ * Strict boundary check: store is open ONLY when current time is within
+ * the configured open/close window for today. Also honors the manual toggle:
+ * - is_open_manual = false → ALWAYS closed (hard override)
+ * - is_open_manual = true  → must also satisfy the schedule
  */
 export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boolean): boolean {
-  // Manual toggle FALSE = always closed (hard override)
   if (!isOpenManual) return false;
-  // If no schedule configured, fall back to manual flag (open)
   if (!openingHours) return true;
-  // Manual TRUE still requires schedule to allow current time
   return isWithinScheduledHours(openingHours);
 }
 
-
-/**
- * Check if store is within scheduled hours (informational only)
- * Used to show "open until X" or "opens at X" messages
- */
 export function isWithinScheduledHours(openingHours: OpeningHours | null): boolean {
-  if (!openingHours) {
-    return true;
-  }
+  if (!openingHours) return true;
 
   const now = getNowInSaoPaulo();
-  const dayOfWeek = now.getDay();
-  const dayKey = dayMap[dayOfWeek];
+  const dayKey = dayMap[now.day];
   const todayHours = openingHours[dayKey];
 
   if (!todayHours || !todayHours.open || !todayHours.close) {
@@ -71,32 +81,31 @@ export function isWithinScheduledHours(openingHours: OpeningHours | null): boole
   const [openHour, openMin] = todayHours.open.split(':').map(Number);
   const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
 
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const openMinutes = openHour * 60 + openMin;
-  const closeMinutes = closeHour * 60 + closeMin;
-
-  // Handle overnight hours (e.g., 22:00 - 02:00)
-  if (closeMinutes < openMinutes) {
-    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  if (
+    Number.isNaN(openHour) || Number.isNaN(openMin) ||
+    Number.isNaN(closeHour) || Number.isNaN(closeMin)
+  ) {
+    return false;
   }
 
-  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+  const current = now.hour * 60 + now.minute;
+  const openAt = openHour * 60 + openMin;
+  const closeAt = closeHour * 60 + closeMin;
+
+  // Overnight (e.g. 22:00 - 02:00)
+  if (closeAt <= openAt) {
+    return current >= openAt || current < closeAt;
+  }
+
+  // Strict boundary: inclusive open, inclusive close
+  return current >= openAt && current <= closeAt;
 }
 
-/**
- * Get current day's hours as formatted string
- */
 export function getTodayHours(openingHours: OpeningHours | null): string | null {
   if (!openingHours) return null;
-
   const now = getNowInSaoPaulo();
-  const dayOfWeek = now.getDay();
-  const dayKey = dayMap[dayOfWeek];
+  const dayKey = dayMap[now.day];
   const todayHours = openingHours[dayKey];
-
-  if (!todayHours || !todayHours.open || !todayHours.close) {
-    return 'Fechado';
-  }
-
+  if (!todayHours || !todayHours.open || !todayHours.close) return 'Fechado';
   return `${todayHours.open} - ${todayHours.close}`;
 }
