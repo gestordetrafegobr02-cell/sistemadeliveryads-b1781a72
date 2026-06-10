@@ -1163,7 +1163,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 {!isStoreOpen
                   ? 'Loja Fechada'
                   : checkoutType === 'direct_cardapio'
-                    ? (submitting && paymentFlow === 'online' ? 'Gerando link de pagamento...' : 'Finalizar pedido')
+                    ? (submitting && paymentFlow === 'online' ? (onlineMethod === 'pix' ? 'Gerando PIX...' : 'Processando cartão...') : 'Finalizar pedido')
                     : 'Confirmar Pedido via WhatsApp'}
               </Button>
             </div>
