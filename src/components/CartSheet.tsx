@@ -400,18 +400,16 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       } catch (_) { /* ignore */ }
 
       try {
-        const pixRequestBody = {
+        const successUrl = `${window.location.origin}/pedido/${savedOrderId}?mp_paid=1`;
+        const prefRequestBody = {
           storeId,
           orderId: savedOrderId,
           amount: Number(grandTotal.toFixed(2)),
           payerName: name,
           payerPhone: phoneDigits || phone,
-          // No email field in the UI — edge function will fall back to
-          // `<phone>@customer.com` so Mercado Pago accepts the payload.
-          payerEmail: null,
           description: `Pedido ${storeName || 'Cardapio'}`,
-          // Full pending-order payload. The webhook uses this to create the
-          // real order in `orders` once Mercado Pago confirms PIX payment.
+          successUrl,
+          failureUrl: successUrl,
           customer: {
             name,
             phone: phoneDigits || phone,
@@ -428,57 +426,43 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             cartId: pendingCartId || null,
           },
         };
-        console.log('[PIX] request body →', pixRequestBody);
+        console.log('[MP] preference request →', prefRequestBody);
 
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
-          body: pixRequestBody,
+          body: prefRequestBody,
         });
-        console.log('[PIX] response ←', { mpError, mpData });
+        console.log('[MP] preference response ←', { mpError, mpData });
+
+        const fail = (msg: string) => {
+          toast.error(msg);
+          setErrors({ submit: msg });
+          setSubmitting(false);
+        };
 
         if (mpError) {
-          console.error('[PIX] invoke transport error', mpError);
-          toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
-          setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
-          setSubmitting(false);
-          return;
+          console.error('[MP] invoke transport error', mpError);
+          return fail('Erro ao gerar link de pagamento. Tente novamente.');
         }
         if (!mpData || (mpData as { error?: string }).error) {
-          console.error('[PIX] edge returned error payload', mpData);
-          const detail = (mpData as { message?: string; detail?: unknown })?.message
-            || (typeof (mpData as { detail?: unknown })?.detail === 'string'
-                ? (mpData as { detail?: string }).detail
-                : 'Erro ao gerar PIX. Verifique os dados ou tente novamente.');
-          toast.error(detail || 'Erro ao gerar PIX. Verifique os dados ou tente novamente.');
-          setErrors({ submit: detail || 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
-          setSubmitting(false);
-          return;
+          const detail = (mpData as { message?: string })?.message
+            || 'Erro ao gerar link de pagamento. Tente novamente.';
+          return fail(detail);
         }
-        if (!mpData.qr_code || !mpData.qr_code_base64) {
-          console.error('[PIX] missing QR fields in response', mpData);
-          toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
-          setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
-          setSubmitting(false);
-          return;
+        const initPoint = (mpData as { init_point?: string }).init_point;
+        if (!initPoint) {
+          return fail('Erro ao gerar link de pagamento. Tente novamente.');
         }
-        // Show the native PIX modal — keep the customer inside our app.
-        setPixPayment({
-          qrCode: mpData.qr_code as string,
-          qrCodeBase64: mpData.qr_code_base64 as string,
-          orderId: savedOrderId,
-          amount: grandTotal,
-          storeSlug: cleanStoreSlug,
-        });
-        setPixCopied(false);
-        setPixApproved(false);
-        setSubmitting(false);
+        // Redirect to Mercado Pago Checkout Pro hosted page.
+        window.location.assign(initPoint);
       } catch (err) {
-        console.error('[PIX] invoke exception', err);
-        toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
-        setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
+        console.error('[MP] invoke exception', err);
+        toast.error('Erro ao gerar link de pagamento. Tente novamente.');
+        setErrors({ submit: 'Erro ao gerar link de pagamento. Tente novamente.' });
         setSubmitting(false);
       }
       return;
     }
+
 
 
 
