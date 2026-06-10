@@ -457,9 +457,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         return;
       }
 
-      // Online payment via Mercado Pago — stash data so the tracking page can
-      // open the customer's WhatsApp with the live tracking link once they
-      // return from the approved payment.
+      // ===== NATIVE TRANSPARENT CHECKOUT (PIX or CARD via /v1/payments) =====
       try {
         if (phoneDigits) {
           localStorage.setItem(
@@ -473,69 +471,169 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         }
       } catch (_) { /* ignore */ }
 
+      const baseBody = {
+        storeId,
+        orderId: savedOrderId,
+        amount: Number(grandTotal.toFixed(2)),
+        payerName: name,
+        payerPhone: phoneDigits || phone,
+        description: `Pedido ${storeName || 'Cardapio'}`,
+        customer: {
+          name,
+          phone: phoneDigits || phone,
+          address: addressStr || null,
+          orderItems: orderItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            modifiers: item.modifiers,
+            observation: item.observation,
+          })),
+          total: grandTotal,
+          cartId: pendingCartId || null,
+        },
+      };
+
+      const fail = (msg: string) => {
+        toast.error(msg);
+        setErrors({ submit: msg });
+        setSubmitting(false);
+      };
+
       try {
-        const successUrl = `${window.location.origin}/pedido/${savedOrderId}?mp_paid=1`;
-        const prefRequestBody = {
-          storeId,
-          orderId: savedOrderId,
-          amount: Number(grandTotal.toFixed(2)),
-          payerName: name,
-          payerPhone: phoneDigits || phone,
-          description: `Pedido ${storeName || 'Cardapio'}`,
-          successUrl,
-          failureUrl: successUrl,
-          customer: {
-            name,
-            phone: phoneDigits || phone,
-            address: addressStr || null,
-            orderItems: orderItems.map((item) => ({
-              id: item.id,
-              name: item.name,
-              quantity: item.quantity,
-              price: item.unitPrice,
-              modifiers: item.modifiers,
-              observation: item.observation,
-            })),
-            total: grandTotal,
-            cartId: pendingCartId || null,
-          },
-        };
-        console.log('[MP] preference request →', prefRequestBody);
+        let invokeBody: Record<string, unknown>;
 
+        if (onlineMethod === 'pix') {
+          invokeBody = { ...baseBody, paymentType: 'pix' };
+        } else {
+          // CARD: tokenize via MP.js, then send token
+          if (!mpRef.current) {
+            try { await loadMpSdk(); } catch { /* ignore */ }
+            if (window.MercadoPago && mpPublicKey) {
+              mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
+            }
+          }
+          if (!mpRef.current) return fail('Não foi possível inicializar o pagamento por cartão.');
+          const numClean = cardNumber.replace(/\D/g, '');
+          const [mm, yy] = cardExpiry.split('/').map((s) => s.trim());
+          if (!numClean || numClean.length < 13 || !cardHolder.trim() || !mm || !yy || !cardCvv) {
+            return fail('Preencha todos os dados do cartão.');
+          }
+          let tokenRes: any;
+          try {
+            tokenRes = await mpRef.current.createCardToken({
+              cardNumber: numClean,
+              cardholderName: cardHolder.trim(),
+              cardExpirationMonth: mm,
+              cardExpirationYear: yy.length === 2 ? `20${yy}` : yy,
+              securityCode: cardCvv,
+            });
+          } catch (e) {
+            console.error('[MP] tokenize error', e);
+            return fail('Cartão inválido. Verifique os dados.');
+          }
+          if (!tokenRes?.id) return fail('Cartão inválido. Verifique os dados.');
+          const brand = detectCardBrand(numClean) || 'visa';
+          invokeBody = {
+            ...baseBody,
+            paymentType: 'card',
+            cardToken: tokenRes.id,
+            installments: 1,
+            paymentMethodId: brand,
+          };
+        }
+
+        console.log('[MP] /v1/payments request →', { type: invokeBody.paymentType, orderId: savedOrderId });
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
-          body: prefRequestBody,
+          body: invokeBody,
         });
-        console.log('[MP] preference response ←', { mpError, mpData });
+        console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
-        const fail = (msg: string) => {
-          toast.error(msg);
-          setErrors({ submit: msg });
-          setSubmitting(false);
+        if (mpError) return fail('Erro ao processar pagamento. Tente novamente.');
+        if (!mpData || (mpData as { error?: string }).error) {
+          return fail((mpData as { message?: string })?.message || 'Erro ao processar pagamento.');
+        }
+
+        const resp = mpData as {
+          status?: string;
+          qr_code?: string;
+          qr_code_base64?: string;
+          payment_id?: string;
         };
 
-        if (mpError) {
-          console.error('[MP] invoke transport error', mpError);
-          return fail('Erro ao gerar link de pagamento. Tente novamente.');
+        // PIX → render QR modal + start polling
+        if (onlineMethod === 'pix') {
+          if (!resp.qr_code || !resp.qr_code_base64) {
+            return fail('Não foi possível gerar o PIX. Tente novamente.');
+          }
+          setPixData({
+            paymentId: String(resp.payment_id || ''),
+            orderId: savedOrderId,
+            sessionToken,
+            qrCode: resp.qr_code,
+            qrCodeBase64: resp.qr_code_base64,
+          });
+          setPixModalOpen(true);
+          setSubmitting(false);
+
+          // Poll get_order_by_id every 4s for status=Pago
+          if (pollRef.current) window.clearInterval(pollRef.current);
+          pollRef.current = window.setInterval(async () => {
+            try {
+              const { data: ord } = await supabase.rpc('get_order_by_id', { p_order_id: savedOrderId });
+              const row = (ord as any[])?.[0];
+              if (row) {
+                // Order was promoted by webhook → payment succeeded
+                if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+                hapticSuccess();
+                onPurchase?.();
+                clearCart();
+                setPixModalOpen(false);
+                window.location.assign(internalTrackingUrl);
+              }
+            } catch (e) { /* swallow */ }
+          }, 4000);
+          return;
         }
-        if (!mpData || (mpData as { error?: string }).error) {
-          const detail = (mpData as { message?: string })?.message
-            || 'Erro ao gerar link de pagamento. Tente novamente.';
-          return fail(detail);
+
+        // CARD → if approved, jump to tracking; if pending, poll briefly
+        if (resp.status === 'approved') {
+          hapticSuccess();
+          onPurchase?.();
+          clearCart();
+          setOpen(false);
+          setSubmitting(false);
+          window.location.assign(internalTrackingUrl);
+          return;
         }
-        const initPoint = (mpData as { init_point?: string }).init_point;
-        if (!initPoint) {
-          return fail('Erro ao gerar link de pagamento. Tente novamente.');
+        if (resp.status === 'in_process' || resp.status === 'pending') {
+          toast.message('Pagamento em análise. Aguardando confirmação...');
+          if (pollRef.current) window.clearInterval(pollRef.current);
+          pollRef.current = window.setInterval(async () => {
+            try {
+              const { data: ord } = await supabase.rpc('get_order_by_id', { p_order_id: savedOrderId });
+              if ((ord as any[])?.[0]) {
+                if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+                onPurchase?.();
+                clearCart();
+                window.location.assign(internalTrackingUrl);
+              }
+            } catch (_) {}
+          }, 4000);
+          setSubmitting(false);
+          return;
         }
-        // Redirect to Mercado Pago Checkout Pro hosted page.
-        window.location.assign(initPoint);
+        return fail('Pagamento recusado. Tente outro cartão.');
       } catch (err) {
         console.error('[MP] invoke exception', err);
-        toast.error('Erro ao gerar link de pagamento. Tente novamente.');
-        setErrors({ submit: 'Erro ao gerar link de pagamento. Tente novamente.' });
+        toast.error('Erro ao processar pagamento. Tente novamente.');
+        setErrors({ submit: 'Erro ao processar pagamento. Tente novamente.' });
         setSubmitting(false);
       }
       return;
     }
+
 
 
 
