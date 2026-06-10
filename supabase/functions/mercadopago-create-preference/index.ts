@@ -1,8 +1,8 @@
-// Edge function: creates a Mercado Pago Checkout Pro preference for an order
-// that DOES NOT yet exist in the orders table. The full order payload is
-// stashed in `pending_orders` and only promoted to a real order once the
-// webhook receives an "approved" payment status. This prevents phantom orders
-// and merchant notifications before the customer actually pays.
+// Edge function: creates a NATIVE Mercado Pago PIX payment (no Checkout Pro
+// redirect). The order is NOT created in `orders` yet — its payload is stashed
+// in `pending_orders` and only promoted to a real order once the webhook
+// receives an "approved" payment status. Returns the QR code (image + copia e
+// cola string) so the frontend can render a native PIX modal.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -11,21 +11,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-interface PreferenceItem {
-  title: string;
-  quantity: number;
-  unit_price: number;
-}
-
 interface RequestBody {
   storeId: string;
   orderId: string;
-  items: PreferenceItem[];
-  payerName?: string;
+  amount: number;
+  payerName: string;
   payerEmail?: string;
-  successUrl: string;
-  failureUrl: string;
-  // Pending-order payload (used by the webhook to create the real order on approval)
+  payerPhone?: string;
+  description?: string;
   customer?: {
     name: string;
     phone: string;
@@ -43,12 +36,25 @@ interface RequestBody {
   };
 }
 
+function splitName(full: string): { first: string; last: string } {
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: 'Cliente', last: 'Cardapio' };
+  if (parts.length === 1) return { first: parts[0], last: 'Cliente' };
+  return { first: parts[0], last: parts.slice(1).join(' ') };
+}
+
+function fallbackEmail(phone?: string, orderId?: string) {
+  const digits = (phone || '').replace(/\D/g, '');
+  const key = digits || (orderId || '').replace(/-/g, '').slice(0, 12) || 'cliente';
+  return `cliente.${key}@cardapio.local`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const body = (await req.json()) as RequestBody;
-    if (!body.storeId || !body.orderId || !Array.isArray(body.items) || body.items.length === 0) {
+    if (!body.storeId || !body.orderId || !body.amount || body.amount <= 0) {
       return new Response(JSON.stringify({ error: 'invalid_payload' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -101,57 +107,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    const preferencePayload = {
+    const { first, last } = splitName(body.payerName || body.customer?.name || '');
+    const email = (body.payerEmail && body.payerEmail.includes('@'))
+      ? body.payerEmail
+      : fallbackEmail(body.payerPhone || body.customer?.phone, body.orderId);
+
+    const storeName = ((store as { name?: string }).name || 'Cardapio').slice(0, 22);
+    const description = (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${storeName}`).slice(0, 250);
+
+    const paymentPayload: Record<string, unknown> = {
+      transaction_amount: Number(body.amount.toFixed(2)),
+      payment_method_id: 'pix',
+      description,
       external_reference: body.orderId,
-      statement_descriptor: ((store as { name?: string }).name || 'Cardapio').slice(0, 22),
-      items: body.items.map((i) => ({
-        id: 'item',
-        title: i.title.slice(0, 250),
-        quantity: Math.max(1, Math.floor(i.quantity)),
-        currency_id: 'BRL',
-        unit_price: Number(i.unit_price.toFixed(2)),
-      })),
-      payer: body.payerName ? { name: body.payerName, email: body.payerEmail || undefined } : undefined,
-      back_urls: {
-        success: body.successUrl,
-        pending: body.successUrl,
-        failure: body.failureUrl,
-      },
-      auto_return: 'approved',
-      binary_mode: false,
+      statement_descriptor: storeName,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
-      // Explicitly allow Pix + cards, exclude Boleto/lottery (ticket) and ATM transfers.
-      // Pix is included by default (not excluded) and prioritized via default_payment_method_id.
-      payment_methods: {
-        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
-        excluded_payment_methods: [],
-        default_payment_method_id: 'pix',
-        installments: 12,
+      payer: {
+        email,
+        first_name: first,
+        last_name: last,
       },
       metadata: { order_id: body.orderId, store_id: body.storeId },
     };
 
-    const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Idempotency-Key': body.orderId,
       },
-      body: JSON.stringify(preferencePayload),
+      body: JSON.stringify(paymentPayload),
     });
     const mpJson = await mpRes.json();
     if (!mpRes.ok) {
-      console.error('[MP] preference error', mpJson);
+      console.error('[MP] payment error', mpJson);
       return new Response(JSON.stringify({ error: 'mercadopago_error', detail: mpJson }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const poi = mpJson?.point_of_interaction?.transaction_data || {};
+    const qrCode: string | undefined = poi.qr_code;
+    const qrCodeBase64: string | undefined = poi.qr_code_base64;
+    const ticketUrl: string | undefined = poi.ticket_url;
+
+    if (!qrCode || !qrCodeBase64) {
+      console.error('[MP] missing PIX QR in response', mpJson);
+      return new Response(JSON.stringify({ error: 'pix_qr_missing', detail: mpJson }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     return new Response(
       JSON.stringify({
-        init_point: mpJson.init_point,
-        sandbox_init_point: mpJson.sandbox_init_point,
-        preference_id: mpJson.id,
+        payment_id: mpJson.id,
+        status: mpJson.status,
+        qr_code: qrCode,
+        qr_code_base64: qrCodeBase64,
+        ticket_url: ticketUrl,
+        expires_at: mpJson?.date_of_expiration || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

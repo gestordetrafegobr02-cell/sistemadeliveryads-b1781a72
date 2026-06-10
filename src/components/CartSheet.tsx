@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle, Copy, Check, QrCode } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useCart } from '@/lib/cart';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticSuccess } from '@/lib/haptics';
@@ -80,6 +81,63 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [paymentFlow, setPaymentFlow] = useState<'online' | 'on_delivery'>('online');
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Native PIX modal state
+  const [pixPayment, setPixPayment] = useState<{
+    qrCode: string;
+    qrCodeBase64: string;
+    orderId: string;
+    amount: number;
+    storeSlug: string;
+  } | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+  const [pixApproved, setPixApproved] = useState(false);
+  const pixPollRef = useRef<number | null>(null);
+
+  // Poll for order existence — webhook creates the row in `orders` only after
+  // the PIX payment is approved. Once it shows up we transition the user to
+  // the tracking page (the mp_paid_stash will fire the WhatsApp links there).
+  useEffect(() => {
+    if (!pixPayment) {
+      if (pixPollRef.current) { window.clearInterval(pixPollRef.current); pixPollRef.current = null; }
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const { data } = await supabase.rpc('get_order_by_id', { p_order_id: pixPayment.orderId });
+        if (!cancelled && data && data.length > 0) {
+          setPixApproved(true);
+          window.setTimeout(() => {
+            const target = `/pedido/${pixPayment.orderId}?mp_paid=1`;
+            window.location.assign(target);
+          }, 1200);
+        }
+      } catch (_) { /* keep polling */ }
+    };
+    tick();
+    pixPollRef.current = window.setInterval(tick, 4000) as unknown as number;
+    return () => {
+      cancelled = true;
+      if (pixPollRef.current) { window.clearInterval(pixPollRef.current); pixPollRef.current = null; }
+    };
+  }, [pixPayment]);
+
+  const copyPixCode = async () => {
+    if (!pixPayment) return;
+    try {
+      await navigator.clipboard.writeText(pixPayment.qrCode);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = pixPayment.qrCode;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (_) { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setPixCopied(true);
+    window.setTimeout(() => setPixCopied(false), 2200);
+  };
 
   // Abandoned cart tracking
   const cartItemsForTracking = items.map(item => ({
@@ -396,28 +454,16 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       } catch (_) { /* ignore */ }
 
       try {
-        const origin = window.location.origin;
-        const successBase = `${origin}${internalTrackingUrl}`;
-        const successUrl = successBase + (successBase.includes('?') ? '&' : '?') + 'mp_paid=1';
-        const failureUrl = `${origin}${cleanStoreSlug ? '/' + cleanStoreSlug : '/'}`;
-        const mpItems = orderItems.map((it) => ({
-          title: it.name,
-          quantity: it.quantity,
-          unit_price: Number(((it.lineTotal) / it.quantity).toFixed(2)),
-        }));
-        if (orderType === 'delivery' && deliveryAmount > 0) {
-          mpItems.push({ title: 'Taxa de entrega', quantity: 1, unit_price: Number(deliveryAmount.toFixed(2)) });
-        }
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
           body: {
             storeId,
             orderId: savedOrderId,
-            items: mpItems,
+            amount: Number(grandTotal.toFixed(2)),
             payerName: name,
-            successUrl,
-            failureUrl,
+            payerPhone: phoneDigits || phone,
+            description: `Pedido ${storeName || 'Cardapio'}`,
             // Full pending-order payload. The webhook uses this to create the
-            // real order in `orders` once Mercado Pago confirms payment.
+            // real order in `orders` once Mercado Pago confirms PIX payment.
             customer: {
               name,
               phone: phoneDigits || phone,
@@ -435,20 +481,27 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             },
           },
         });
-        if (mpError || !mpData?.init_point) {
-          console.error('[MP] preference error', mpError, mpData);
-          setErrors({ submit: 'Não foi possível iniciar o pagamento. Tente novamente em instantes.' });
+        if (mpError || !mpData?.qr_code || !mpData?.qr_code_base64) {
+          console.error('[MP] pix error', mpError, mpData);
+          setErrors({ submit: 'Não foi possível gerar o PIX. Tente novamente em instantes.' });
           setSubmitting(false);
-          window.location.assign(internalTrackingUrl);
           return;
         }
+        // Show the native PIX modal — keep the customer inside our app.
+        setPixPayment({
+          qrCode: mpData.qr_code as string,
+          qrCodeBase64: mpData.qr_code_base64 as string,
+          orderId: savedOrderId,
+          amount: grandTotal,
+          storeSlug: cleanStoreSlug,
+        });
+        setPixCopied(false);
+        setPixApproved(false);
         setSubmitting(false);
-        window.location.assign(mpData.init_point);
       } catch (err) {
         console.error('[MP] invoke exception', err);
         setErrors({ submit: 'Erro ao conectar ao Mercado Pago.' });
         setSubmitting(false);
-        window.location.assign(internalTrackingUrl);
       }
       return;
     }
@@ -924,6 +977,77 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
           />
         )}
       </SheetContent>
+
+      {/* Native PIX payment modal — keeps the customer inside our app */}
+      <Dialog
+        open={!!pixPayment}
+        onOpenChange={(o) => {
+          if (!o && !pixApproved) {
+            // Allow closing while waiting — pending_orders/webhook will clean up
+            setPixPayment(null);
+          }
+        }}
+      >
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl text-foreground flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              Pague com PIX
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {pixApproved
+                ? 'Pagamento confirmado! Redirecionando...'
+                : 'Escaneie o QR Code ou copie o código abaixo. Esta tela atualiza automaticamente quando o pagamento for confirmado.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {pixPayment && (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div className="rounded-2xl bg-white p-3 shadow-inner">
+                <img
+                  src={`data:image/png;base64,${pixPayment.qrCodeBase64}`}
+                  alt="QR Code PIX"
+                  className="w-56 h-56 object-contain"
+                />
+              </div>
+
+              <div className="w-full text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
+                <p className="text-2xl font-display text-primary">
+                  R$ {pixPayment.amount.toFixed(2).replace('.', ',')}
+                </p>
+              </div>
+
+              <div className="w-full">
+                <p className="text-xs text-muted-foreground mb-1">Código PIX (copia e cola)</p>
+                <div className="rounded-lg bg-secondary border border-border p-2 text-xs text-foreground break-all max-h-20 overflow-y-auto">
+                  {pixPayment.qrCode}
+                </div>
+              </div>
+
+              <Button
+                onClick={copyPixCode}
+                className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-display"
+                disabled={pixApproved}
+              >
+                {pixCopied ? <Check className="w-5 h-5 mr-2" /> : <Copy className="w-5 h-5 mr-2" />}
+                {pixCopied ? 'Código copiado!' : 'Copiar Código PIX'}
+              </Button>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {pixApproved ? (
+                  <Check className="w-4 h-4 text-primary" />
+                ) : (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                <span>
+                  {pixApproved ? 'Pagamento aprovado' : 'Aguardando confirmação do pagamento...'}
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
