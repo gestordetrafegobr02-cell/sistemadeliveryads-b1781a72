@@ -416,6 +416,23 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             payerName: name,
             successUrl,
             failureUrl,
+            // Full pending-order payload. The webhook uses this to create the
+            // real order in `orders` once Mercado Pago confirms payment.
+            customer: {
+              name,
+              phone: phoneDigits || phone,
+              address: addressStr || null,
+              orderItems: orderItems.map((item) => ({
+                id: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                modifiers: item.modifiers,
+                observation: item.observation,
+              })),
+              total: grandTotal,
+              cartId: pendingCartId || null,
+            },
           },
         });
         if (mpError || !mpData?.init_point) {
