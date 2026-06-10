@@ -37,6 +37,7 @@ interface CartSheetProps {
   onPurchase?: () => void;
   onOpen?: () => void;
   isStoreOpen?: boolean;
+  checkoutType?: 'whatsapp' | 'direct_cardapio';
 }
 
 interface StoreUpsellConfig {
@@ -54,7 +55,7 @@ interface CheckoutOrderItem {
   observation: string | null;
 }
 
-export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true }: CartSheetProps) {
+export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true, checkoutType = 'whatsapp' }: CartSheetProps) {
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -72,6 +73,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [complement, setComplement] = useState('');
   const [referencePoint, setReferencePoint] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
+  const [paymentFlow, setPaymentFlow] = useState<'online' | 'on_delivery'>('online');
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -156,7 +158,12 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   async function handleProceedToCheckout() {
     if (!validateCheckoutForm()) return;
 
-    const pendingWhatsAppWindow = window.open('about:blank', '_blank');
+    // Only pre-open a tab for WhatsApp mode (browsers require it inside the click handler)
+    const isWhatsAppFlow = checkoutType !== 'direct_cardapio' || paymentFlow === 'on_delivery'
+      ? checkoutType !== 'direct_cardapio'
+      : false;
+    const pendingWhatsAppWindow = isWhatsAppFlow ? window.open('about:blank', '_blank') : null;
+
     const showUpsell = await shouldShowUpsell();
     if (showUpsell) {
       pendingWhatsAppWindow?.close();
@@ -237,7 +244,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       return;
     }
 
-    const checkoutWindow = pendingWhatsAppWindow ?? window.open('about:blank', '_blank');
+    const isMpOnline = checkoutType === 'direct_cardapio' && paymentFlow === 'online';
+    const isMpOnDelivery = checkoutType === 'direct_cardapio' && paymentFlow === 'on_delivery';
+    const checkoutWindow = (checkoutType === 'direct_cardapio')
+      ? null
+      : (pendingWhatsAppWindow ?? window.open('about:blank', '_blank'));
     setSubmitting(true);
 
     // Build address string
@@ -303,7 +314,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             observation: item.observation,
           })) as unknown as import('@/integrations/supabase/types').Json,
           p_address: addressStr || null,
-          p_payment_method: paymentMethod,
+          p_payment_method: isMpOnline ? 'mercadopago_pending' : (isMpOnDelivery ? 'on_delivery' : paymentMethod),
           p_client_total: grandTotal,
           p_cart_id: cartId || undefined,
         });
@@ -329,6 +340,63 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         return;
       }
     }
+
+    const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
+
+    // ===== Mercado Pago direct checkout branches =====
+    if (checkoutType === 'direct_cardapio') {
+      onPurchase?.();
+      clearCart();
+      setOpen(false);
+
+      if (isMpOnDelivery) {
+        setSubmitting(false);
+        window.location.assign(internalTrackingUrl);
+        return;
+      }
+
+      // Online payment via Mercado Pago
+      try {
+        const origin = window.location.origin;
+        const successUrl = `${origin}${internalTrackingUrl}`;
+        const failureUrl = `${origin}${cleanStoreSlug ? '/' + cleanStoreSlug : '/'}`;
+        const mpItems = orderItems.map((it) => ({
+          title: it.name,
+          quantity: it.quantity,
+          unit_price: Number(((it.lineTotal) / it.quantity).toFixed(2)),
+        }));
+        if (orderType === 'delivery' && deliveryAmount > 0) {
+          mpItems.push({ title: 'Taxa de entrega', quantity: 1, unit_price: Number(deliveryAmount.toFixed(2)) });
+        }
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
+          body: {
+            storeId,
+            orderId: savedOrderId,
+            items: mpItems,
+            payerName: name,
+            successUrl,
+            failureUrl,
+          },
+        });
+        if (mpError || !mpData?.init_point) {
+          console.error('[MP] preference error', mpError, mpData);
+          setErrors({ submit: 'Não foi possível iniciar o pagamento. Tente novamente em instantes.' });
+          setSubmitting(false);
+          window.location.assign(internalTrackingUrl);
+          return;
+        }
+        setSubmitting(false);
+        window.location.assign(mpData.init_point);
+      } catch (err) {
+        console.error('[MP] invoke exception', err);
+        setErrors({ submit: 'Erro ao conectar ao Mercado Pago.' });
+        setSubmitting(false);
+        window.location.assign(internalTrackingUrl);
+      }
+      return;
+    }
+
+
 
     const shortId = savedOrderId.slice(0, 8).toUpperCase();
     const itemLines = orderItems
@@ -384,7 +452,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedMessage}`;
-    const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
+    // internalTrackingUrl already computed above
     const openWhatsAppTab = () => {
       try {
         if (checkoutWindow && !checkoutWindow.closed) {
@@ -666,42 +734,73 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 </div>
               )}
 
-              {/* Payment Method */}
-              <div>
-                <Label className="text-foreground">Forma de Pagamento</Label>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as 'cash' | 'card' | 'pix')}
-                  className="mt-2 space-y-2"
-                >
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="pix" id="pix" />
-                    <Label htmlFor="pix" className="cursor-pointer flex-1">PIX</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="card" id="card" />
-                    <Label htmlFor="card" className="cursor-pointer flex-1">Cartão na Entrega</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
-                    <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="cursor-pointer flex-1">Dinheiro</Label>
-                  </div>
-                </RadioGroup>
+              {/* Mercado Pago: choose Online vs On-Delivery */}
+              {checkoutType === 'direct_cardapio' && (
+                <div>
+                  <Label className="text-foreground">Forma de Pagamento</Label>
+                  <RadioGroup
+                    value={paymentFlow}
+                    onValueChange={(v) => setPaymentFlow(v as 'online' | 'on_delivery')}
+                    className="mt-2 space-y-2"
+                  >
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary border border-primary/30">
+                      <RadioGroupItem value="online" id="pf-online" />
+                      <Label htmlFor="pf-online" className="cursor-pointer flex-1">
+                        <span className="font-medium">Pagar Online</span>
+                        <span className="block text-xs text-muted-foreground">Cartão, PIX ou boleto via Mercado Pago</span>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="on_delivery" id="pf-on-delivery" />
+                      <Label htmlFor="pf-on-delivery" className="cursor-pointer flex-1">
+                        <span className="font-medium">Pagar na Entrega</span>
+                        <span className="block text-xs text-muted-foreground">Pague ao receber o pedido</span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
 
-                {/* Change For - Only show for cash */}
-                {paymentMethod === 'cash' && (
-                  <div className="mt-3">
-                    <Label htmlFor="changeFor" className="text-foreground">Troco para quanto?</Label>
-                    <Input
-                      id="changeFor"
-                      value={changeFor}
-                      onChange={(e) => setChangeFor(e.target.value)}
-                      placeholder="Ex: 50,00"
-                      className="mt-1 bg-secondary border-border"
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Payment Method (hidden when paying online via MP) */}
+              {!(checkoutType === 'direct_cardapio' && paymentFlow === 'online') && (
+                <div>
+                  <Label className="text-foreground">
+                    {checkoutType === 'direct_cardapio' ? 'Pagamento na Entrega — Como?' : 'Forma de Pagamento'}
+                  </Label>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as 'cash' | 'card' | 'pix')}
+                    className="mt-2 space-y-2"
+                  >
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="pix" id="pix" />
+                      <Label htmlFor="pix" className="cursor-pointer flex-1">PIX</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="card" id="card" />
+                      <Label htmlFor="card" className="cursor-pointer flex-1">Cartão na Entrega</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
+                      <RadioGroupItem value="cash" id="cash" />
+                      <Label htmlFor="cash" className="cursor-pointer flex-1">Dinheiro</Label>
+                    </div>
+                  </RadioGroup>
+
+                  {/* Change For - Only show for cash */}
+                  {paymentMethod === 'cash' && (
+                    <div className="mt-3">
+                      <Label htmlFor="changeFor" className="text-foreground">Troco para quanto?</Label>
+                      <Input
+                        id="changeFor"
+                        value={changeFor}
+                        onChange={(e) => setChangeFor(e.target.value)}
+                        placeholder="Ex: 50,00"
+                        className="mt-1 bg-secondary border-border"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Totals */}
               <div className="py-4 border-t border-border space-y-2">
@@ -748,7 +847,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                {isStoreOpen ? 'Confirmar Pedido via WhatsApp' : 'Loja Fechada'}
+                {!isStoreOpen
+                  ? 'Loja Fechada'
+                  : checkoutType === 'direct_cardapio'
+                    ? (paymentFlow === 'online' ? 'Pagar Agora (Mercado Pago)' : 'Confirmar Pedido')
+                    : 'Confirmar Pedido via WhatsApp'}
               </Button>
             </div>
           </div>
