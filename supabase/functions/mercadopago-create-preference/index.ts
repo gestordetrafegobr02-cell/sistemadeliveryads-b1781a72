@@ -16,7 +16,7 @@ interface RequestBody {
   orderId: string;
   amount: number;
   payerName: string;
-  payerEmail?: string;
+  payerEmail?: string | null;
   payerPhone?: string;
   description?: string;
   customer?: {
