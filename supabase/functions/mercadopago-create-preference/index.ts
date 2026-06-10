@@ -1,5 +1,8 @@
-// Edge function: creates a Mercado Pago Checkout Pro preference for a given order.
-// Uses the merchant's own access_token saved in stores.mercadopago_access_token.
+// Edge function: creates a Mercado Pago Checkout Pro preference for an order
+// that DOES NOT yet exist in the orders table. The full order payload is
+// stashed in `pending_orders` and only promoted to a real order once the
+// webhook receives an "approved" payment status. This prevents phantom orders
+// and merchant notifications before the customer actually pays.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -22,6 +25,22 @@ interface RequestBody {
   payerEmail?: string;
   successUrl: string;
   failureUrl: string;
+  // Pending-order payload (used by the webhook to create the real order on approval)
+  customer?: {
+    name: string;
+    phone: string;
+    address?: string | null;
+    orderItems: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+      modifiers?: Array<{ id: string; name: string; price: number }>;
+      observation?: string | null;
+    }>;
+    total: number;
+    cartId?: string | null;
+  };
 }
 
 Deno.serve(async (req) => {
@@ -63,10 +82,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Stash the full order payload so the webhook can create the real order on approval.
+    if (body.customer) {
+      const { error: pendingErr } = await admin
+        .from('pending_orders')
+        .upsert({
+          id: body.orderId,
+          store_id: body.storeId,
+          payload: body.customer as unknown as Record<string, unknown>,
+          status: 'awaiting_payment',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      if (pendingErr) {
+        console.error('[MP] pending_orders upsert error', pendingErr);
+        return new Response(JSON.stringify({ error: 'pending_order_failed', detail: pendingErr.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const preferencePayload = {
       external_reference: body.orderId,
       statement_descriptor: ((store as { name?: string }).name || 'Cardapio').slice(0, 22),
       items: body.items.map((i) => ({
+        id: 'item',
         title: i.title.slice(0, 250),
         quantity: Math.max(1, Math.floor(i.quantity)),
         currency_id: 'BRL',
@@ -79,9 +118,14 @@ Deno.serve(async (req) => {
         failure: body.failureUrl,
       },
       auto_return: 'approved',
+      binary_mode: false,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
+      // Explicitly allow Pix + cards, exclude Boleto/lottery (ticket) and ATM transfers.
+      // Pix is included by default (not excluded) and prioritized via default_payment_method_id.
       payment_methods: {
         excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+        excluded_payment_methods: [],
+        default_payment_method_id: 'pix',
         installments: 12,
       },
       metadata: { order_id: body.orderId, store_id: body.storeId },
