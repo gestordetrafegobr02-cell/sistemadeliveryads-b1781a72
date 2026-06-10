@@ -244,7 +244,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       return;
     }
 
-    const checkoutWindow = pendingWhatsAppWindow ?? window.open('about:blank', '_blank');
+    const isMpOnline = checkoutType === 'direct_cardapio' && paymentFlow === 'online';
+    const isMpOnDelivery = checkoutType === 'direct_cardapio' && paymentFlow === 'on_delivery';
+    const checkoutWindow = (checkoutType === 'direct_cardapio')
+      ? null
+      : (pendingWhatsAppWindow ?? window.open('about:blank', '_blank'));
     setSubmitting(true);
 
     // Build address string
