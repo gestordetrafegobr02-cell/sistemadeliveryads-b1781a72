@@ -1071,7 +1071,31 @@ export default function Admin() {
                               status={order.status}
                               storeName={store?.name || 'Loja'}
                             />
-                            
+
+                            {order.status !== 'cancelled' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  if (!confirm('Cancelar este pedido? Ele será excluído das receitas e métricas.')) return;
+                                  const { error } = await supabase
+                                    .from('orders')
+                                    .update({ status: 'cancelled' })
+                                    .eq('id', order.id);
+                                  if (error) {
+                                    toast.error('Erro ao cancelar pedido');
+                                  } else {
+                                    toast.success('Pedido cancelado');
+                                    fetchData();
+                                  }
+                                }}
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancelar
+                              </Button>
+                            )}
+
                             <Button
                               size="icon"
                               variant="ghost"
