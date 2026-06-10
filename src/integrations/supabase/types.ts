@@ -352,6 +352,7 @@ export type Database = {
         Row: {
           bg_color: string | null
           card_style: string | null
+          checkout_type: string
           cover_url: string | null
           created_at: string
           delivery_fee: number | null
@@ -360,6 +361,8 @@ export type Database = {
           is_active: boolean | null
           is_open_manual: boolean | null
           logo_url: string | null
+          mercadopago_access_token: string | null
+          mercadopago_public_key: string | null
           name: string
           opening_hours: Json | null
           owner_id: string
@@ -381,6 +384,7 @@ export type Database = {
         Insert: {
           bg_color?: string | null
           card_style?: string | null
+          checkout_type?: string
           cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
@@ -389,6 +393,8 @@ export type Database = {
           is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
+          mercadopago_access_token?: string | null
+          mercadopago_public_key?: string | null
           name: string
           opening_hours?: Json | null
           owner_id: string
@@ -410,6 +416,7 @@ export type Database = {
         Update: {
           bg_color?: string | null
           card_style?: string | null
+          checkout_type?: string
           cover_url?: string | null
           created_at?: string
           delivery_fee?: number | null
@@ -418,6 +425,8 @@ export type Database = {
           is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
+          mercadopago_access_token?: string | null
+          mercadopago_public_key?: string | null
           name?: string
           opening_hours?: Json | null
           owner_id?: string
@@ -730,6 +739,7 @@ export type Database = {
         Returns: {
           bg_color: string
           card_style: string
+          checkout_type: string
           cover_url: string
           created_at: string
           delivery_fee: number
@@ -738,6 +748,7 @@ export type Database = {
           is_open_manual: boolean
           is_trial_expired: boolean
           logo_url: string
+          mercadopago_public_key: string
           name: string
           opening_hours: Json
           primary_color: string
