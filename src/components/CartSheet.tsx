@@ -489,10 +489,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         }
       } catch (_) { /* ignore */ }
 
+      const sanitizedGrandTotal = parseFloat(Number(grandTotal).toFixed(2));
       const baseBody = {
         storeId,
         orderId: savedOrderId,
-        amount: Number(grandTotal.toFixed(2)),
+        amount: sanitizedGrandTotal,
         payerName: name,
         payerPhone: phoneDigits || phone,
         description: `Pedido ${storeName || 'Cardapio'}`,
@@ -508,7 +509,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             modifiers: item.modifiers,
             observation: item.observation,
           })),
-          total: grandTotal,
+          total: sanitizedGrandTotal,
           cartId: pendingCartId || null,
         },
       };
@@ -569,9 +570,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
         if (mpError) {
+          console.error('[MP] invoke server response', mpError);
           return fail(onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento. Tente novamente.');
         }
         if (!mpData || (mpData as { error?: string }).error) {
+          console.error('[MP] invoke error payload', mpData);
           return fail((mpData as { message?: string })?.message || (onlineMethod === 'pix' ? 'Falha ao gerar pagamento real. Tente novamente.' : 'Erro ao processar pagamento.'));
         }
 
@@ -649,6 +652,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         return fail('Pagamento recusado. Tente outro cartão.');
       } catch (err) {
         console.error('[MP] invoke exception', err);
+        if (err instanceof Error && 'context' in err) {
+          console.error('[MP] invoke exception context', (err as Error & { context?: unknown }).context);
+        }
         toast.error('Erro ao processar pagamento. Tente novamente.');
         setErrors({ submit: 'Erro ao processar pagamento. Tente novamente.' });
         setSubmitting(false);
