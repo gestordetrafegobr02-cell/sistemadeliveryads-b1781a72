@@ -37,6 +37,7 @@ interface CartSheetProps {
   onPurchase?: () => void;
   onOpen?: () => void;
   isStoreOpen?: boolean;
+  checkoutType?: 'whatsapp' | 'direct_cardapio';
 }
 
 interface StoreUpsellConfig {
