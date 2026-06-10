@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle, QrCode, Copy, CheckCircle2, CreditCard, Smartphone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,35 @@ import { getOrderTrackingUrl, getStoreUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
 import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
+
+// Mercado Pago JS SDK loader (singleton)
+declare global { interface Window { MercadoPago?: any; __mpSdkPromise?: Promise<void> } }
+function loadMpSdk(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.MercadoPago) return Promise.resolve();
+  if (window.__mpSdkPromise) return window.__mpSdkPromise;
+  window.__mpSdkPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://sdk.mercadopago.com/js/v2';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('mp_sdk_failed'));
+    document.head.appendChild(s);
+  });
+  return window.__mpSdkPromise;
+}
+
+// Best-effort detection of MP payment_method_id from card BIN
+function detectCardBrand(num: string): string | null {
+  const n = num.replace(/\D/g, '');
+  if (!n) return null;
+  if (/^4/.test(n)) return 'visa';
+  if (/^(5[1-5]|2[2-7])/.test(n)) return 'master';
+  if (/^3[47]/.test(n)) return 'amex';
+  if (/^(38|60)/.test(n)) return 'hipercard';
+  if (/^(636368|438935|504175|451416|636297|5067|4576|4011|506699)/.test(n)) return 'elo';
+  return null;
+}
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome muito curto').max(100),
