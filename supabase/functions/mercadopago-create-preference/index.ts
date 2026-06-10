@@ -1,8 +1,8 @@
-// Edge function: creates a NATIVE Mercado Pago PIX payment (no Checkout Pro
-// redirect). The order is NOT created in `orders` yet — its payload is stashed
-// in `pending_orders` and only promoted to a real order once the webhook
-// receives an "approved" payment status. Returns the QR code (image + copia e
-// cola string) so the frontend can render a native PIX modal.
+// Edge function: creates a Mercado Pago Checkout Pro PREFERENCE and returns
+// the init_point URL. The order is NOT created in `orders` yet — its payload
+// is stashed in `pending_orders` and only promoted to a real order once the
+// webhook receives an "approved" payment status. Boleto/ticket is blocked;
+// only PIX and cards are allowed at MP's hosted checkout.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -11,48 +11,34 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+interface PreferenceItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  modifiers?: Array<{ id: string; name: string; price: number }>;
+  observation?: string | null;
+}
+
 interface RequestBody {
   storeId: string;
   orderId: string;
   amount: number;
   payerName: string;
-  payerEmail?: string | null;
   payerPhone?: string;
   description?: string;
+  successUrl?: string;
+  failureUrl?: string;
   customer?: {
     name: string;
     phone: string;
     address?: string | null;
-    orderItems: Array<{
-      id: string;
-      name: string;
-      quantity: number;
-      price: number;
-      modifiers?: Array<{ id: string; name: string; price: number }>;
-      observation?: string | null;
-    }>;
+    orderItems: PreferenceItem[];
     total: number;
     cartId?: string | null;
   };
 }
 
-function splitName(full: string, phoneFallback?: string): { first: string; last: string } {
-  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: 'Cliente', last: phoneFallback || 'Cardapio' };
-  if (parts.length === 1) return { first: parts[0], last: phoneFallback || 'Cliente' };
-  return { first: parts[0], last: parts.slice(1).join(' ') };
-}
-
-function fallbackEmail(phone?: string, orderId?: string) {
-  const digits = (phone || '').replace(/\D/g, '');
-  const key = digits || (orderId || '').replace(/-/g, '').slice(0, 12) || 'cliente';
-  // `customer.com` is a real TLD that Mercado Pago accepts for PIX payer emails.
-  return `${key}@customer.com`;
-}
-
-// Always answer with HTTP 200 + structured JSON so the client can surface a
-// proper toast even when Mercado Pago rejects the payload. Non-200 responses
-// get swallowed by `supabase.functions.invoke` as a generic transport error.
 function jsonResp(payload: Record<string, unknown>) {
   return new Response(JSON.stringify(payload), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -64,12 +50,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as RequestBody;
-    console.log('[MP] incoming', {
+    console.log('[MP] incoming preference', {
       storeId: body.storeId,
       orderId: body.orderId,
       amount: body.amount,
       payerName: body.payerName,
-      payerPhone: body.payerPhone,
     });
 
     if (!body.storeId || !body.orderId || !body.amount || body.amount <= 0) {
@@ -100,7 +85,7 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' });
     }
 
-    // Stash the full order payload so the webhook can create the real order on approval.
+    // Stash full order payload so webhook can create the real order on approval.
     if (body.customer) {
       const { error: pendingErr } = await admin
         .from('pending_orders')
@@ -117,83 +102,83 @@ Deno.serve(async (req) => {
       }
     }
 
-    const phoneDigits = (body.payerPhone || body.customer?.phone || '').replace(/\D/g, '');
-    const { first, last } = splitName(body.payerName || body.customer?.name || '', phoneDigits || undefined);
-    const email = (body.payerEmail && body.payerEmail.includes('@'))
-      ? body.payerEmail
-      : fallbackEmail(phoneDigits, body.orderId);
-
-    // Phone area code + number split (Brazilian format: 2-digit DDD + 8/9-digit number).
-    const areaCode = phoneDigits.length >= 10 ? phoneDigits.slice(0, 2) : '11';
-    const phoneNumber = phoneDigits.length >= 10 ? phoneDigits.slice(2) : (phoneDigits || '999999999');
-
     const storeName = ((store as { name?: string }).name || 'Cardapio').slice(0, 22);
     const description = (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${storeName}`).slice(0, 250);
 
-    const paymentPayload: Record<string, unknown> = {
-      transaction_amount: Number(body.amount.toFixed(2)),
-      payment_method_id: 'pix',
-      description,
+    // Build a single line item with the grand total. MP requires items[], and a
+    // single aggregate line keeps fees/rounding aligned with what the customer
+    // sees in the cart (subtotal + delivery, modifiers already folded in).
+    const items = [{
+      id: body.orderId,
+      title: description,
+      quantity: 1,
+      currency_id: 'BRL',
+      unit_price: Number(body.amount.toFixed(2)),
+    }];
+
+    const preferencePayload: Record<string, unknown> = {
+      items,
       external_reference: body.orderId,
       statement_descriptor: storeName,
       notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?store_id=${body.storeId}`,
-      payer: {
-        email,
-        first_name: first,
-        last_name: last,
-        phone: { area_code: areaCode, number: phoneNumber },
-      },
       metadata: { order_id: body.orderId, store_id: body.storeId },
+      payer: body.payerName ? { first_name: body.payerName.slice(0, 50) } : undefined,
+      payment_methods: {
+        // Only PIX and cards. Block boleto explicitly.
+        excluded_payment_types: [
+          { id: 'ticket' },
+          { id: 'atm' },
+        ],
+        installments: 12,
+      },
+      back_urls: {
+        success: body.successUrl || undefined,
+        failure: body.failureUrl || body.successUrl || undefined,
+        pending: body.successUrl || undefined,
+      },
+      auto_return: body.successUrl ? 'approved' : undefined,
     };
 
-    console.log('[MP] /v1/payments payload', paymentPayload);
+    console.log('[MP] /v1/preferences payload', preferencePayload);
 
-    const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
+    const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'X-Idempotency-Key': body.orderId,
       },
-      body: JSON.stringify(paymentPayload),
+      body: JSON.stringify(preferencePayload),
     });
     const mpJson = await mpRes.json();
     if (!mpRes.ok) {
-      console.error('[MP] payment error', mpRes.status, mpJson);
+      console.error('[MP] preference error', mpRes.status, mpJson);
       return jsonResp({
         error: 'mercadopago_error',
-        message: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.',
+        message: 'Erro ao gerar link de pagamento. Tente novamente.',
         detail: mpJson,
       });
     }
 
-    const poi = mpJson?.point_of_interaction?.transaction_data || {};
-    const qrCode: string | undefined = poi.qr_code;
-    const qrCodeBase64: string | undefined = poi.qr_code_base64;
-    const ticketUrl: string | undefined = poi.ticket_url;
-
-    if (!qrCode || !qrCodeBase64) {
-      console.error('[MP] missing PIX QR in response', mpJson);
+    const initPoint: string | undefined = mpJson?.init_point || mpJson?.sandbox_init_point;
+    if (!initPoint) {
+      console.error('[MP] missing init_point in response', mpJson);
       return jsonResp({
-        error: 'pix_qr_missing',
-        message: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.',
+        error: 'init_point_missing',
+        message: 'Erro ao gerar link de pagamento. Tente novamente.',
         detail: mpJson,
       });
     }
 
     return jsonResp({
-      payment_id: mpJson.id,
-      status: mpJson.status,
-      qr_code: qrCode,
-      qr_code_base64: qrCodeBase64,
-      ticket_url: ticketUrl,
-      expires_at: mpJson?.date_of_expiration || null,
+      preference_id: mpJson.id,
+      init_point: initPoint,
     });
   } catch (err) {
     console.error('[MP] unexpected', err);
     return jsonResp({
       error: 'internal_error',
-      message: 'Erro inesperado ao gerar PIX. Tente novamente.',
+      message: 'Erro inesperado ao gerar link de pagamento. Tente novamente.',
       detail: String(err),
     });
   }
