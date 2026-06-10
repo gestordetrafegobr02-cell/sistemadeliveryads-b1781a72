@@ -158,7 +158,12 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   async function handleProceedToCheckout() {
     if (!validateCheckoutForm()) return;
 
-    const pendingWhatsAppWindow = window.open('about:blank', '_blank');
+    // Only pre-open a tab for WhatsApp mode (browsers require it inside the click handler)
+    const isWhatsAppFlow = checkoutType !== 'direct_cardapio' || paymentFlow === 'on_delivery'
+      ? checkoutType !== 'direct_cardapio'
+      : false;
+    const pendingWhatsAppWindow = isWhatsAppFlow ? window.open('about:blank', '_blank') : null;
+
     const showUpsell = await shouldShowUpsell();
     if (showUpsell) {
       pendingWhatsAppWindow?.close();
