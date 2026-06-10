@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle, QrCode, Copy, CheckCircle2, CreditCard, Smartphone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,35 @@ import { getOrderTrackingUrl, getStoreUrl } from '@/lib/siteConfig';
 import { z } from 'zod';
 import { UpsellModal } from './UpsellModal';
 import { useAbandonedCartTracking } from '@/hooks/useAbandonedCartTracking';
+
+// Mercado Pago JS SDK loader (singleton)
+declare global { interface Window { MercadoPago?: any; __mpSdkPromise?: Promise<void> } }
+function loadMpSdk(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.MercadoPago) return Promise.resolve();
+  if (window.__mpSdkPromise) return window.__mpSdkPromise;
+  window.__mpSdkPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://sdk.mercadopago.com/js/v2';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('mp_sdk_failed'));
+    document.head.appendChild(s);
+  });
+  return window.__mpSdkPromise;
+}
+
+// Best-effort detection of MP payment_method_id from card BIN
+function detectCardBrand(num: string): string | null {
+  const n = num.replace(/\D/g, '');
+  if (!n) return null;
+  if (/^4/.test(n)) return 'visa';
+  if (/^(5[1-5]|2[2-7])/.test(n)) return 'master';
+  if (/^3[47]/.test(n)) return 'amex';
+  if (/^(38|60)/.test(n)) return 'hipercard';
+  if (/^(636368|438935|504175|451416|636297|5067|4576|4011|506699)/.test(n)) return 'elo';
+  return null;
+}
 
 const checkoutSchema = z.object({
   name: z.string().min(2, 'Nome muito curto').max(100),
@@ -82,7 +112,51 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // (Native PIX modal removed — Checkout Pro redirects to MP hosted page.)
+  // ===== Native Mercado Pago Transparent Checkout =====
+  const [onlineMethod, setOnlineMethod] = useState<'pix' | 'card'>('pix');
+  // PIX modal state
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<{
+    paymentId: string;
+    orderId: string;
+    sessionToken: string | null;
+    qrCode: string;
+    qrCodeBase64: string;
+  } | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+  const pollRef = useRef<number | null>(null);
+  // Card form state
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState(''); // MM/YY
+  const [cardCvv, setCardCvv] = useState('');
+  const [mpPublicKey, setMpPublicKey] = useState<string | null>(null);
+  const mpRef = useRef<any>(null);
+
+  // Fetch the store's MP public key when needed for card tokenization
+  useEffect(() => {
+    if (checkoutType !== 'direct_cardapio' || !storeSlug || mpPublicKey) return;
+    if (paymentFlow !== 'online' || onlineMethod !== 'card') return;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('get_public_store_by_slug', { store_slug: storeSlug });
+        const pk = (data as any[])?.[0]?.mercadopago_public_key;
+        if (pk) {
+          setMpPublicKey(pk);
+          await loadMpSdk();
+          if (window.MercadoPago) {
+            mpRef.current = new window.MercadoPago(pk, { locale: 'pt-BR' });
+          }
+        }
+      } catch (e) {
+        console.warn('[MP] public key fetch failed', e);
+      }
+    })();
+  }, [checkoutType, storeSlug, mpPublicKey, paymentFlow, onlineMethod]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
+
 
 
   // Abandoned cart tracking
@@ -383,9 +457,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         return;
       }
 
-      // Online payment via Mercado Pago — stash data so the tracking page can
-      // open the customer's WhatsApp with the live tracking link once they
-      // return from the approved payment.
+      // ===== NATIVE TRANSPARENT CHECKOUT (PIX or CARD via /v1/payments) =====
       try {
         if (phoneDigits) {
           localStorage.setItem(
@@ -399,69 +471,169 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         }
       } catch (_) { /* ignore */ }
 
+      const baseBody = {
+        storeId,
+        orderId: savedOrderId,
+        amount: Number(grandTotal.toFixed(2)),
+        payerName: name,
+        payerPhone: phoneDigits || phone,
+        description: `Pedido ${storeName || 'Cardapio'}`,
+        customer: {
+          name,
+          phone: phoneDigits || phone,
+          address: addressStr || null,
+          orderItems: orderItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            modifiers: item.modifiers,
+            observation: item.observation,
+          })),
+          total: grandTotal,
+          cartId: pendingCartId || null,
+        },
+      };
+
+      const fail = (msg: string) => {
+        toast.error(msg);
+        setErrors({ submit: msg });
+        setSubmitting(false);
+      };
+
       try {
-        const successUrl = `${window.location.origin}/pedido/${savedOrderId}?mp_paid=1`;
-        const prefRequestBody = {
-          storeId,
-          orderId: savedOrderId,
-          amount: Number(grandTotal.toFixed(2)),
-          payerName: name,
-          payerPhone: phoneDigits || phone,
-          description: `Pedido ${storeName || 'Cardapio'}`,
-          successUrl,
-          failureUrl: successUrl,
-          customer: {
-            name,
-            phone: phoneDigits || phone,
-            address: addressStr || null,
-            orderItems: orderItems.map((item) => ({
-              id: item.id,
-              name: item.name,
-              quantity: item.quantity,
-              price: item.unitPrice,
-              modifiers: item.modifiers,
-              observation: item.observation,
-            })),
-            total: grandTotal,
-            cartId: pendingCartId || null,
-          },
-        };
-        console.log('[MP] preference request →', prefRequestBody);
+        let invokeBody: Record<string, unknown>;
 
+        if (onlineMethod === 'pix') {
+          invokeBody = { ...baseBody, paymentType: 'pix' };
+        } else {
+          // CARD: tokenize via MP.js, then send token
+          if (!mpRef.current) {
+            try { await loadMpSdk(); } catch { /* ignore */ }
+            if (window.MercadoPago && mpPublicKey) {
+              mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
+            }
+          }
+          if (!mpRef.current) return fail('Não foi possível inicializar o pagamento por cartão.');
+          const numClean = cardNumber.replace(/\D/g, '');
+          const [mm, yy] = cardExpiry.split('/').map((s) => s.trim());
+          if (!numClean || numClean.length < 13 || !cardHolder.trim() || !mm || !yy || !cardCvv) {
+            return fail('Preencha todos os dados do cartão.');
+          }
+          let tokenRes: any;
+          try {
+            tokenRes = await mpRef.current.createCardToken({
+              cardNumber: numClean,
+              cardholderName: cardHolder.trim(),
+              cardExpirationMonth: mm,
+              cardExpirationYear: yy.length === 2 ? `20${yy}` : yy,
+              securityCode: cardCvv,
+            });
+          } catch (e) {
+            console.error('[MP] tokenize error', e);
+            return fail('Cartão inválido. Verifique os dados.');
+          }
+          if (!tokenRes?.id) return fail('Cartão inválido. Verifique os dados.');
+          const brand = detectCardBrand(numClean) || 'visa';
+          invokeBody = {
+            ...baseBody,
+            paymentType: 'card',
+            cardToken: tokenRes.id,
+            installments: 1,
+            paymentMethodId: brand,
+          };
+        }
+
+        console.log('[MP] /v1/payments request →', { type: invokeBody.paymentType, orderId: savedOrderId });
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
-          body: prefRequestBody,
+          body: invokeBody,
         });
-        console.log('[MP] preference response ←', { mpError, mpData });
+        console.log('[MP] /v1/payments response ←', { mpError, mpData });
 
-        const fail = (msg: string) => {
-          toast.error(msg);
-          setErrors({ submit: msg });
-          setSubmitting(false);
+        if (mpError) return fail('Erro ao processar pagamento. Tente novamente.');
+        if (!mpData || (mpData as { error?: string }).error) {
+          return fail((mpData as { message?: string })?.message || 'Erro ao processar pagamento.');
+        }
+
+        const resp = mpData as {
+          status?: string;
+          qr_code?: string;
+          qr_code_base64?: string;
+          payment_id?: string;
         };
 
-        if (mpError) {
-          console.error('[MP] invoke transport error', mpError);
-          return fail('Erro ao gerar link de pagamento. Tente novamente.');
+        // PIX → render QR modal + start polling
+        if (onlineMethod === 'pix') {
+          if (!resp.qr_code || !resp.qr_code_base64) {
+            return fail('Não foi possível gerar o PIX. Tente novamente.');
+          }
+          setPixData({
+            paymentId: String(resp.payment_id || ''),
+            orderId: savedOrderId,
+            sessionToken,
+            qrCode: resp.qr_code,
+            qrCodeBase64: resp.qr_code_base64,
+          });
+          setPixModalOpen(true);
+          setSubmitting(false);
+
+          // Poll get_order_by_id every 4s for status=Pago
+          if (pollRef.current) window.clearInterval(pollRef.current);
+          pollRef.current = window.setInterval(async () => {
+            try {
+              const { data: ord } = await supabase.rpc('get_order_by_id', { p_order_id: savedOrderId });
+              const row = (ord as any[])?.[0];
+              if (row) {
+                // Order was promoted by webhook → payment succeeded
+                if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+                hapticSuccess();
+                onPurchase?.();
+                clearCart();
+                setPixModalOpen(false);
+                window.location.assign(internalTrackingUrl);
+              }
+            } catch (e) { /* swallow */ }
+          }, 4000);
+          return;
         }
-        if (!mpData || (mpData as { error?: string }).error) {
-          const detail = (mpData as { message?: string })?.message
-            || 'Erro ao gerar link de pagamento. Tente novamente.';
-          return fail(detail);
+
+        // CARD → if approved, jump to tracking; if pending, poll briefly
+        if (resp.status === 'approved') {
+          hapticSuccess();
+          onPurchase?.();
+          clearCart();
+          setOpen(false);
+          setSubmitting(false);
+          window.location.assign(internalTrackingUrl);
+          return;
         }
-        const initPoint = (mpData as { init_point?: string }).init_point;
-        if (!initPoint) {
-          return fail('Erro ao gerar link de pagamento. Tente novamente.');
+        if (resp.status === 'in_process' || resp.status === 'pending') {
+          toast.message('Pagamento em análise. Aguardando confirmação...');
+          if (pollRef.current) window.clearInterval(pollRef.current);
+          pollRef.current = window.setInterval(async () => {
+            try {
+              const { data: ord } = await supabase.rpc('get_order_by_id', { p_order_id: savedOrderId });
+              if ((ord as any[])?.[0]) {
+                if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+                onPurchase?.();
+                clearCart();
+                window.location.assign(internalTrackingUrl);
+              }
+            } catch (_) {}
+          }, 4000);
+          setSubmitting(false);
+          return;
         }
-        // Redirect to Mercado Pago Checkout Pro hosted page.
-        window.location.assign(initPoint);
+        return fail('Pagamento recusado. Tente outro cartão.');
       } catch (err) {
         console.error('[MP] invoke exception', err);
-        toast.error('Erro ao gerar link de pagamento. Tente novamente.');
-        setErrors({ submit: 'Erro ao gerar link de pagamento. Tente novamente.' });
+        toast.error('Erro ao processar pagamento. Tente novamente.');
+        setErrors({ submit: 'Erro ao processar pagamento. Tente novamente.' });
         setSubmitting(false);
       }
       return;
     }
+
 
 
 
@@ -826,8 +998,81 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                       </Label>
                     </div>
                   </RadioGroup>
+
+                  {/* Online sub-method: PIX or Card */}
+                  {paymentFlow === 'online' && (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setOnlineMethod('pix')}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${onlineMethod === 'pix' ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+                        >
+                          <div className="flex items-center gap-2"><Smartphone className="w-4 h-4 text-primary" /><span className="font-medium text-sm">PIX</span></div>
+                          <p className="text-[11px] text-muted-foreground mt-1">Aprovação instantânea</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOnlineMethod('card')}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${onlineMethod === 'card' ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+                        >
+                          <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /><span className="font-medium text-sm">Cartão</span></div>
+                          <p className="text-[11px] text-muted-foreground mt-1">Crédito ou Débito</p>
+                        </button>
+                      </div>
+
+                      {onlineMethod === 'card' && (
+                        <div className="space-y-2 p-3 rounded-lg bg-secondary border border-border">
+                          <Input
+                            value={cardNumber}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, '').slice(0, 19);
+                              setCardNumber(v.replace(/(\d{4})(?=\d)/g, '$1 '));
+                            }}
+                            placeholder="Número do cartão"
+                            inputMode="numeric"
+                            autoComplete="cc-number"
+                            className="bg-background"
+                          />
+                          <Input
+                            value={cardHolder}
+                            onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                            placeholder="Nome impresso no cartão"
+                            autoComplete="cc-name"
+                            className="bg-background"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={cardExpiry}
+                              onChange={(e) => {
+                                let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+                                setCardExpiry(v);
+                              }}
+                              placeholder="MM/AA"
+                              inputMode="numeric"
+                              autoComplete="cc-exp"
+                              className="bg-background"
+                            />
+                            <Input
+                              value={cardCvv}
+                              onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              placeholder="CVV"
+                              inputMode="numeric"
+                              autoComplete="cc-csc"
+                              className="bg-background"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            🔒 Pagamento criptografado e processado pelo Mercado Pago
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+
 
               {/* Payment Method (hidden when paying online via MP) */}
               {!(checkoutType === 'direct_cardapio' && paymentFlow === 'online') && (
@@ -918,7 +1163,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 {!isStoreOpen
                   ? 'Loja Fechada'
                   : checkoutType === 'direct_cardapio'
-                    ? (submitting && paymentFlow === 'online' ? 'Gerando link de pagamento...' : 'Finalizar pedido')
+                    ? (submitting && paymentFlow === 'online' ? (onlineMethod === 'pix' ? 'Gerando PIX...' : 'Processando cartão...') : 'Finalizar pedido')
                     : 'Confirmar Pedido via WhatsApp'}
               </Button>
             </div>
@@ -936,7 +1181,71 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         )}
       </SheetContent>
 
-    </Sheet>
+      {/* ===== Premium Native PIX Modal ===== */}
+      <Dialog open={pixModalOpen} onOpenChange={(o) => { if (!o && pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; } setPixModalOpen(o); }}>
+        <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden bg-card border-primary/30">
+          <div className="bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground font-display text-xl">
+                <QrCode className="w-6 h-6 text-primary" />
+                Pague com PIX
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm">
+                Escaneie o QR Code ou copie o código abaixo. A confirmação é automática.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
+          <div className="px-6 pb-6 space-y-4">
+            {pixData?.qrCodeBase64 && (
+              <div className="bg-white p-4 rounded-2xl mx-auto w-fit shadow-lg">
+                <img
+                  src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                  alt="QR Code PIX"
+                  className="w-56 h-56 sm:w-64 sm:h-64 block"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-2 text-2xl font-display text-primary">
+              R$ {grandTotal.toFixed(2).replace('.', ',')}
+            </div>
+
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!pixData?.qrCode) return;
+                try {
+                  await navigator.clipboard.writeText(pixData.qrCode);
+                  setPixCopied(true);
+                  toast.success('Código PIX copiado!');
+                  setTimeout(() => setPixCopied(false), 2500);
+                } catch {
+                  toast.error('Não foi possível copiar. Selecione manualmente.');
+                }
+              }}
+              className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            >
+              {pixCopied ? <><CheckCircle2 className="w-5 h-5 mr-2" /> Copiado!</> : <><Copy className="w-5 h-5 mr-2" /> Copiar Código PIX</>}
+            </Button>
+
+            {pixData?.qrCode && (
+              <div className="bg-secondary/50 rounded-lg p-2 border border-border">
+                <p className="text-[10px] text-muted-foreground break-all font-mono leading-relaxed max-h-20 overflow-y-auto">
+                  {pixData.qrCode}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30">
+              <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+              <p className="text-xs text-foreground">
+                Aguardando confirmação do pagamento... Você será redirecionado automaticamente.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Sheet>
   );
 }
