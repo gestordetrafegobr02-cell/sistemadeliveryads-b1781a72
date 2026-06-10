@@ -727,7 +727,7 @@ export default function Shop() {
             onPurchase={handlePurchase}
             onOpen={handleCartOpen}
             isStoreOpen={storeIsOpen}
-            checkoutType={(store as { checkout_type?: string }).checkout_type === 'direct_cardapio' ? 'direct_cardapio' : 'whatsapp'}
+            checkoutType={store.checkout_type === 'direct_cardapio' ? 'direct_cardapio' : 'whatsapp'}
           />
         </div>
       </CartProvider>
