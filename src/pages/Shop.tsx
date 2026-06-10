@@ -34,6 +34,8 @@ interface StorePublic {
   store_template_style?: string | null;
   bg_color?: string | null;
   card_style?: string | null;
+  checkout_type?: string | null;
+  mercadopago_public_key?: string | null;
 }
 
 // Payment data from secure RPC (fetched during checkout flow)
