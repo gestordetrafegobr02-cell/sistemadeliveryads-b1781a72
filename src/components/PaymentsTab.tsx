@@ -149,17 +149,26 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
 
         {checkoutType === 'direct_cardapio' && (
           <div className="space-y-4 p-4 rounded-lg border border-border bg-secondary/50">
-            <p className="text-sm text-muted-foreground">
-              Cole as credenciais da sua conta Mercado Pago. Você as encontra em{' '}
-              <a
-                href="https://www.mercadopago.com.br/developers/panel/app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                Mercado Pago → Suas integrações
-              </a>.
-            </p>
+            <div className="text-sm text-muted-foreground space-y-2 p-3 rounded-md bg-background/60 border border-border">
+              <p className="font-medium text-foreground">💡 Como pegar suas credenciais pelo Celular:</p>
+              <p>
+                1. Abra o navegador do seu celular (Chrome ou Safari) e acesse:{' '}
+                <a
+                  href="https://www.mercadopago.com.br/developers/panel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline break-all"
+                >
+                  https://www.mercadopago.com.br/developers/panel
+                </a>
+              </p>
+              <p>2. Faça login com a sua conta do Mercado Pago.</p>
+              <p>
+                3. <span className="font-medium text-foreground">IMPORTANTE:</span> No menu do seu navegador (nos 3 pontinhos do Chrome ou no 'aA' do Safari), ative a opção 'Versão para Computador' ou 'Para Computador'. Isso facilita a visualização do painel.
+              </p>
+              <p>4. Clique em 'Criar aplicação', dê um nome para ela (ex: Cardápio) e escolha a opção 'Checkout Pro'.</p>
+              <p>5. Vá no menu lateral da aplicação em 'Credenciais' &gt; 'Credenciais de Produção', copie a 'Public Key' e o 'Access Token' e cole nos campos acima.</p>
+            </div>
             <div>
               <Label>Public Key</Label>
               <Input
