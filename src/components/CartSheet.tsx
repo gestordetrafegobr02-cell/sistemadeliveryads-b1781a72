@@ -998,8 +998,81 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                       </Label>
                     </div>
                   </RadioGroup>
+
+                  {/* Online sub-method: PIX or Card */}
+                  {paymentFlow === 'online' && (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setOnlineMethod('pix')}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${onlineMethod === 'pix' ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+                        >
+                          <div className="flex items-center gap-2"><Smartphone className="w-4 h-4 text-primary" /><span className="font-medium text-sm">PIX</span></div>
+                          <p className="text-[11px] text-muted-foreground mt-1">Aprovação instantânea</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOnlineMethod('card')}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${onlineMethod === 'card' ? 'border-primary bg-primary/10' : 'border-border bg-secondary'}`}
+                        >
+                          <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /><span className="font-medium text-sm">Cartão</span></div>
+                          <p className="text-[11px] text-muted-foreground mt-1">Crédito ou Débito</p>
+                        </button>
+                      </div>
+
+                      {onlineMethod === 'card' && (
+                        <div className="space-y-2 p-3 rounded-lg bg-secondary border border-border">
+                          <Input
+                            value={cardNumber}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, '').slice(0, 19);
+                              setCardNumber(v.replace(/(\d{4})(?=\d)/g, '$1 '));
+                            }}
+                            placeholder="Número do cartão"
+                            inputMode="numeric"
+                            autoComplete="cc-number"
+                            className="bg-background"
+                          />
+                          <Input
+                            value={cardHolder}
+                            onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                            placeholder="Nome impresso no cartão"
+                            autoComplete="cc-name"
+                            className="bg-background"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={cardExpiry}
+                              onChange={(e) => {
+                                let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+                                setCardExpiry(v);
+                              }}
+                              placeholder="MM/AA"
+                              inputMode="numeric"
+                              autoComplete="cc-exp"
+                              className="bg-background"
+                            />
+                            <Input
+                              value={cardCvv}
+                              onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              placeholder="CVV"
+                              inputMode="numeric"
+                              autoComplete="cc-csc"
+                              className="bg-background"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            🔒 Pagamento criptografado e processado pelo Mercado Pago
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+
 
               {/* Payment Method (hidden when paying online via MP) */}
               {!(checkoutType === 'direct_cardapio' && paymentFlow === 'online') && (
