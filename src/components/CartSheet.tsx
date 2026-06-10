@@ -751,7 +751,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                       <RadioGroupItem value="online" id="pf-online" />
                       <Label htmlFor="pf-online" className="cursor-pointer flex-1">
                         <span className="font-medium">Pagar Online</span>
-                        <span className="block text-xs text-muted-foreground">Cartão, PIX ou boleto via Mercado Pago</span>
+                        <span className="block text-xs text-muted-foreground">Cartão de Crédito, Débito ou Pix</span>
                       </Label>
                     </div>
                     <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary">
