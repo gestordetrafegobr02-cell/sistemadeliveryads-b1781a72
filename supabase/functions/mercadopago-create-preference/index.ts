@@ -36,17 +36,27 @@ interface RequestBody {
   };
 }
 
-function splitName(full: string): { first: string; last: string } {
+function splitName(full: string, phoneFallback?: string): { first: string; last: string } {
   const parts = (full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: 'Cliente', last: 'Cardapio' };
-  if (parts.length === 1) return { first: parts[0], last: 'Cliente' };
+  if (parts.length === 0) return { first: 'Cliente', last: phoneFallback || 'Cardapio' };
+  if (parts.length === 1) return { first: parts[0], last: phoneFallback || 'Cliente' };
   return { first: parts[0], last: parts.slice(1).join(' ') };
 }
 
 function fallbackEmail(phone?: string, orderId?: string) {
   const digits = (phone || '').replace(/\D/g, '');
   const key = digits || (orderId || '').replace(/-/g, '').slice(0, 12) || 'cliente';
-  return `cliente.${key}@cardapio.local`;
+  // `customer.com` is a real TLD that Mercado Pago accepts for PIX payer emails.
+  return `${key}@customer.com`;
+}
+
+// Always answer with HTTP 200 + structured JSON so the client can surface a
+// proper toast even when Mercado Pago rejects the payload. Non-200 responses
+// get swallowed by `supabase.functions.invoke` as a generic transport error.
+function jsonResp(payload: Record<string, unknown>) {
+  return new Response(JSON.stringify(payload), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -54,10 +64,16 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as RequestBody;
+    console.log('[MP] incoming', {
+      storeId: body.storeId,
+      orderId: body.orderId,
+      amount: body.amount,
+      payerName: body.payerName,
+      payerPhone: body.payerPhone,
+    });
+
     if (!body.storeId || !body.orderId || !body.amount || body.amount <= 0) {
-      return new Response(JSON.stringify({ error: 'invalid_payload' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResp({ error: 'invalid_payload', message: 'Dados do pedido incompletos.' });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -71,9 +87,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (error || !store) {
-      return new Response(JSON.stringify({ error: 'store_not_found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResp({ error: 'store_not_found', message: 'Loja não encontrada.' });
     }
 
     const { data: secret } = await admin
@@ -83,9 +97,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const token = (secret as { mercadopago_access_token?: string | null } | null)?.mercadopago_access_token;
     if (!token) {
-      return new Response(JSON.stringify({ error: 'mercadopago_not_configured' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResp({ error: 'mercadopago_not_configured', message: 'Pagamento online não configurado pela loja.' });
     }
 
     // Stash the full order payload so the webhook can create the real order on approval.
@@ -101,16 +113,19 @@ Deno.serve(async (req) => {
         }, { onConflict: 'id' });
       if (pendingErr) {
         console.error('[MP] pending_orders upsert error', pendingErr);
-        return new Response(JSON.stringify({ error: 'pending_order_failed', detail: pendingErr.message }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return jsonResp({ error: 'pending_order_failed', message: 'Erro ao preparar o pedido. Tente novamente.', detail: pendingErr.message });
       }
     }
 
-    const { first, last } = splitName(body.payerName || body.customer?.name || '');
+    const phoneDigits = (body.payerPhone || body.customer?.phone || '').replace(/\D/g, '');
+    const { first, last } = splitName(body.payerName || body.customer?.name || '', phoneDigits || undefined);
     const email = (body.payerEmail && body.payerEmail.includes('@'))
       ? body.payerEmail
-      : fallbackEmail(body.payerPhone || body.customer?.phone, body.orderId);
+      : fallbackEmail(phoneDigits, body.orderId);
+
+    // Phone area code + number split (Brazilian format: 2-digit DDD + 8/9-digit number).
+    const areaCode = phoneDigits.length >= 10 ? phoneDigits.slice(0, 2) : '11';
+    const phoneNumber = phoneDigits.length >= 10 ? phoneDigits.slice(2) : (phoneDigits || '999999999');
 
     const storeName = ((store as { name?: string }).name || 'Cardapio').slice(0, 22);
     const description = (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${storeName}`).slice(0, 250);
@@ -126,9 +141,12 @@ Deno.serve(async (req) => {
         email,
         first_name: first,
         last_name: last,
+        phone: { area_code: areaCode, number: phoneNumber },
       },
       metadata: { order_id: body.orderId, store_id: body.storeId },
     };
+
+    console.log('[MP] /v1/payments payload', paymentPayload);
 
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -141,9 +159,11 @@ Deno.serve(async (req) => {
     });
     const mpJson = await mpRes.json();
     if (!mpRes.ok) {
-      console.error('[MP] payment error', mpJson);
-      return new Response(JSON.stringify({ error: 'mercadopago_error', detail: mpJson }), {
-        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      console.error('[MP] payment error', mpRes.status, mpJson);
+      return jsonResp({
+        error: 'mercadopago_error',
+        message: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.',
+        detail: mpJson,
       });
     }
 
@@ -154,26 +174,27 @@ Deno.serve(async (req) => {
 
     if (!qrCode || !qrCodeBase64) {
       console.error('[MP] missing PIX QR in response', mpJson);
-      return new Response(JSON.stringify({ error: 'pix_qr_missing', detail: mpJson }), {
-        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return jsonResp({
+        error: 'pix_qr_missing',
+        message: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.',
+        detail: mpJson,
       });
     }
 
-    return new Response(
-      JSON.stringify({
-        payment_id: mpJson.id,
-        status: mpJson.status,
-        qr_code: qrCode,
-        qr_code_base64: qrCodeBase64,
-        ticket_url: ticketUrl,
-        expires_at: mpJson?.date_of_expiration || null,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    return jsonResp({
+      payment_id: mpJson.id,
+      status: mpJson.status,
+      qr_code: qrCode,
+      qr_code_base64: qrCodeBase64,
+      ticket_url: ticketUrl,
+      expires_at: mpJson?.date_of_expiration || null,
+    });
   } catch (err) {
     console.error('[MP] unexpected', err);
-    return new Response(JSON.stringify({ error: 'internal_error', message: String(err) }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return jsonResp({
+      error: 'internal_error',
+      message: 'Erro inesperado ao gerar PIX. Tente novamente.',
+      detail: String(err),
     });
   }
 });
