@@ -188,7 +188,13 @@ export default function Admin() {
 
       setCategories(catRes.data || []);
       setProducts(prodRes.data || []);
-      setOrders(ordersRes.data || []);
+      // Hide Mercado Pago online orders until payment is confirmed ("Pago").
+      // Prevents phantom/abandoned MP orders from polluting the merchant view.
+      const visibleOrders = (ordersRes.data || []).filter((o) => {
+        if (o.payment_method === 'mercadopago_pending' && o.payment_status !== 'Pago') return false;
+        return true;
+      });
+      setOrders(visibleOrders);
     }
 
     setLoading(false);
