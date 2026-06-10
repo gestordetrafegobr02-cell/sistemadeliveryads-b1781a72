@@ -300,7 +300,16 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       storeShareUrl = getStoreUrl(cleanStoreSlug);
     }
 
-    if (storeId) {
+    // For Mercado Pago ONLINE payments, do NOT create the order yet.
+    // The edge function stashes a pending_orders row; the webhook promotes it
+    // to a real order only when MP reports `approved`. This prevents phantom
+    // orders, the merchant buzzer/WhatsApp alert, and dashboard noise before
+    // the customer actually pays.
+    let pendingCartId: string | null = null;
+    if (storeId && isMpOnline) {
+      // Still capture abandoned cart so recovery can chase non-payers
+      try { pendingCartId = await saveImmediately(); } catch (_) { /* ignore */ }
+    } else if (storeId) {
       try {
         const cartId = await saveImmediately();
 
@@ -318,7 +327,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             observation: item.observation,
           })) as unknown as import('@/integrations/supabase/types').Json,
           p_address: addressStr || null,
-          p_payment_method: isMpOnline ? 'mercadopago_pending' : (isMpOnDelivery ? 'on_delivery' : paymentMethod),
+          p_payment_method: isMpOnDelivery ? 'on_delivery' : paymentMethod,
           p_client_total: grandTotal,
           p_cart_id: cartId || undefined,
         });
