@@ -82,6 +82,63 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Native PIX modal state
+  const [pixPayment, setPixPayment] = useState<{
+    qrCode: string;
+    qrCodeBase64: string;
+    orderId: string;
+    amount: number;
+    storeSlug: string;
+  } | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
+  const [pixApproved, setPixApproved] = useState(false);
+  const pixPollRef = useRef<number | null>(null);
+
+  // Poll for order existence — webhook creates the row in `orders` only after
+  // the PIX payment is approved. Once it shows up we transition the user to
+  // the tracking page (the mp_paid_stash will fire the WhatsApp links there).
+  useEffect(() => {
+    if (!pixPayment) {
+      if (pixPollRef.current) { window.clearInterval(pixPollRef.current); pixPollRef.current = null; }
+      return;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const { data } = await supabase.rpc('get_order_by_id', { p_order_id: pixPayment.orderId });
+        if (!cancelled && data && data.length > 0) {
+          setPixApproved(true);
+          window.setTimeout(() => {
+            const target = `/pedido/${pixPayment.orderId}?mp_paid=1`;
+            window.location.assign(target);
+          }, 1200);
+        }
+      } catch (_) { /* keep polling */ }
+    };
+    tick();
+    pixPollRef.current = window.setInterval(tick, 4000) as unknown as number;
+    return () => {
+      cancelled = true;
+      if (pixPollRef.current) { window.clearInterval(pixPollRef.current); pixPollRef.current = null; }
+    };
+  }, [pixPayment]);
+
+  const copyPixCode = async () => {
+    if (!pixPayment) return;
+    try {
+      await navigator.clipboard.writeText(pixPayment.qrCode);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = pixPayment.qrCode;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (_) { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setPixCopied(true);
+    window.setTimeout(() => setPixCopied(false), 2200);
+  };
+
   // Abandoned cart tracking
   const cartItemsForTracking = items.map(item => ({
     id: item.id,
