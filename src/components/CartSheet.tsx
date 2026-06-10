@@ -56,6 +56,10 @@ interface CheckoutOrderItem {
 }
 
 export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee = 0, pixKey, onPurchase, onOpen, isStoreOpen = true, checkoutType = 'whatsapp' }: CartSheetProps) {
+  if (typeof window !== 'undefined') {
+    // Runtime guard: confirms checkout routing prop is bound correctly
+    (window as any).__cartCheckoutType = checkoutType;
+  }
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);

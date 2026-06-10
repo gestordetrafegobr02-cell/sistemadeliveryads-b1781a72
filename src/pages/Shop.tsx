@@ -34,6 +34,8 @@ interface StorePublic {
   store_template_style?: string | null;
   bg_color?: string | null;
   card_style?: string | null;
+  checkout_type?: string | null;
+  mercadopago_public_key?: string | null;
 }
 
 // Payment data from secure RPC (fetched during checkout flow)
@@ -234,7 +236,13 @@ export default function Shop() {
           store_template_style: (storeData as any).store_template_style ?? null,
           bg_color: (storeData as any).bg_color ?? null,
           card_style: (storeData as any).card_style ?? null,
+          checkout_type: (storeData as any).checkout_type ?? 'whatsapp',
+          mercadopago_public_key: (storeData as any).mercadopago_public_key ?? null,
         };
+        console.info('[Shop] Checkout config loaded', {
+          checkout_type: mappedStore.checkout_type,
+          hasMpPublicKey: Boolean(mappedStore.mercadopago_public_key),
+        });
         setStore(mappedStore);
         setError(null);
 
@@ -719,7 +727,7 @@ export default function Shop() {
             onPurchase={handlePurchase}
             onOpen={handleCartOpen}
             isStoreOpen={storeIsOpen}
-            checkoutType={(store as { checkout_type?: string }).checkout_type === 'direct_cardapio' ? 'direct_cardapio' : 'whatsapp'}
+            checkoutType={store.checkout_type === 'direct_cardapio' ? 'direct_cardapio' : 'whatsapp'}
           />
         </div>
       </CartProvider>
