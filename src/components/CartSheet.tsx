@@ -1181,7 +1181,71 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         )}
       </SheetContent>
 
-    </Sheet>
+      {/* ===== Premium Native PIX Modal ===== */}
+      <Dialog open={pixModalOpen} onOpenChange={(o) => { if (!o && pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; } setPixModalOpen(o); }}>
+        <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden bg-card border-primary/30">
+          <div className="bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-6 pb-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground font-display text-xl">
+                <QrCode className="w-6 h-6 text-primary" />
+                Pague com PIX
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm">
+                Escaneie o QR Code ou copie o código abaixo. A confirmação é automática.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
+          <div className="px-6 pb-6 space-y-4">
+            {pixData?.qrCodeBase64 && (
+              <div className="bg-white p-4 rounded-2xl mx-auto w-fit shadow-lg">
+                <img
+                  src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                  alt="QR Code PIX"
+                  className="w-56 h-56 sm:w-64 sm:h-64 block"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-2 text-2xl font-display text-primary">
+              R$ {grandTotal.toFixed(2).replace('.', ',')}
+            </div>
+
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!pixData?.qrCode) return;
+                try {
+                  await navigator.clipboard.writeText(pixData.qrCode);
+                  setPixCopied(true);
+                  toast.success('Código PIX copiado!');
+                  setTimeout(() => setPixCopied(false), 2500);
+                } catch {
+                  toast.error('Não foi possível copiar. Selecione manualmente.');
+                }
+              }}
+              className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            >
+              {pixCopied ? <><CheckCircle2 className="w-5 h-5 mr-2" /> Copiado!</> : <><Copy className="w-5 h-5 mr-2" /> Copiar Código PIX</>}
+            </Button>
+
+            {pixData?.qrCode && (
+              <div className="bg-secondary/50 rounded-lg p-2 border border-border">
+                <p className="text-[10px] text-muted-foreground break-all font-mono leading-relaxed max-h-20 overflow-y-auto">
+                  {pixData.qrCode}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30">
+              <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+              <p className="text-xs text-foreground">
+                Aguardando confirmação do pagamento... Você será redirecionado automaticamente.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Sheet>
   );
 }
