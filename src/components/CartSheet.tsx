@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useCart } from '@/lib/cart';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { hapticSuccess } from '@/lib/haptics';
 import { getOrderTrackingUrl, getStoreUrl } from '@/lib/siteConfig';
@@ -454,36 +455,63 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       } catch (_) { /* ignore */ }
 
       try {
-        const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
-          body: {
-            storeId,
-            orderId: savedOrderId,
-            amount: Number(grandTotal.toFixed(2)),
-            payerName: name,
-            payerPhone: phoneDigits || phone,
-            description: `Pedido ${storeName || 'Cardapio'}`,
-            // Full pending-order payload. The webhook uses this to create the
-            // real order in `orders` once Mercado Pago confirms PIX payment.
-            customer: {
-              name,
-              phone: phoneDigits || phone,
-              address: addressStr || null,
-              orderItems: orderItems.map((item) => ({
-                id: item.id,
-                name: item.name,
-                quantity: item.quantity,
-                price: item.unitPrice,
-                modifiers: item.modifiers,
-                observation: item.observation,
-              })),
-              total: grandTotal,
-              cartId: pendingCartId || null,
-            },
+        const pixRequestBody = {
+          storeId,
+          orderId: savedOrderId,
+          amount: Number(grandTotal.toFixed(2)),
+          payerName: name,
+          payerPhone: phoneDigits || phone,
+          // No email field in the UI — edge function will fall back to
+          // `<phone>@customer.com` so Mercado Pago accepts the payload.
+          payerEmail: null,
+          description: `Pedido ${storeName || 'Cardapio'}`,
+          // Full pending-order payload. The webhook uses this to create the
+          // real order in `orders` once Mercado Pago confirms PIX payment.
+          customer: {
+            name,
+            phone: phoneDigits || phone,
+            address: addressStr || null,
+            orderItems: orderItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.unitPrice,
+              modifiers: item.modifiers,
+              observation: item.observation,
+            })),
+            total: grandTotal,
+            cartId: pendingCartId || null,
           },
+        };
+        console.log('[PIX] request body →', pixRequestBody);
+
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
+          body: pixRequestBody,
         });
-        if (mpError || !mpData?.qr_code || !mpData?.qr_code_base64) {
-          console.error('[MP] pix error', mpError, mpData);
-          setErrors({ submit: 'Não foi possível gerar o PIX. Tente novamente em instantes.' });
+        console.log('[PIX] response ←', { mpError, mpData });
+
+        if (mpError) {
+          console.error('[PIX] invoke transport error', mpError);
+          toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
+          setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
+          setSubmitting(false);
+          return;
+        }
+        if (!mpData || (mpData as { error?: string }).error) {
+          console.error('[PIX] edge returned error payload', mpData);
+          const detail = (mpData as { message?: string; detail?: unknown })?.message
+            || (typeof (mpData as { detail?: unknown })?.detail === 'string'
+                ? (mpData as { detail?: string }).detail
+                : 'Erro ao gerar PIX. Verifique os dados ou tente novamente.');
+          toast.error(detail || 'Erro ao gerar PIX. Verifique os dados ou tente novamente.');
+          setErrors({ submit: detail || 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
+          setSubmitting(false);
+          return;
+        }
+        if (!mpData.qr_code || !mpData.qr_code_base64) {
+          console.error('[PIX] missing QR fields in response', mpData);
+          toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
+          setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
           setSubmitting(false);
           return;
         }
@@ -499,8 +527,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         setPixApproved(false);
         setSubmitting(false);
       } catch (err) {
-        console.error('[MP] invoke exception', err);
-        setErrors({ submit: 'Erro ao conectar ao Mercado Pago.' });
+        console.error('[PIX] invoke exception', err);
+        toast.error('Erro ao gerar PIX. Verifique os dados ou tente novamente.');
+        setErrors({ submit: 'Erro ao gerar PIX. Verifique os dados ou tente novamente.' });
         setSubmitting(false);
       }
       return;
