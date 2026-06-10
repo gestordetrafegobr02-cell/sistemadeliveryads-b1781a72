@@ -1,7 +1,8 @@
-// Edge function: receives Mercado Pago payment webhook notifications and
-// marks the matching order as paid (payment_status = 'Pago') when the
-// payment is approved. The notification_url is registered with a ?store_id=
-// query param so we can pick the correct merchant access token.
+// Edge function: receives Mercado Pago payment webhook notifications.
+// On "approved" status: promotes the matching `pending_orders` row into a real
+// order via the `create_public_order` RPC, then marks it as paid. The order
+// only becomes visible to the merchant after this point — preventing phantom
+// orders and premature WhatsApp/buzzer alerts.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -10,14 +11,33 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
+interface PendingPayload {
+  name: string;
+  phone: string;
+  address?: string | null;
+  orderItems: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+    modifiers?: Array<{ id: string; name: string; price: number }>;
+    observation?: string | null;
+  }>;
+  total: number;
+  cartId?: string | null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const ok = () => new Response(JSON.stringify({ received: true }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
   try {
     const url = new URL(req.url);
     const storeId = url.searchParams.get('store_id');
 
-    // MP may send data via query (?type=payment&data.id=123) or JSON body
     let topic = url.searchParams.get('type') || url.searchParams.get('topic') || '';
     let paymentId = url.searchParams.get('data.id') || url.searchParams.get('id') || '';
 
@@ -30,11 +50,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('[MP-WEBHOOK]', { storeId, topic, paymentId });
-
-    // Always 200 OK to MP so it doesn't retry endlessly
-    const ok = () => new Response(JSON.stringify({ received: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
     if (!storeId || !paymentId || (topic && !topic.includes('payment'))) return ok();
 
@@ -72,19 +87,71 @@ Deno.serve(async (req) => {
     }
 
     if (status === 'approved') {
-      const { error } = await admin
+      // Check if order already exists (idempotency guard for webhook retries)
+      const { data: existingOrder } = await admin
+        .from('orders')
+        .select('id, payment_status')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (existingOrder) {
+        if (existingOrder.payment_status !== 'Pago') {
+          await admin.from('orders').update({ payment_status: 'Pago' }).eq('id', orderId);
+        }
+        console.log('[MP-WEBHOOK] order already exists, marked paid', orderId);
+        return ok();
+      }
+
+      // Promote pending_orders row into a real order
+      const { data: pending, error: pendingErr } = await admin
+        .from('pending_orders')
+        .select('payload')
+        .eq('id', orderId)
+        .eq('store_id', storeId)
+        .maybeSingle();
+
+      if (pendingErr || !pending) {
+        console.warn('[MP-WEBHOOK] no pending_orders row for', orderId, pendingErr);
+        return ok();
+      }
+
+      const p = pending.payload as unknown as PendingPayload;
+
+      const { error: rpcErr } = await admin.rpc('create_public_order', {
+        p_order_id: orderId,
+        p_store_id: storeId,
+        p_customer_name: p.name,
+        p_customer_phone: p.phone || null,
+        p_items: p.orderItems as unknown as Record<string, unknown>[],
+        p_address: p.address || null,
+        p_payment_method: 'mercadopago',
+        p_client_total: p.total,
+        p_cart_id: p.cartId || undefined,
+      });
+
+      if (rpcErr) {
+        console.error('[MP-WEBHOOK] create_public_order error', rpcErr);
+        return ok();
+      }
+
+      const { error: updErr } = await admin
         .from('orders')
         .update({ payment_status: 'Pago' })
-        .eq('id', orderId)
-        .eq('store_id', storeId);
-      if (error) console.error('[MP-WEBHOOK] update error', error);
-      else console.log('[MP-WEBHOOK] order marked paid', orderId);
+        .eq('id', orderId);
+      if (updErr) console.error('[MP-WEBHOOK] mark paid error', updErr);
+
+      await admin.from('pending_orders').delete().eq('id', orderId);
+
+      console.log('[MP-WEBHOOK] order promoted + paid', orderId);
     } else if (['rejected', 'cancelled', 'refunded', 'charged_back'].includes(status)) {
+      // Pending row may be cleaned up; if an order somehow exists, update it.
       await admin
         .from('orders')
         .update({ payment_status: status })
         .eq('id', orderId)
         .eq('store_id', storeId);
+      // Remove pending order so it doesn't linger
+      await admin.from('pending_orders').delete().eq('id', orderId).eq('store_id', storeId);
     }
 
     return ok();
