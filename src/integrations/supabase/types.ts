@@ -318,6 +318,39 @@ export type Database = {
         }
         Relationships: []
       }
+      store_secrets: {
+        Row: {
+          mercadopago_access_token: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          mercadopago_access_token?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          mercadopago_access_token?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_secrets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_secrets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_templates: {
         Row: {
           categories: Json
@@ -361,7 +394,6 @@ export type Database = {
           is_active: boolean | null
           is_open_manual: boolean | null
           logo_url: string | null
-          mercadopago_access_token: string | null
           mercadopago_public_key: string | null
           name: string
           opening_hours: Json | null
@@ -393,7 +425,6 @@ export type Database = {
           is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
-          mercadopago_access_token?: string | null
           mercadopago_public_key?: string | null
           name: string
           opening_hours?: Json | null
@@ -425,7 +456,6 @@ export type Database = {
           is_active?: boolean | null
           is_open_manual?: boolean | null
           logo_url?: string | null
-          mercadopago_access_token?: string | null
           mercadopago_public_key?: string | null
           name?: string
           opening_hours?: Json | null
@@ -795,10 +825,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_store_mercadopago_token: {
+        Args: { _store_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
       mark_abandoned_cart_converted: {
         Args: { p_cart_id: string; p_order_id?: string }
+        Returns: undefined
+      }
+      set_store_mercadopago_token: {
+        Args: { _store_id: string; _token: string }
         Returns: undefined
       }
       toggle_store_active: { Args: { p_store_id: string }; Returns: boolean }

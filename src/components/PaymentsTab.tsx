@@ -22,14 +22,17 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
   const [accessToken, setAccessToken] = useState('');
   const [showToken, setShowToken] = useState(false);
 
+  const [hasToken, setHasToken] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const { data, error } = await supabase
         .from('stores')
-        .select('checkout_type, mercadopago_public_key, mercadopago_access_token')
+        .select('checkout_type, mercadopago_public_key')
         .eq('id', storeId)
         .maybeSingle();
+      const { data: tokenStatus } = await supabase.rpc('has_store_mercadopago_token', { _store_id: storeId });
       if (cancelled) return;
       if (error) {
         console.error('[Payments] load error', error);
@@ -37,12 +40,11 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
         const row = data as unknown as {
           checkout_type?: string;
           mercadopago_public_key?: string | null;
-          mercadopago_access_token?: string | null;
         };
         setCheckoutType((row.checkout_type as CheckoutType) || 'whatsapp');
         setPublicKey(row.mercadopago_public_key || '');
-        setAccessToken(row.mercadopago_access_token || '');
       }
+      setHasToken(Boolean(tokenStatus));
       setLoading(false);
     }
     load();
@@ -51,12 +53,16 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
 
   async function handleSave() {
     if (checkoutType === 'direct_cardapio') {
-      if (!publicKey.trim() || !accessToken.trim()) {
-        toast.error('Informe a Public Key e o Access Token do Mercado Pago.');
+      if (!publicKey.trim()) {
+        toast.error('Informe a Public Key do Mercado Pago.');
         return;
       }
       if (!publicKey.startsWith('APP_USR-') && !publicKey.startsWith('TEST-')) {
         toast.error('Public Key inválida (deve começar com APP_USR- ou TEST-).');
+        return;
+      }
+      if (!hasToken && !accessToken.trim()) {
+        toast.error('Informe o Access Token do Mercado Pago.');
         return;
       }
     }
@@ -66,12 +72,23 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
       .update({
         checkout_type: checkoutType,
         mercadopago_public_key: publicKey.trim() || null,
-        mercadopago_access_token: accessToken.trim() || null,
       })
       .eq('id', storeId);
+    let tokenErr: { message: string } | null = null;
+    if (accessToken.trim()) {
+      const { error: tErr } = await supabase.rpc('set_store_mercadopago_token', {
+        _store_id: storeId,
+        _token: accessToken.trim(),
+      });
+      if (tErr) tokenErr = tErr as { message: string };
+      else {
+        setHasToken(true);
+        setAccessToken('');
+      }
+    }
     setSaving(false);
-    if (error) {
-      toast.error('Erro ao salvar: ' + error.message);
+    if (error || tokenErr) {
+      toast.error('Erro ao salvar: ' + (error?.message || tokenErr?.message));
     } else {
       toast.success('Configurações de pagamento salvas!');
     }
@@ -154,12 +171,15 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
             </div>
             <div>
               <Label>Access Token</Label>
+              {hasToken && (
+                <p className="text-xs text-green-500 mt-1">✓ Access Token configurado e armazenado de forma segura no servidor.</p>
+              )}
               <div className="relative mt-1">
                 <Input
                   type={showToken ? 'text' : 'password'}
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
-                  placeholder="APP_USR-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  placeholder={hasToken ? 'Deixe vazio para manter o atual' : 'APP_USR-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
                   className="bg-background border-border font-mono text-xs pr-10"
                 />
                 <button
@@ -172,7 +192,7 @@ export function PaymentsTab({ storeId }: PaymentsTabProps) {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Armazenado de forma segura. Apenas você (dono da loja) tem acesso.
+                Armazenado em tabela protegida (sem acesso pelo navegador). Usado apenas pelo servidor para processar pagamentos.
               </p>
             </div>
           </div>
