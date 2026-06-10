@@ -15,10 +15,13 @@ const OrderItemSchema = z.object({
   observation: z.string().nullable().optional(),
 });
 
+const CurrencySchema = z.preprocess((value) => Number(value), z.number().finite().positive());
+const NonNegativeCurrencySchema = z.preprocess((value) => Number(value), z.number().finite().nonnegative());
+
 const BodySchema = z.object({
   storeId: z.string().uuid(),
   orderId: z.string().uuid(),
-  amount: z.number().positive(),
+  amount: CurrencySchema,
   payerName: z.string().trim().min(2).max(120),
   payerPhone: z.string().trim().min(8).max(30).optional(),
   description: z.string().trim().max(250).optional(),
@@ -32,7 +35,7 @@ const BodySchema = z.object({
     phone: z.string().trim().min(8).max(30),
     address: z.string().trim().max(500).nullable().optional(),
     orderItems: z.array(OrderItemSchema).min(1),
-    total: z.number().nonnegative(),
+    total: NonNegativeCurrencySchema,
     cartId: z.string().uuid().nullable().optional(),
   }).optional(),
 });
@@ -55,8 +58,8 @@ function splitName(full: string): { first: string; last: string } {
 }
 
 function fallbackEmail(phone: string | undefined, orderId: string): string {
-  const digits = (phone || '').replace(/\D/g, '');
-  return `${digits || orderId.replace(/-/g, '').slice(0, 12)}@cardapioprivado.com`;
+  const cleanedPhone = (phone || '').replace(/[^0-9]/g, '');
+  return `${cleanedPhone || orderId.replace(/-/g, '').slice(0, 12)}@cardapioprivado.com`;
 }
 
 function safeJsonParse(raw: string) {
@@ -65,6 +68,10 @@ function safeJsonParse(raw: string) {
   } catch {
     return { raw_response: raw };
   }
+}
+
+function sanitizeAmount(total: number): number {
+  return parseFloat(Number(total).toFixed(2));
 }
 
 Deno.serve(async (req) => {
@@ -85,10 +92,27 @@ Deno.serve(async (req) => {
     }
 
     const body: RequestBody = parsed.data;
+    const normalizedAmount = sanitizeAmount(body.amount);
+    const normalizedCustomerTotal = body.customer ? sanitizeAmount(body.customer.total) : null;
+
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return jsonResp({
+        error: 'invalid_amount',
+        message: 'Valor do pagamento inválido.',
+      }, 400);
+    }
+
+    if (body.customer && (!Number.isFinite(normalizedCustomerTotal ?? NaN) || (normalizedCustomerTotal ?? 0) < 0)) {
+      return jsonResp({
+        error: 'invalid_customer_total',
+        message: 'Total do pedido inválido.',
+      }, 400);
+    }
+
     console.log('[MP] incoming', {
       storeId: body.storeId,
       orderId: body.orderId,
-      amount: body.amount,
+      amount: normalizedAmount,
       paymentType: body.paymentType,
       payerName: body.payerName,
     });
@@ -159,7 +183,7 @@ Deno.serve(async (req) => {
 
     const paymentPayload: Record<string, unknown> = body.paymentType === 'pix'
       ? {
-          transaction_amount: Number(body.amount.toFixed(2)),
+          transaction_amount: normalizedAmount,
           description: 'Pedido no Cardapio Digital',
           payment_method_id: 'pix',
           external_reference: body.orderId,
@@ -172,7 +196,7 @@ Deno.serve(async (req) => {
           },
         }
       : {
-          transaction_amount: Number(body.amount.toFixed(2)),
+          transaction_amount: normalizedAmount,
           description: (body.description || `Pedido ${body.orderId.slice(0, 8).toUpperCase()} - ${store.name || 'Cardapio'}`).slice(0, 250),
           token: body.cardToken,
           installments: body.installments || 1,
@@ -220,11 +244,10 @@ Deno.serve(async (req) => {
     });
 
     if (!mpRes.ok) {
-      return jsonResp({
-        error: 'mercadopago_error',
-        message: typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.',
-        detail: mpJson,
-      }, mpRes.status);
+      throw new Error(
+        typeof mpJson?.message === 'string' ? mpJson.message : 'Erro ao processar pagamento. Tente novamente.',
+        { cause: mpJson },
+      );
     }
 
     const status = typeof mpJson?.status === 'string' ? mpJson.status : '';
@@ -246,7 +269,7 @@ Deno.serve(async (req) => {
         payment_id: mpJson.id,
         status,
         status_detail: statusDetail,
-        transaction_amount: Number(mpJson?.transaction_amount ?? body.amount),
+          transaction_amount: Number(mpJson?.transaction_amount ?? normalizedAmount),
         point_of_interaction: {
           ...mpJson.point_of_interaction,
           transaction_data: {
@@ -277,7 +300,7 @@ Deno.serve(async (req) => {
             p_items: c.orderItems as unknown as Record<string, unknown>[],
             p_address: c.address || null,
             p_payment_method: 'mercadopago_card',
-            p_client_total: c.total,
+            p_client_total: normalizedCustomerTotal ?? c.total,
             p_cart_id: c.cartId || undefined,
           });
 
@@ -299,15 +322,17 @@ Deno.serve(async (req) => {
       payment_id: mpJson.id,
       status,
       status_detail: statusDetail,
-      transaction_amount: Number(mpJson?.transaction_amount ?? body.amount),
+      transaction_amount: Number(mpJson?.transaction_amount ?? normalizedAmount),
       gateway_response: mpJson,
     });
-  } catch (err) {
-    console.error('[MP] unexpected', err);
-    return jsonResp({
-      error: 'internal_error',
-      message: 'Erro inesperado ao processar pagamento. Tente novamente.',
-      detail: String(err),
-    }, 500);
+  } catch (error) {
+    console.error('[MP] unexpected', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Erro inesperado ao processar pagamento. Tente novamente.',
+      details: error instanceof Error ? (error.cause ?? null) : error,
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
