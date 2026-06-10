@@ -1228,7 +1228,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             )}
 
             <div className="flex items-center justify-center gap-2 text-2xl font-display text-primary">
-              R$ {grandTotal.toFixed(2).replace('.', ',')}
+              R$ {(pixData?.amount ?? grandTotal).toFixed(2).replace('.', ',')}
             </div>
 
             <Button
