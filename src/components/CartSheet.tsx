@@ -454,28 +454,16 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       } catch (_) { /* ignore */ }
 
       try {
-        const origin = window.location.origin;
-        const successBase = `${origin}${internalTrackingUrl}`;
-        const successUrl = successBase + (successBase.includes('?') ? '&' : '?') + 'mp_paid=1';
-        const failureUrl = `${origin}${cleanStoreSlug ? '/' + cleanStoreSlug : '/'}`;
-        const mpItems = orderItems.map((it) => ({
-          title: it.name,
-          quantity: it.quantity,
-          unit_price: Number(((it.lineTotal) / it.quantity).toFixed(2)),
-        }));
-        if (orderType === 'delivery' && deliveryAmount > 0) {
-          mpItems.push({ title: 'Taxa de entrega', quantity: 1, unit_price: Number(deliveryAmount.toFixed(2)) });
-        }
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
           body: {
             storeId,
             orderId: savedOrderId,
-            items: mpItems,
+            amount: Number(grandTotal.toFixed(2)),
             payerName: name,
-            successUrl,
-            failureUrl,
+            payerPhone: phoneDigits || phone,
+            description: `Pedido ${storeName || 'Cardapio'}`,
             // Full pending-order payload. The webhook uses this to create the
-            // real order in `orders` once Mercado Pago confirms payment.
+            // real order in `orders` once Mercado Pago confirms PIX payment.
             customer: {
               name,
               phone: phoneDigits || phone,
@@ -493,20 +481,27 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             },
           },
         });
-        if (mpError || !mpData?.init_point) {
-          console.error('[MP] preference error', mpError, mpData);
-          setErrors({ submit: 'Não foi possível iniciar o pagamento. Tente novamente em instantes.' });
+        if (mpError || !mpData?.qr_code || !mpData?.qr_code_base64) {
+          console.error('[MP] pix error', mpError, mpData);
+          setErrors({ submit: 'Não foi possível gerar o PIX. Tente novamente em instantes.' });
           setSubmitting(false);
-          window.location.assign(internalTrackingUrl);
           return;
         }
+        // Show the native PIX modal — keep the customer inside our app.
+        setPixPayment({
+          qrCode: mpData.qr_code as string,
+          qrCodeBase64: mpData.qr_code_base64 as string,
+          orderId: savedOrderId,
+          amount: grandTotal,
+          storeSlug: cleanStoreSlug,
+        });
+        setPixCopied(false);
+        setPixApproved(false);
         setSubmitting(false);
-        window.location.assign(mpData.init_point);
       } catch (err) {
         console.error('[MP] invoke exception', err);
         setErrors({ submit: 'Erro ao conectar ao Mercado Pago.' });
         setSubmitting(false);
-        window.location.assign(internalTrackingUrl);
       }
       return;
     }
