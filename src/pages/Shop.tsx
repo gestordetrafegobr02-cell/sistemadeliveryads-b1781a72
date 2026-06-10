@@ -236,7 +236,13 @@ export default function Shop() {
           store_template_style: (storeData as any).store_template_style ?? null,
           bg_color: (storeData as any).bg_color ?? null,
           card_style: (storeData as any).card_style ?? null,
+          checkout_type: (storeData as any).checkout_type ?? 'whatsapp',
+          mercadopago_public_key: (storeData as any).mercadopago_public_key ?? null,
         };
+        console.info('[Shop] Checkout config loaded', {
+          checkout_type: mappedStore.checkout_type,
+          hasMpPublicKey: Boolean(mappedStore.mercadopago_public_key),
+        });
         setStore(mappedStore);
         setError(null);
 
