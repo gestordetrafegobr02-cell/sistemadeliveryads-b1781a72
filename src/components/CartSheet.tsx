@@ -341,6 +341,63 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       }
     }
 
+    const internalTrackingUrl = `/pedido/${savedOrderId}${sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : ''}`;
+
+    // ===== Mercado Pago direct checkout branches =====
+    if (checkoutType === 'direct_cardapio') {
+      onPurchase?.();
+      clearCart();
+      setOpen(false);
+
+      if (isMpOnDelivery) {
+        setSubmitting(false);
+        window.location.assign(internalTrackingUrl);
+        return;
+      }
+
+      // Online payment via Mercado Pago
+      try {
+        const origin = window.location.origin;
+        const successUrl = `${origin}${internalTrackingUrl}`;
+        const failureUrl = `${origin}${cleanStoreSlug ? '/' + cleanStoreSlug : '/'}`;
+        const mpItems = orderItems.map((it) => ({
+          title: it.name,
+          quantity: it.quantity,
+          unit_price: Number(((it.lineTotal) / it.quantity).toFixed(2)),
+        }));
+        if (orderType === 'delivery' && deliveryAmount > 0) {
+          mpItems.push({ title: 'Taxa de entrega', quantity: 1, unit_price: Number(deliveryAmount.toFixed(2)) });
+        }
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('mercadopago-create-preference', {
+          body: {
+            storeId,
+            orderId: savedOrderId,
+            items: mpItems,
+            payerName: name,
+            successUrl,
+            failureUrl,
+          },
+        });
+        if (mpError || !mpData?.init_point) {
+          console.error('[MP] preference error', mpError, mpData);
+          setErrors({ submit: 'Não foi possível iniciar o pagamento. Tente novamente em instantes.' });
+          setSubmitting(false);
+          window.location.assign(internalTrackingUrl);
+          return;
+        }
+        setSubmitting(false);
+        window.location.assign(mpData.init_point);
+      } catch (err) {
+        console.error('[MP] invoke exception', err);
+        setErrors({ submit: 'Erro ao conectar ao Mercado Pago.' });
+        setSubmitting(false);
+        window.location.assign(internalTrackingUrl);
+      }
+      return;
+    }
+
+
+
     const shortId = savedOrderId.slice(0, 8).toUpperCase();
     const itemLines = orderItems
       .map((item) => {
