@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
     const { data: store, error } = await admin
       .from('stores')
-      .select('mercadopago_access_token, name, slug')
+      .select('name, slug')
       .eq('id', body.storeId)
       .maybeSingle();
 
@@ -50,7 +50,13 @@ Deno.serve(async (req) => {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const token = (store as { mercadopago_access_token?: string | null }).mercadopago_access_token;
+
+    const { data: secret } = await admin
+      .from('store_secrets')
+      .select('mercadopago_access_token')
+      .eq('store_id', body.storeId)
+      .maybeSingle();
+    const token = (secret as { mercadopago_access_token?: string | null } | null)?.mercadopago_access_token;
     if (!token) {
       return new Response(JSON.stringify({ error: 'mercadopago_not_configured' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
