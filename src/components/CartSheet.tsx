@@ -847,7 +847,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 className="w-full btn-glow bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg font-display disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                {isStoreOpen ? 'Confirmar Pedido via WhatsApp' : 'Loja Fechada'}
+                {!isStoreOpen
+                  ? 'Loja Fechada'
+                  : checkoutType === 'direct_cardapio'
+                    ? (paymentFlow === 'online' ? 'Pagar Agora (Mercado Pago)' : 'Confirmar Pedido')
+                    : 'Confirmar Pedido via WhatsApp'}
               </Button>
             </div>
           </div>
