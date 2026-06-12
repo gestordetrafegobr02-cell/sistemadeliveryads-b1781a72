@@ -569,8 +569,8 @@ export default function Shop() {
         <meta name="twitter:image" content={ogImage} />
         <meta name="apple-mobile-web-app-title" content={store.name} />
         <meta name="application-name" content={store.name} />
-        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
-        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=3'} />
+        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=3'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
