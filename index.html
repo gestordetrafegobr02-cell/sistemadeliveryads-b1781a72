@@ -122,12 +122,12 @@
             setMeta('meta[name="msapplication-TileImage"]', 'content', icon);
             setMeta('meta[property="og:title"]', 'content', title);
             setMeta('meta[property="og:description"]', 'content', description);
-            setMeta('meta[property="og:image"]', 'content', icon);
+            setMeta('meta[property="og:image"]', 'content', previewImage);
             setMeta('meta[property="og:url"]', 'content', storeUrl);
-            setMeta('meta[property="og:site_name"]', 'content', title);
+            setMeta('meta[property="og:site_name"]', 'content', store.name);
             setMeta('meta[name="twitter:title"]', 'content', title);
             setMeta('meta[name="twitter:description"]', 'content', description);
-            setMeta('meta[name="twitter:image"]', 'content', icon);
+            setMeta('meta[name="twitter:image"]', 'content', previewImage);
 
             setLink('icon', icon);
             setLink('shortcut icon', icon);
