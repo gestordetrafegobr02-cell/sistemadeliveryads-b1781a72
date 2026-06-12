@@ -542,13 +542,13 @@ export default function Shop() {
     .filter(Boolean)
     .slice(0, 3)
     .join(' • ');
-  const ogTitle = store.name;
-  const ogDescription = store.description?.trim()
-    || (categorySummary
-      ? `${categorySummary} • Faça seu pedido online em ${store.name}`
-      : `Faça seu pedido online agora em ${store.name}`);
+  const ogTitle = `${store.name} - Cardápio Digital`;
+  const ogDescription = `Faça seu pedido online no ${store.name} via DeliveryPro`
+    + (categorySummary ? ` • ${categorySummary}` : '');
   const storeLogoSanitized = sanitizeImageUrl(store.logo_url);
-  const ogImage = storeLogoSanitized || sanitizeImageUrl(store.cover_url) || `${window.location.origin}/logo.png`;
+  const storeCoverSanitized = sanitizeImageUrl(store.cover_url);
+  // Prefer the store's own cover/logo so WhatsApp previews show the merchant's identity, not DeliveryPro's.
+  const ogImage = storeCoverSanitized || storeLogoSanitized || `${window.location.origin}/logo.png?v=3`;
   const ogUrl = `https://${window.location.hostname}/${cleanSlug}`;
 
   return (
@@ -569,8 +569,8 @@ export default function Shop() {
         <meta name="twitter:image" content={ogImage} />
         <meta name="apple-mobile-web-app-title" content={store.name} />
         <meta name="application-name" content={store.name} />
-        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=2'} />
-        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=2'} />
+        <link rel="icon" type="image/png" href={storeLogoSanitized || '/logo.png?v=3'} />
+        <link rel="apple-touch-icon" href={storeLogoSanitized || '/logo.png?v=3'} />
       </Helmet>
       <CartProvider>
         <div className="min-h-screen bg-background pb-28">
