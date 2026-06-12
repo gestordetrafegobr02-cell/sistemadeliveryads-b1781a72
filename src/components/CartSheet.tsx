@@ -306,7 +306,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       message += `• Forma: ${paymentLine}\n`;
       message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
       message += `${divider}\n\n`;
-      message += `👉 _Pedido gerado por Sistema Delivery ADS_`;
+      message += `👉 _Pedido gerado por DeliveryPro_`;
 
       const encodedText = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedText}`;

@@ -532,7 +532,7 @@ export default function Index() {
       <footer className="py-12 px-4 md:px-6 border-t border-border bg-background">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Sistema Delivery ADS. Todos os direitos reservados.
+            © {new Date().getFullYear()} DeliveryPro. Todos os direitos reservados.
           </p>
         </div>
       </footer>

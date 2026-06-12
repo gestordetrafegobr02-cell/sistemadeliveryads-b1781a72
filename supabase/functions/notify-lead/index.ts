@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
 🏪 *Segmento:* ${cleanSegment}
 
 ---
-_Notificação automática do Sistema Delivery ADS_`;
+_Notificação automática do DeliveryPro_`;
 
     // Create WhatsApp link (for logging/reference)
     const encodedMessage = encodeURIComponent(message);
