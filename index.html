@@ -110,8 +110,9 @@
             const store = Array.isArray(rows) ? rows[0] : null;
             if (!store || !store.name) return;
             const icon = store.logo_url || defaultIcon;
-            const title = store.name;
-            const description = 'Faça seu pedido online em ' + store.name;
+            const previewImage = store.cover_url || store.logo_url || defaultIcon;
+            const title = store.name + ' - Cardápio Digital';
+            const description = 'Faça seu pedido online no ' + store.name + ' via DeliveryPro';
 
             document.title = title;
             setMeta('meta[name="description"]', 'content', description);
