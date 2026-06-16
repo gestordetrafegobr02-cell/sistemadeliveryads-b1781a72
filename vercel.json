@@ -1,19 +1,31 @@
 {
+  "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "x-deliverypro-version",
+          "value": "1.0.0-live"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/:slug",
+      "source": "/((?!auth|admin|super-admin|onboarding|demo|order-status|pedido|assets/|_next/|favicon.ico|logo.png|manifest.json).*[^/])",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|RedditBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Embedly).*"
+          "value": "(.*WhatsApp.*|.*facebookexternalhit.*|.*Twitterbot.*|.*TelegramBot.*|.*Slackbot.*|.*Discordbot.*)"
         }
       ],
-      "missing": [
-        { "type": "header", "key": "x-skip-og" }
-      ],
-      "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview/:slug"
+      "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview?slug=$1"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!assets/|favicon.ico|logo.png|manifest.json).*)",
+      "destination": "/index.html"
+    }
   ]
 }
