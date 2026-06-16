@@ -584,7 +584,7 @@ export default function Admin() {
                       className="mt-1 bg-secondary border-border"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Sua loja: sistemadeliveryads.site/{storeSlug || 'seu-slug'}
+                      Sua loja: deliverypro.site/{storeSlug || 'seu-slug'}
                     </p>
                   </div>
                 </div>
