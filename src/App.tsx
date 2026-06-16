@@ -33,7 +33,8 @@ const App = () => (
             <Route path="/demo/:slug" element={<Demo />} />
             <Route path="/order-status/:id" element={<OrderStatus />} />
             <Route path="/pedido/:id" element={<OrderStatus />} />
-            {/* Public store menu — catch-all root slug. MUST be last before 404 */}
+            <Route path="/shop/:storeSlug" element={<Shop />} />
+            {/* Public store menu — catch-all root slug. MUST remain last before 404 */}
             <Route path="/:slug" element={<Shop />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
