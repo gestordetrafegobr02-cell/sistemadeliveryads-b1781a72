@@ -1,13 +1,16 @@
 {
   "rewrites": [
     {
-      "source": "/:slug((?!assets|api|.*\\..*|auth|admin|super-admin|onboarding|demo|order-status|pedido).*)",
+      "source": "/:slug",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
           "value": "(?i).*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|RedditBot|SkypeUriPreview|Applebot|Googlebot|bingbot|Embedly).*"
         }
+      ],
+      "missing": [
+        { "type": "header", "key": "x-skip-og" }
       ],
       "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview/:slug"
     },
