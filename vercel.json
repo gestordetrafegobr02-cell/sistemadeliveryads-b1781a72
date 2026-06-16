@@ -1,30 +1,20 @@
 {
   "version": 2,
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "x-deliverypro-version",
-          "value": "1.0.0-live"
-        }
-      ]
-    }
-  ],
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!auth|admin|super-admin|onboarding|demo|order-status|pedido|assets/|_next/|favicon.ico|logo.png|manifest.json).*[^/])",
+      "source": "/:slug",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(.*WhatsApp.*|.*facebookexternalhit.*|.*Twitterbot.*|.*TelegramBot.*|.*Slackbot.*|.*Discordbot.*)"
+          "value": "(.*WhatsApp.*|.*facebookexternalhit.*|.*Twitterbot.*|.*TelegramBot.*)"
         }
       ],
-      "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview?slug=$1"
+      "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview?slug=:slug"
     },
     {
-      "source": "/((?!assets/|favicon.ico|logo.png|manifest.json).*)",
+      "source": "/((?!auth|admin|super-admin|onboarding|demo|order-status|pedido|assets/|favicon.ico|logo.png|manifest.json).*)",
       "destination": "/index.html"
     }
   ]
