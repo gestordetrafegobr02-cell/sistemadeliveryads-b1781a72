@@ -1219,7 +1219,7 @@ export default function Admin() {
         </Dialog>
       </main>
       <div className="fixed bottom-2 right-3 text-[10px] text-muted-foreground/60 font-mono pointer-events-none select-none z-50">
-        v1.1.0-clean
+        v1.1.1-clean
       </div>
     </div>
   );
