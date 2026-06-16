@@ -305,7 +305,7 @@ export default function Onboarding() {
                   className="bg-secondary border-border"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Sua loja ficará em: sistemadeliveryads.site/{storeSlug || 'seu-slug'}
+                  Sua loja ficará em: deliverypro.site/{storeSlug || 'seu-slug'}
                 </p>
                 {errors.slug && <p className="text-sm text-destructive">{errors.slug}</p>}
               </div>

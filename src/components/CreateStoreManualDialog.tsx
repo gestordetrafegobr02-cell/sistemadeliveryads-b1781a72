@@ -196,7 +196,7 @@ export function CreateStoreManualDialog({
             <div className="space-y-2">
               <Label htmlFor="storeSlug">Slug (URL) *</Label>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">sistemadeliveryads.site/</span>
+                <span className="text-muted-foreground text-xs">deliverypro.site/</span>
                 <Input
                   id="storeSlug"
                   placeholder="burger-house"
