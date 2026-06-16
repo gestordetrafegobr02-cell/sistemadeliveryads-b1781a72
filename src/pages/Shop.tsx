@@ -17,6 +17,7 @@ import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
 
 // Demo store slugs
 const DEMO_SLUGS = ['demo-hamburgueria', 'demo-pizzaria', 'demo-acaiteria', 'demo-hortifruti'];
+const SYSTEM_ROUTES = ['admin', 'auth', 'onboarding', 'super-admin', 'demo', 'order-status', 'pedido', 'shop'];
 
 // Public store data from stores_public view (excludes sensitive fields)
 interface StorePublic {
@@ -124,9 +125,9 @@ export default function Shop() {
     if (!raw) {
       // Fallback: extract slug from pathname (e.g. /my-store)
       const segments = location.pathname.split('/').filter(Boolean);
-      // Skip known system routes
-      const systemRoutes = ['admin', 'auth', 'onboarding', 'super-admin', 'demo', 'order-status', 'pedido'];
-      if (segments.length >= 1 && !systemRoutes.includes(segments[0])) {
+      if (segments[0] === 'shop' && segments[1]) {
+        raw = segments[1].toLowerCase();
+      } else if (segments.length >= 1 && !SYSTEM_ROUTES.includes(segments[0])) {
         raw = segments[0].toLowerCase();
       }
     }
