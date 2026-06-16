@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://sistemadeliveryads.site/sitemap.xml
+Sitemap: https://deliverypro.site/sitemap.xml

@@ -1,10 +1,10 @@
-// Build trigger: 2026-06-16 - v1.1.0-clean (SW purge + cache bust)
+// Build trigger: 2026-06-16T12:00Z - v1.1.1-clean (force rebuild, domain unified)
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 
-export const APP_VERSION = "v1.1.0-clean";
+export const APP_VERSION = "v1.1.1-clean";
 
 // One-time legacy service worker + cache purge.
 // Removes any stale app-shell SW from previous deploys so the new bundle is served.
