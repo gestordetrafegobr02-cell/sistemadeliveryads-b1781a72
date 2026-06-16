@@ -1,4 +1,4 @@
-// Build trigger: 2026-06-16T12:00Z - v1.1.1-clean (force rebuild, domain unified)
+// Build trigger: 2026-06-16T12:30Z - v1.1.2-clean (force fresh Vercel build, vercel.json rewrites active)
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
