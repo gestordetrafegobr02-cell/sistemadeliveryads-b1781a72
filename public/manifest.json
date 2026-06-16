@@ -1,16 +1,16 @@
 {
-  "name": "Cardápio Digital",
-  "short_name": "Cardápio",
-  "description": "Cardápio digital para pedidos online",
+  "name": "DeliveryPro",
+  "short_name": "DeliveryPro",
+  "description": "DeliveryPro - Plataforma white-label de cardápio digital e pedidos online",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#f59e0b",
   "orientation": "portrait-primary",
   "icons": [
-    { "src": "/logo.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/logo.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/logo.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/logo.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["food", "lifestyle"],
   "lang": "pt-BR"
