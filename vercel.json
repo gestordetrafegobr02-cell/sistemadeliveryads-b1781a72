@@ -1,21 +1,7 @@
 {
   "version": 2,
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/:slug",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": "(.*WhatsApp.*|.*facebookexternalhit.*|.*Twitterbot.*|.*TelegramBot.*)"
-        }
-      ],
-      "destination": "https://rxmjjuhibcvqzidgidxp.supabase.co/functions/v1/og-preview?slug=:slug"
-    },
-    {
-      "source": "/((?!auth|admin|super-admin|onboarding|demo|order-status|pedido|assets/|favicon.ico|logo.png|manifest.json).*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
