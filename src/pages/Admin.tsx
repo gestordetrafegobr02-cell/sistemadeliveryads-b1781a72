@@ -584,7 +584,7 @@ export default function Admin() {
                       className="mt-1 bg-secondary border-border"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Sua loja: deliverypro.site/{storeSlug || 'seu-slug'}
+                      Sua loja: {(typeof window !== 'undefined' ? window.location.origin.replace(/^https?:\/\//, '') : 'deliverypro.site')}/{storeSlug || 'seu-slug'}
                     </p>
                   </div>
                 </div>
@@ -599,7 +599,7 @@ export default function Admin() {
                     <div className="flex gap-2">
                       <Input
                         readOnly
-                        value={getStoreUrl(store.slug)}
+                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://deliverypro.site'}/${store.slug}`}
                         className="bg-secondary border-border font-mono text-sm"
                       />
                       <Button
@@ -1218,6 +1218,9 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
       </main>
+      <div className="fixed bottom-2 right-3 text-[10px] text-muted-foreground/60 font-mono pointer-events-none select-none z-50">
+        v1.1.0-clean
+      </div>
     </div>
   );
 }
