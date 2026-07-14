@@ -77,10 +77,19 @@ export default function Index() {
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { settings: globalSettings } = useGlobalSettings();
+
+  // Load Meta Pixel (landing) once the ID is available and fire PageView
+  useEffect(() => {
+    if (globalSettings.landing_pixel_id) {
+      loadLandingPixel(globalSettings.landing_pixel_id);
+    }
+  }, [globalSettings.landing_pixel_id]);
 
   const scrollToForm = () => {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
 
   const generateSlug = (name: string) => {
     const base = name
