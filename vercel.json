@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/__l5e/assets-v1/:path*",
+      "destination": "https://sistemadeliveryads.lovable.app/__l5e/assets-v1/:path*"
+    },
+    {
       "source": "/:slug",
       "has": [
         {
