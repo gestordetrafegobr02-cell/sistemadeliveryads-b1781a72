@@ -10,8 +10,6 @@
 
 declare global {
   interface Window {
-    fbq?: (...args: unknown[]) => void;
-    _fbq?: unknown;
     __landingPixelLoaded?: string;
   }
 }
