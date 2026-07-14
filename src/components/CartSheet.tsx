@@ -567,6 +567,27 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                     <span>R$ {deliveryAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
+                {cashbackConfig.enabled && cashbackBalance > 0 && (
+                  <label className="flex items-center justify-between gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer">
+                    <span className="flex items-center gap-2 text-sm text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={applyCashback}
+                        onChange={(e) => setApplyCashback(e.target.checked)}
+                        className="accent-primary"
+                      />
+                      Usar meu cashback (R$ {cashbackBalance.toFixed(2).replace('.', ',')})
+                    </span>
+                    {applyCashback && (
+                      <span className="text-sm text-primary font-medium">-R$ {cashbackApplied.toFixed(2).replace('.', ',')}</span>
+                    )}
+                  </label>
+                )}
+                {cashbackConfig.enabled && cashbackConfig.percentage > 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    💰 Você ganhará <strong>{cashbackConfig.percentage}%</strong> de cashback neste pedido
+                  </p>
+                )}
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <span className="text-lg font-medium text-foreground">Total</span>
                   <span className="text-2xl font-display text-primary">R$ {grandTotal.toFixed(2).replace('.', ',')}</span>
