@@ -374,24 +374,57 @@ export default function Index() {
             {features.map((feature, index) => (
               <ScrollReveal
                 key={index}
-                direction="flip"
+                direction="up"
                 delay={index * 0.08}
-                className="group p-8 rounded-3xl bg-card border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
               >
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <feature.icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
+                <Tilt3DCard className="h-full">
+                  <article
+                    className="group relative h-full min-h-[340px] rounded-3xl overflow-hidden border border-border/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] bg-card"
+                  >
+                    {/* Real photo background */}
+                    <img
+                      src={feature.image}
+                      alt=""
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-[1200ms] ease-out"
+                      style={{ transform: 'translateZ(0px)' }}
+                    />
+                    {/* Cinematic tint */}
+                    <div className={`absolute inset-0 bg-gradient-to-t ${feature.tint}`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/10" />
+
+                    {/* Floating 3D glass icon */}
+                    <div
+                      className="absolute top-6 left-6"
+                      style={{ transform: 'translateZ(60px)' }}
+                    >
+                      <div className="relative w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-xl border border-white/25 flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(0,0,0,0.6)]">
+                        <feature.icon className="w-7 h-7 text-white drop-shadow-lg" strokeWidth={2} />
+                        <span className="absolute -inset-px rounded-2xl bg-gradient-to-br from-white/40 to-transparent opacity-60 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Content pushed forward */}
+                    <div
+                      className="absolute inset-x-0 bottom-0 p-7"
+                      style={{ transform: 'translateZ(40px)' }}
+                    >
+                      <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-md">
+                        {feature.title}
+                      </h3>
+                      <p className="text-white/85 leading-relaxed text-[15px]">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </article>
+                </Tilt3DCard>
               </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
+
+
 
       {/* Pricing Section */}
       <ScrollReveal direction="up">
