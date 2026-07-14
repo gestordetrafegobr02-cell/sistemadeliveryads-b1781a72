@@ -16,6 +16,7 @@ import { CartProvider } from '@/lib/cart';
 import { StoreThemeProvider } from '@/lib/storeTheme';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isStoreOpen, getTodayHours, OpeningHours } from '@/lib/storeHours';
+import { resolveCdnAssetUrl } from '@/lib/cdnAssetUrl';
 
 // Demo store slugs
 const DEMO_SLUGS = ['demo-hamburgueria', 'demo-pizzaria', 'demo-acaiteria', 'demo-hortifruti'];
@@ -64,10 +65,7 @@ interface Product {
 
 // Helper: returns valid URL or undefined (rejects base64 or long blobs)
 function sanitizeImageUrl(url: string | null | undefined): string | undefined {
-  if (!url) return undefined;
-  if (url.startsWith('data:')) return undefined;
-  if (url.length > 5000) return undefined;
-  return url;
+  return resolveCdnAssetUrl(url);
 }
 
 declare global {
