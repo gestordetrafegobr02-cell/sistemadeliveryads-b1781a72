@@ -296,6 +296,19 @@ export default function Shop() {
         }));
 
         setProducts(sanitizedProducts);
+
+        // Batch fetch: single query for all modifiers instead of N per card
+        if (sanitizedProducts.length > 0) {
+          const productIds = sanitizedProducts.map((p) => p.id);
+          const { data: modifiersData } = await supabase
+            .from('product_modifiers')
+            .select('product_id')
+            .in('product_id', productIds)
+            .eq('is_available', true);
+          if (!cancelled && modifiersData) {
+            setProductsWithModifiers(new Set(modifiersData.map((m) => m.product_id)));
+          }
+        }
       } catch (fetchError) {
         console.error('[Shop] Unexpected error while loading public menu', {
           normalizedSlug,
