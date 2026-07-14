@@ -147,6 +147,7 @@ export default function Shop() {
     setFacebookPixelId(null);
     setCategories([]);
     setProducts([]);
+    setProductsWithModifiers(new Set());
     setActiveCategory(null);
 
     async function doFetch() {
