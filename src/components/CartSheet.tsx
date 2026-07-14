@@ -74,6 +74,13 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Cashback
+  const [cashbackConfig, setCashbackConfig] = useState<{ enabled: boolean; percentage: number; validity_days: number }>({
+    enabled: false, percentage: 0, validity_days: 0,
+  });
+  const [cashbackBalance, setCashbackBalance] = useState(0);
+  const [applyCashback, setApplyCashback] = useState(false);
+
   // Abandoned cart tracking
   const cartItemsForTracking = items.map((item) => ({
     id: item.id,
@@ -144,7 +151,38 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
   const subtotal = total;
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
-  const grandTotal = subtotal + deliveryAmount;
+  const preCashbackTotal = subtotal + deliveryAmount;
+  const cashbackApplied = applyCashback ? Math.min(cashbackBalance, preCashbackTotal) : 0;
+  const grandTotal = Math.max(0, preCashbackTotal - cashbackApplied);
+
+  // Fetch cashback config for store
+  useEffect(() => {
+    if (!storeId) return;
+    (async () => {
+      const { data } = await supabase.rpc('get_store_cashback_config', { p_store_id: storeId });
+      const row = data?.[0];
+      if (row) setCashbackConfig({
+        enabled: !!row.enabled,
+        percentage: Number(row.percentage) || 0,
+        validity_days: Number(row.validity_days) || 0,
+      });
+    })();
+  }, [storeId]);
+
+  // Fetch balance when phone changes (debounced)
+  useEffect(() => {
+    if (!storeId || !cashbackConfig.enabled) { setCashbackBalance(0); return; }
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) { setCashbackBalance(0); setApplyCashback(false); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.rpc('get_cashback_balance', {
+        p_store_id: storeId, p_customer_phone: digits,
+      });
+      setCashbackBalance(Number(data) || 0);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [phone, storeId, cashbackConfig.enabled]);
+
 
   const generateOrderId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -253,6 +291,18 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             savedOrderId = createdOrder[0].order_id;
             sessionToken = createdOrder[0].customer_session_token;
             try { await markAsConverted(savedOrderId); } catch (e) { console.warn('[Cart] markAsConverted failed:', e); }
+            // Process cashback: redeem applied + earn new
+            if (cashbackConfig.enabled && (phoneDigits || phone)) {
+              try {
+                await supabase.rpc('process_order_cashback', {
+                  p_store_id: storeId,
+                  p_order_id: savedOrderId,
+                  p_customer_phone: phoneDigits || phone,
+                  p_redeem_amount: cashbackApplied,
+                  p_earn_base: grandTotal,
+                });
+              } catch (e) { console.warn('[Cashback] failed:', e); }
+            }
           }
         } catch (err) {
           console.error('[Order] save exception, continuing to WhatsApp anyway:', err);
@@ -304,6 +354,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       message += `• Taxa de Entrega: R$ ${deliveryFeeText}\n\n`;
       message += `*💰 PAGAMENTO:*\n`;
       message += `• Forma: ${paymentLine}\n`;
+      if (cashbackApplied > 0) {
+        message += `• Cashback usado: -R$ ${cashbackApplied.toFixed(2).replace('.', ',')}\n`;
+      }
       message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
       message += `${divider}\n\n`;
       message += `👉 _Pedido gerado por DeliveryPro_`;
@@ -513,6 +566,27 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                     <span>Taxa de Entrega</span>
                     <span>R$ {deliveryAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
+                )}
+                {cashbackConfig.enabled && cashbackBalance > 0 && (
+                  <label className="flex items-center justify-between gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer">
+                    <span className="flex items-center gap-2 text-sm text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={applyCashback}
+                        onChange={(e) => setApplyCashback(e.target.checked)}
+                        className="accent-primary"
+                      />
+                      Usar meu cashback (R$ {cashbackBalance.toFixed(2).replace('.', ',')})
+                    </span>
+                    {applyCashback && (
+                      <span className="text-sm text-primary font-medium">-R$ {cashbackApplied.toFixed(2).replace('.', ',')}</span>
+                    )}
+                  </label>
+                )}
+                {cashbackConfig.enabled && cashbackConfig.percentage > 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    💰 Você ganhará <strong>{cashbackConfig.percentage}%</strong> de cashback neste pedido
+                  </p>
                 )}
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <span className="text-lg font-medium text-foreground">Total</span>

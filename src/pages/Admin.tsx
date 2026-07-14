@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer } from 'lucide-react';
+import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
+import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
 
 import { toast } from 'sonner';
@@ -50,6 +52,7 @@ interface StoreData {
   recovery_message_template: string | null;
   primary_color: string | null;
   store_template_style: string | null;
+  auto_print: boolean;
 }
 
 interface Category {
@@ -169,6 +172,7 @@ export default function Admin() {
         recovery_message_template: storeData.recovery_message_template,
         primary_color: storeData.primary_color ?? null,
         store_template_style: storeData.store_template_style ?? 'default',
+        auto_print: (storeData as { auto_print?: boolean }).auto_print ?? false,
       };
       setStore(mappedStore);
       setStoreName(storeData.name);
@@ -216,7 +220,16 @@ export default function Admin() {
           filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
-          const order = payload.new as { customer_name?: string; total?: number };
+          const order = payload.new as {
+            id: string;
+            customer_name?: string;
+            customer_phone?: string | null;
+            address?: string | null;
+            payment_method?: string | null;
+            items?: unknown;
+            total?: number;
+            created_at?: string;
+          };
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
@@ -227,6 +240,20 @@ export default function Admin() {
                 }
               : undefined,
           });
+          // Auto-print if enabled for this store
+          if (store?.auto_print && Array.isArray(order.items)) {
+            printOrderReceipt({
+              id: order.id,
+              customer_name: order.customer_name ?? 'Cliente',
+              customer_phone: order.customer_phone,
+              address: order.address,
+              payment_method: order.payment_method,
+              items: order.items as { name: string; quantity: number; price: number; modifiers?: { name: string; price: number }[]; observation?: string | null }[],
+              total: Number(order.total ?? 0),
+              created_at: order.created_at ?? new Date().toISOString(),
+              store_name: store?.name ?? 'Loja',
+            });
+          }
           fetchData();
         }
       )
@@ -235,7 +262,7 @@ export default function Admin() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [store?.id, alertsUnlocked, unlockAlerts, fetchData]);
+  }, [store?.id, store?.auto_print, store?.name, alertsUnlocked, unlockAlerts, fetchData]);
 
 
   // Validate Facebook Pixel ID format (15-20 digits only)
@@ -802,6 +829,11 @@ export default function Admin() {
                     }}
                   />
                 )}
+
+                {/* Print + Cashback */}
+                {store && (
+                  <PrintCashbackSettings storeId={store.id} storeName={store.name} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1080,6 +1112,26 @@ export default function Admin() {
                               status={order.status}
                               storeName={store?.name || 'Loja'}
                             />
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => printOrderReceipt({
+                                id: order.id,
+                                customer_name: order.customer_name,
+                                customer_phone: order.customer_phone,
+                                address: order.address,
+                                payment_method: order.payment_method,
+                                items: Array.isArray(order.items) ? (order.items as OrderItem[]) as unknown as { name: string; quantity: number; price: number }[] : [],
+                                total: Number(order.total),
+                                created_at: order.created_at,
+                                store_name: store?.name || 'Loja',
+                              })}
+                            >
+                              <Printer className="w-4 h-4" />
+                              Imprimir
+                            </Button>
 
                             {order.status !== 'cancelled' && (
                               <Button
