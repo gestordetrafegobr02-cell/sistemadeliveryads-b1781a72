@@ -200,31 +200,43 @@ export default function Index() {
       icon: Sparkles,
       title: 'Design de Alto Nível',
       description: 'Templates inteligentes (Hamburgueria, Pizzaria, Açaí) com animações fluidas e interface de última geração.',
+      image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-orange-600/90 via-orange-700/40 to-transparent',
     },
     {
       icon: Palette,
       title: 'Visual Personalizado',
       description: 'Altere cores, fontes e estilos para combinar 100% com a identidade visual da sua marca.',
+      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-purple-700/90 via-fuchsia-800/40 to-transparent',
     },
     {
       icon: LayoutGrid,
       title: 'Navegação por Categorias',
       description: 'Barra inteligente "Sticky" que facilita a escolha do cliente e aumenta o ticket médio.',
+      image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-rose-700/90 via-red-800/40 to-transparent',
     },
     {
       icon: Smartphone,
       title: 'Mobile-First Real',
       description: 'Otimizado para 2 colunas no celular, exibindo mais produtos com menos esforço de navegação.',
+      image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-slate-900/90 via-slate-800/50 to-transparent',
     },
     {
       icon: TrendingUp,
       title: 'Upsell Inteligente',
       description: 'Sugira combos e adicionais no momento certo da compra. Aumente seu ticket médio automaticamente.',
+      image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-amber-700/90 via-yellow-800/40 to-transparent',
     },
     {
       icon: ShoppingCart,
       title: 'Recupere Vendas Perdidas',
       description: 'Carrinhos abandonados? Recupere clientes com mensagens automáticas via WhatsApp.',
+      image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=800&auto=format&fit=crop&q=80',
+      tint: 'from-emerald-700/90 via-green-800/40 to-transparent',
     },
   ];
 
