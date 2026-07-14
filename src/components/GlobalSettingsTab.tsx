@@ -19,6 +19,7 @@ export function GlobalSettingsTab() {
     owner_whatsapp: '',
     subscription_price: '97',
     default_trial_days: '7',
+    landing_pixel_id: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export function GlobalSettingsTab() {
         owner_whatsapp: '',
         subscription_price: '97',
         default_trial_days: '7',
+    landing_pixel_id: '',
       };
 
       data?.forEach((item) => {
