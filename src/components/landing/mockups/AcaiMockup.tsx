@@ -1,111 +1,131 @@
-import { ShoppingCart } from 'lucide-react';
-import acaiImage from '@/assets/demo-acai.jpg';
+import { Search, ShoppingBag, Flame, Plus } from 'lucide-react';
+
+const featured = [
+  {
+    name: 'Tigelão da Casa 700ml',
+    desc: 'Açaí batido com banana, morango, granola e leite condensado',
+    price: 'R$ 32,90',
+    img: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Barca do Casal 1L',
+    desc: 'Açaí premium com 6 acompanhamentos para 2 pessoas',
+    price: 'R$ 49,90',
+    img: 'https://images.unsplash.com/photo-1638176067000-9e51de9be99a?w=400&auto=format&fit=crop&q=80',
+  },
+];
+
+const items = [
+  {
+    name: 'Copo 500ml',
+    desc: 'Açaí puro com 3 acompanhamentos',
+    price: 'R$ 22,90',
+    img: 'https://images.unsplash.com/photo-1543076447-215ad9ba6923?w=200&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Copo 700ml',
+    desc: 'Açaí puro com 4 acompanhamentos',
+    price: 'R$ 28,90',
+    img: 'https://images.unsplash.com/photo-1600718374662-0483d2b9da44?w=200&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'Tigelão 1 Litro',
+    desc: 'Açaí generoso com 5 acompanhamentos',
+    price: 'R$ 42,90',
+    img: 'https://images.unsplash.com/photo-1583334513367-b8e2c8e33ad0?w=200&auto=format&fit=crop&q=80',
+  },
+];
 
 export function AcaiMockup() {
   return (
     <div className="h-full bg-gradient-to-b from-purple-950 to-neutral-950 text-white flex flex-col">
-      {/* Header */}
+      {/* Store Header */}
       <div className="px-3 py-2 border-b border-purple-900/50">
-        <p className="text-[10px] text-purple-300">Monte seu</p>
-        <h3 className="text-sm font-semibold text-purple-400">Açaí 500ml</h3>
-      </div>
-
-      {/* Product Image */}
-      <div className="relative h-20 overflow-hidden">
-        <img 
-          src={acaiImage} 
-          alt="Açaí 500ml" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-purple-950/90 to-transparent" />
-        <div className="absolute bottom-2 right-2 bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-          R$ 18,00
-        </div>
-      </div>
-
-      {/* Toppings Selection */}
-      <div className="flex-1 px-3 py-2 space-y-2 overflow-y-auto">
-        {/* Fruits */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[9px] text-purple-400 uppercase tracking-wider">Frutas (até 3)</p>
-            <span className="text-[8px] text-purple-300 bg-purple-900/50 px-1.5 py-0.5 rounded-full">2/3</span>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-[10px] font-black text-white">
+            AC
           </div>
-          <div className="grid grid-cols-3 gap-1">
-            {[
-              { emoji: '🍌', name: 'Banana', selected: true },
-              { emoji: '🍓', name: 'Morango', selected: true },
-              { emoji: '🥝', name: 'Kiwi', selected: false },
-              { emoji: '🫐', name: 'Mirtilo', selected: false },
-              { emoji: '🥭', name: 'Manga', selected: false },
-              { emoji: '🍑', name: 'Pêssego', selected: false },
-            ].map((fruit) => (
-              <button 
-                key={fruit.name} 
-                className={`p-1.5 rounded-lg text-center ${fruit.selected ? 'bg-purple-600 ring-1 ring-purple-400' : 'bg-purple-900/30'}`}
-              >
-                <span className="text-lg block">{fruit.emoji}</span>
-                <span className="text-[8px]">{fruit.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Adicionais com preços */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[9px] text-purple-400 uppercase tracking-wider">Adicionais</p>
-            <span className="text-[8px] text-pink-300 bg-pink-500/20 px-1.5 py-0.5 rounded-full">Extras</span>
-          </div>
-          <div className="space-y-1">
-            {[
-              { name: 'Granola', price: 'Grátis', selected: true, free: true },
-              { name: 'Leite em Pó', price: 'Grátis', selected: true, free: true },
-              { name: 'Nutella', price: '+R$ 5,00', selected: false, free: false },
-              { name: 'Leite Condensado', price: '+R$ 3,00', selected: true, free: false },
-              { name: 'Paçoca', price: '+R$ 2,00', selected: false, free: false },
-            ].map((topping) => (
-              <div key={topping.name} className="flex items-center justify-between p-1.5 rounded-lg bg-purple-900/30">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded ${topping.selected ? 'bg-purple-500' : 'border border-purple-600'}`}>
-                    {topping.selected && <span className="text-[8px] text-white flex items-center justify-center">✓</span>}
-                  </div>
-                  <span className="text-[10px]">{topping.name}</span>
-                </div>
-                <span className={`text-[9px] font-medium ${topping.free ? 'text-green-400' : 'text-pink-400'}`}>
-                  {topping.price}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Syrups */}
-        <div>
-          <p className="text-[9px] text-purple-400 uppercase tracking-wider mb-1">Caldas (+R$ 2,00 cada)</p>
-          <div className="flex gap-1">
-            {[
-              { name: 'Morango', color: 'bg-red-500' },
-              { name: 'Chocolate', color: 'bg-amber-800' },
-              { name: 'Leite Cond.', color: 'bg-amber-200' },
-            ].map((syrup, i) => (
-              <button 
-                key={syrup.name} 
-                className={`flex-1 py-1.5 rounded-lg text-center ${i === 1 ? 'ring-2 ring-purple-400' : ''} bg-purple-900/30`}
-              >
-                <div className={`w-4 h-4 rounded-full ${syrup.color} mx-auto mb-0.5`} />
-                <span className="text-[8px]">{syrup.name}</span>
-              </button>
-            ))}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[11px] font-bold truncate">Açaí do Ponto</h3>
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[8px] text-emerald-400">Aberto agora</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Search */}
+      <div className="px-3 py-1.5">
+        <div className="flex items-center gap-1.5 bg-purple-900/40 rounded-lg px-2 py-1.5">
+          <Search className="w-2.5 h-2.5 text-purple-300" />
+          <span className="text-[9px] text-purple-300">Buscar no cardápio</span>
+        </div>
+      </div>
+
+      {/* Categories chips */}
+      <div className="px-3 pb-1.5 flex gap-1 overflow-x-auto">
+        {['🔥 Destaques', 'Copos', 'Tigelões', 'Frutas', 'Cremes'].map((c, i) => (
+          <span
+            key={c}
+            className={`text-[8px] px-2 py-0.5 rounded-full whitespace-nowrap ${
+              i === 0
+                ? 'bg-purple-500 text-white font-bold'
+                : 'bg-purple-900/40 text-purple-300'
+            }`}
+          >
+            {c}
+          </span>
+        ))}
+      </div>
+
+      {/* Menu list */}
+      <div className="flex-1 px-3 pb-2 space-y-2 overflow-y-auto">
+        <div className="flex items-center gap-1 pt-1">
+          <Flame className="w-2.5 h-2.5 text-purple-400" />
+          <span className="text-[9px] font-bold text-purple-400 uppercase tracking-wider">
+            Destaques
+          </span>
+        </div>
+        {featured.map((p) => (
+          <div
+            key={p.name}
+            className="flex gap-2 bg-purple-900/30 rounded-xl p-1.5 border border-purple-500/30"
+          >
+            <img src={p.img} alt={p.name} className="w-14 h-14 rounded-lg object-cover" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold truncate">{p.name}</p>
+              <p className="text-[8px] text-purple-300 line-clamp-2 leading-tight">{p.desc}</p>
+              <p className="text-[10px] font-bold text-purple-300 mt-0.5">{p.price}</p>
+            </div>
+            <button className="self-end w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center text-white">
+              <Plus className="w-3 h-3" strokeWidth={3} />
+            </button>
+          </div>
+        ))}
+
+        <div className="pt-1">
+          <span className="text-[9px] font-bold text-purple-300 uppercase tracking-wider">
+            Copos & Tigelões
+          </span>
+        </div>
+        {items.map((p) => (
+          <div key={p.name} className="flex gap-2 bg-purple-900/30 rounded-xl p-1.5">
+            <img src={p.img} alt={p.name} className="w-12 h-12 rounded-lg object-cover" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold truncate">{p.name}</p>
+              <p className="text-[8px] text-purple-300/70 line-clamp-1 leading-tight">{p.desc}</p>
+              <p className="text-[10px] font-bold text-purple-300 mt-0.5">{p.price}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Cart button */}
       <div className="px-3 py-2 bg-purple-950 border-t border-purple-900/50">
-        <button className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1">
-          <ShoppingCart className="w-3 h-3" />
-          Adicionar • R$ 23,00
+        <button className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5">
+          <ShoppingBag className="w-3 h-3" />
+          Ver carrinho • R$ 82,80
         </button>
       </div>
     </div>
