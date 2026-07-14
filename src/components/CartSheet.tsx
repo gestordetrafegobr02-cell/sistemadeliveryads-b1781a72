@@ -74,6 +74,13 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [changeFor, setChangeFor] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Cashback
+  const [cashbackConfig, setCashbackConfig] = useState<{ enabled: boolean; percentage: number; validity_days: number }>({
+    enabled: false, percentage: 0, validity_days: 0,
+  });
+  const [cashbackBalance, setCashbackBalance] = useState(0);
+  const [applyCashback, setApplyCashback] = useState(false);
+
   // Abandoned cart tracking
   const cartItemsForTracking = items.map((item) => ({
     id: item.id,
