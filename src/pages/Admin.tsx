@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck } from 'lucide-react';
+import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
 
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
@@ -99,6 +100,7 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   // Pending orders trigger the looping alert + flashing border.
   const pendingCount = orders.filter(
     (o) => !o.status || o.status === 'pending'
@@ -441,12 +443,29 @@ export default function Admin() {
                 Ver Loja
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccountDialogOpen(true)}
+              className="gap-2"
+              title="Alterar email e senha"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Minha Conta</span>
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </header>
+
+      <AccountSettingsDialog
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
+        currentEmail={user?.email}
+      />
+
 
       {/* Persistent overlay: blocks until merchant unlocks audio alerts */}
       {!alertsUnlocked && (
