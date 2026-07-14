@@ -738,7 +738,6 @@ export default function Shop() {
             onPurchase={handlePurchase}
             onOpen={handleCartOpen}
             isStoreOpen={storeIsOpen}
-            
           />
         </div>
       </CartProvider>
