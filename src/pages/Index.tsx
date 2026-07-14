@@ -124,6 +124,9 @@ export default function Index() {
     // Meta Pixel: signup intent (before creating account)
     trackLandingEvent('Lead', { content_name: 'landing_signup', segment: selectedNiche });
 
+    try {
+
+
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
