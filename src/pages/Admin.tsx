@@ -220,7 +220,16 @@ export default function Admin() {
           filter: `store_id=eq.${storeId}`,
         },
         async (payload) => {
-          const order = payload.new as { customer_name?: string; total?: number };
+          const order = payload.new as {
+            id: string;
+            customer_name?: string;
+            customer_phone?: string | null;
+            address?: string | null;
+            payment_method?: string | null;
+            items?: unknown;
+            total?: number;
+            created_at?: string;
+          };
           toast.success(`🔔 Novo pedido de ${order.customer_name ?? 'cliente'}!`, {
             description: order.total ? `Total: R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : undefined,
             duration: 8000,
@@ -231,6 +240,20 @@ export default function Admin() {
                 }
               : undefined,
           });
+          // Auto-print if enabled for this store
+          if (store?.auto_print && Array.isArray(order.items)) {
+            printOrderReceipt({
+              id: order.id,
+              customer_name: order.customer_name ?? 'Cliente',
+              customer_phone: order.customer_phone,
+              address: order.address,
+              payment_method: order.payment_method,
+              items: order.items as { name: string; quantity: number; price: number; modifiers?: { name: string; price: number }[]; observation?: string | null }[],
+              total: Number(order.total ?? 0),
+              created_at: order.created_at ?? new Date().toISOString(),
+              store_name: store?.name ?? 'Loja',
+            });
+          }
           fetchData();
         }
       )
