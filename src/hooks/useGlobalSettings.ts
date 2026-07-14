@@ -5,12 +5,14 @@ interface GlobalSettings {
   owner_whatsapp: string;
   subscription_price: number;
   default_trial_days: number;
+  landing_pixel_id: string;
 }
 
 const DEFAULT_SETTINGS: GlobalSettings = {
   owner_whatsapp: '5511999999999',
   subscription_price: 49.90,
   default_trial_days: 7,
+  landing_pixel_id: '',
 };
 
 export function useGlobalSettings() {
@@ -39,6 +41,9 @@ export function useGlobalSettings() {
             break;
           case 'default_trial_days':
             newSettings.default_trial_days = parseInt(item.value, 10) || 7;
+            break;
+          case 'landing_pixel_id':
+            newSettings.landing_pixel_id = (item.value || '').trim();
             break;
         }
       });
