@@ -168,6 +168,17 @@ export default function Index() {
         .eq('id', storeId);
 
       const nicheLabel = NICHE_OPTIONS.find(n => n.slug === selectedNiche)?.name || 'Outro';
+
+      // Meta Pixel: conversion completed
+      trackLandingEvent('CompleteRegistration', {
+        content_name: 'store_created',
+        segment: nicheLabel,
+        value: globalSettings.subscription_price,
+        currency: 'BRL',
+        status: 'trial',
+      });
+
+
       
       toast({ 
         title: '🎉 Loja criada com sucesso!', 
