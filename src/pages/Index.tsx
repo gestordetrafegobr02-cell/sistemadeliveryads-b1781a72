@@ -11,6 +11,7 @@ import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { Floating3DScene } from '@/components/landing/Floating3DScene';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
+import { Tilt3DCard } from '@/components/landing/Tilt3DCard';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
