@@ -3,6 +3,8 @@ import { useParams, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductCard } from '@/components/ProductCard';
+import { GroupedProductCard } from '@/components/GroupedProductCard';
+import { groupProductsBySize, type ProductEntry } from '@/lib/productGrouping';
 import { CartSheet } from '@/components/CartSheet';
 import { CategoriesBar } from '@/components/CategoriesBar';
 import { StoreClosedBanner } from '@/components/StoreClosedBanner';
