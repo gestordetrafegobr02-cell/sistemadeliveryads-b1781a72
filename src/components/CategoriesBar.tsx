@@ -85,19 +85,7 @@ export function CategoriesBar({ categories, activeCategory, onCategoryClick }: C
 
   if (categories.length === 0) return null;
 
-  const CategoryPill = ({ active, label, onClick, dataCategory }: { active: boolean; label: string; onClick: () => void; dataCategory: string }) => (
-    <button
-      data-category={dataCategory}
-      onClick={onClick}
-      className={`relative shrink-0 snap-start px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-        active
-          ? 'bg-primary text-primary-foreground shadow-md'
-          : 'bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground'
-      }`}
-    >
-      {label}
-    </button>
-  );
+
 
   return (
     <div className="sticky top-[73px] z-30 bg-background/80 backdrop-blur-md border-b border-border/30 py-3">
