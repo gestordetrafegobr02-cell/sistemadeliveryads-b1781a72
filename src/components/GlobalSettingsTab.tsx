@@ -199,6 +199,36 @@ Enviado pelo painel Master Admin`;
           </p>
         </div>
 
+        {/* Landing Page Meta Pixel */}
+        <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <Label htmlFor="landing_pixel_id" className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" />
+            Pixel Meta (Facebook / Instagram Ads) — Página de Vendas
+          </Label>
+          <Input
+            id="landing_pixel_id"
+            type="text"
+            inputMode="numeric"
+            placeholder="Ex: 123456789012345"
+            value={settings.landing_pixel_id}
+            onChange={(e) =>
+              setSettings({ ...settings, landing_pixel_id: e.target.value.replace(/\D/g, '') })
+            }
+          />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Cole o <strong>ID numérico do Pixel</strong> (15 a 20 dígitos) do Gerenciador de Eventos da Meta.
+            Ele será carregado na landing page e disparará automaticamente:
+            <br />
+            • <strong>PageView</strong> ao abrir a página
+            <br />
+            • <strong>Lead</strong> ao enviar o formulário de cadastro
+            <br />
+            • <strong>CompleteRegistration</strong> quando a loja for criada com sucesso
+          </p>
+        </div>
+
+
+
         {/* Save Button */}
         <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
           {saving ? (
