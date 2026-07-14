@@ -10,11 +10,11 @@ export function FAQSection() {
   const faqs = [
     {
       question: 'Vou ser cobrado automaticamente após os 7 dias?',
-      answer: 'Não! Após os 7 dias, seu painel apenas será pausado. Você só assina os R$ 97/mês se o sistema realmente trouxer resultados para o seu delivery. Não pedimos cartão de crédito para iniciar o teste.',
+      answer: 'Não! Após os 7 dias, seu painel apenas será pausado. Você só assina os R$ 49,90/mês se o sistema realmente trouxer resultados para o seu delivery. Não pedimos cartão de crédito para iniciar o teste.',
     },
     {
       question: 'Qual a diferença para o iFood e outros apps?',
-      answer: 'A principal diferença é que aqui você paga ZERO TAXA por venda. Enquanto iFood e similares cobram de 12% a 27% por pedido, no nosso sistema você fica com 100% do lucro. Pagamos apenas uma mensalidade fixa de R$ 97.',
+      answer: 'A principal diferença é que aqui você paga ZERO TAXA por venda. Enquanto iFood e similares cobram de 12% a 27% por pedido, no nosso sistema você fica com 100% do lucro. Pagamos apenas uma mensalidade fixa de R$ 49,90.',
     },
     {
       question: 'Preciso de conhecimento técnico para usar?',

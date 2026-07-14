@@ -504,7 +504,7 @@ export default function Index() {
             </form>
 
             <p className="text-xs text-muted-foreground text-center mt-6">
-              Após 7 dias, apenas R$ 97/mês. Cancele quando quiser.
+              Após 7 dias, apenas R$ 49,90/mês. Cancele quando quiser.
             </p>
           </div>
 
