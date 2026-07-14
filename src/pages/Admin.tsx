@@ -829,6 +829,11 @@ export default function Admin() {
                     }}
                   />
                 )}
+
+                {/* Print + Cashback */}
+                {store && (
+                  <PrintCashbackSettings storeId={store.id} storeName={store.name} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
