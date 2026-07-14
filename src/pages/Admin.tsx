@@ -52,6 +52,7 @@ interface StoreData {
   recovery_message_template: string | null;
   primary_color: string | null;
   store_template_style: string | null;
+  auto_print: boolean;
 }
 
 interface Category {
