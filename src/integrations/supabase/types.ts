@@ -72,6 +72,54 @@ export type Database = {
           },
         ]
       }
+      cashback_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_phone: string
+          expires_at: string | null
+          id: string
+          order_id: string | null
+          store_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_phone: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string | null
+          store_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_phone?: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string | null
+          store_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashback_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -428,8 +476,12 @@ export type Database = {
       }
       stores: {
         Row: {
+          auto_print: boolean
           bg_color: string | null
           card_style: string | null
+          cashback_enabled: boolean
+          cashback_percentage: number
+          cashback_validity_days: number
           checkout_type: string
           cover_url: string | null
           created_at: string
@@ -459,8 +511,12 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          auto_print?: boolean
           bg_color?: string | null
           card_style?: string | null
+          cashback_enabled?: boolean
+          cashback_percentage?: number
+          cashback_validity_days?: number
           checkout_type?: string
           cover_url?: string | null
           created_at?: string
@@ -490,8 +546,12 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          auto_print?: boolean
           bg_color?: string | null
           card_style?: string | null
+          cashback_enabled?: boolean
+          cashback_percentage?: number
+          cashback_validity_days?: number
           checkout_type?: string
           cover_url?: string | null
           created_at?: string
@@ -741,6 +801,10 @@ export type Database = {
           store_name: string
         }[]
       }
+      get_cashback_balance: {
+        Args: { p_customer_phone: string; p_store_id: string }
+        Returns: number
+      }
       get_global_setting: { Args: { setting_key: string }; Returns: string }
       get_order_by_id: {
         Args: { p_order_id: string }
@@ -831,6 +895,14 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_store_cashback_config: {
+        Args: { p_store_id: string }
+        Returns: {
+          enabled: boolean
+          percentage: number
+          validity_days: number
+        }[]
+      }
       get_store_checkout_info: {
         Args: { store_slug_param: string }
         Returns: {
@@ -879,6 +951,16 @@ export type Database = {
       mark_abandoned_cart_converted: {
         Args: { p_cart_id: string; p_order_id?: string }
         Returns: undefined
+      }
+      process_order_cashback: {
+        Args: {
+          p_customer_phone: string
+          p_earn_base: number
+          p_order_id: string
+          p_redeem_amount: number
+          p_store_id: string
+        }
+        Returns: number
       }
       set_store_mercadopago_token: {
         Args: { _store_id: string; _token: string }
