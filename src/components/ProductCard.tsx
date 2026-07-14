@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Plus, Check, ImageOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/lib/cart';
@@ -12,26 +12,34 @@ interface ProductCardProps {
   description?: string;
   price: number;
   image_url?: string;
+  /** When provided, skips the per-card modifier lookup (parent has already batched it). */
+  hasModifiers?: boolean;
 }
 
-export function ProductCard({ id, name, description, price, image_url }: ProductCardProps) {
+function ProductCardImpl({ id, name, description, price, image_url, hasModifiers: hasModifiersProp }: ProductCardProps) {
   const { addItem } = useCart();
   const [imgError, setImgError] = useState(false);
-  const [hasModifiers, setHasModifiers] = useState(false);
+  const [hasModifiers, setHasModifiers] = useState(hasModifiersProp ?? false);
   const [modifierModalOpen, setModifierModalOpen] = useState(false);
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    async function checkModifiers() {
+    // Parent already told us — skip the network call entirely.
+    if (hasModifiersProp !== undefined) {
+      setHasModifiers(hasModifiersProp);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
       const { count } = await supabase
         .from('product_modifiers')
         .select('*', { count: 'exact', head: true })
         .eq('product_id', id)
         .eq('is_available', true);
-      setHasModifiers((count || 0) > 0);
-    }
-    checkModifiers();
-  }, [id]);
+      if (!cancelled) setHasModifiers((count || 0) > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [id, hasModifiersProp]);
 
   const handleAdd = () => {
     hapticClick();
@@ -132,3 +140,8 @@ export function ProductCard({ id, name, description, price, image_url }: Product
     </>
   );
 }
+
+// Memoized to avoid re-rendering every card when unrelated Shop state changes
+// (e.g. activeCategory toggle, cart mutations). Props are primitives so the
+// default shallow comparison is enough.
+export const ProductCard = memo(ProductCardImpl);

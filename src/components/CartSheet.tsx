@@ -398,7 +398,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                 return (
                   <div key={item.cartKey} className="flex items-start gap-3 p-3 glass-card animate-fade-in">
                     {item.image_url && (
-                      <img src={item.image_url} alt={item.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                      <img src={item.image_url} alt={item.name} loading="lazy" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-foreground truncate">{item.name}</h4>
