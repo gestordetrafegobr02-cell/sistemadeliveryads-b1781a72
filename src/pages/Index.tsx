@@ -9,6 +9,8 @@ import { SystemShowcase } from '@/components/landing/SystemShowcase';
 import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { Floating3DScene } from '@/components/landing/Floating3DScene';
+import { ScrollReveal } from '@/components/landing/ScrollReveal';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
@@ -310,7 +312,7 @@ export default function Index() {
       {/* System Showcase - Phone Mockups Carousel (Templates) */}
       <section className="py-16 md:py-24 bg-secondary">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 px-4">
+          <ScrollReveal direction="up" className="text-center mb-12 px-4">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
               Templates Prontos
             </span>
@@ -320,19 +322,26 @@ export default function Index() {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Cardápios otimizados para hamburguerias, açaiterias, pizzarias e hortifrutis
             </p>
-          </div>
-          
-          <SystemShowcase onCtaClick={scrollToForm} />
+          </ScrollReveal>
+
+          <ScrollReveal direction="zoom" delay={0.15}>
+            <SystemShowcase onCtaClick={scrollToForm} />
+          </ScrollReveal>
         </div>
       </section>
 
+      {/* 3D Floating Ecosystem Scene */}
+      <Floating3DScene />
+
       {/* Savings Comparison Section */}
-      <SavingsComparisonSection onCtaClick={scrollToForm} />
+      <ScrollReveal direction="up">
+        <SavingsComparisonSection onCtaClick={scrollToForm} />
+      </ScrollReveal>
 
       {/* Features Grid */}
       <section className="py-20 md:py-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <ScrollReveal direction="up" className="text-center mb-16">
             <div className="flex items-center justify-center gap-3 mb-4">
               <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
                 Funcionalidades
@@ -347,15 +356,17 @@ export default function Index() {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Templates premium, navegação fluida e design que converte
             </p>
-          </div>
+          </ScrollReveal>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <div 
-                key={index} 
-                className="group p-8 rounded-3xl bg-card border border-border hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+              <ScrollReveal
+                key={index}
+                direction="flip"
+                delay={index * 0.08}
+                className="group p-8 rounded-3xl bg-card border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
               >
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <feature.icon className="w-7 h-7 text-primary" strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-3">
@@ -364,17 +375,23 @@ export default function Index() {
                 <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <PricingSection onCtaClick={scrollToForm} />
+      <ScrollReveal direction="up">
+        <PricingSection onCtaClick={scrollToForm} />
+      </ScrollReveal>
 
       {/* FAQ Section */}
-      <FAQSection />
+      <ScrollReveal direction="up">
+        <FAQSection />
+      </ScrollReveal>
+
+
 
       {/* Signup Form */}
       <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6">
