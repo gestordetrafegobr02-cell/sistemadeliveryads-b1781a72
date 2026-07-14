@@ -673,6 +673,7 @@ export default function Shop() {
                           description={product.description || undefined}
                           price={product.price}
                           image_url={product.image_url || undefined}
+                          hasModifiers={productsWithModifiers.has(product.id)}
                         />
                       ))}
                     </div>
