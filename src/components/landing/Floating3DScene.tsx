@@ -206,12 +206,11 @@ export function Floating3DScene() {
                       boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)',
                     }}
                   >
-                    <div className="w-full h-full rounded-2xl bg-card/95 backdrop-blur flex flex-col items-center justify-center gap-1">
-                      <Icon className={`w-5 h-5 md:w-6 md:h-6 bg-gradient-to-br ${card.color} bg-clip-text`} style={{ color: 'transparent', stroke: 'url(#grad)' }} />
-                      <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center`}>
-                        <Icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" strokeWidth={2.5} />
+                    <div className="w-full h-full rounded-2xl bg-card/95 backdrop-blur flex flex-col items-center justify-center gap-1.5">
+                      <div className={`w-7 h-7 md:w-9 md:h-9 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center shadow-md`}>
+                        <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={2.5} />
                       </div>
-                      <span className="text-[9px] md:text-[10px] font-semibold text-foreground/80 whitespace-nowrap px-1">
+                      <span className="text-[8px] md:text-[10px] font-semibold text-foreground/80 whitespace-nowrap px-1 leading-none">
                         {card.label}
                       </span>
                     </div>
