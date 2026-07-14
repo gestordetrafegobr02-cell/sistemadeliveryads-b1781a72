@@ -1113,6 +1113,26 @@ export default function Admin() {
                               storeName={store?.name || 'Loja'}
                             />
 
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => printOrderReceipt({
+                                id: order.id,
+                                customer_name: order.customer_name,
+                                customer_phone: order.customer_phone,
+                                address: order.address,
+                                payment_method: order.payment_method,
+                                items: Array.isArray(order.items) ? (order.items as OrderItem[]) as unknown as { name: string; quantity: number; price: number }[] : [],
+                                total: Number(order.total),
+                                created_at: order.created_at,
+                                store_name: store?.name || 'Loja',
+                              })}
+                            >
+                              <Printer className="w-4 h-4" />
+                              Imprimir
+                            </Button>
+
                             {order.status !== 'cancelled' && (
                               <Button
                                 size="sm"
