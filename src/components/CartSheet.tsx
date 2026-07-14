@@ -354,6 +354,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       message += `• Taxa de Entrega: R$ ${deliveryFeeText}\n\n`;
       message += `*💰 PAGAMENTO:*\n`;
       message += `• Forma: ${paymentLine}\n`;
+      if (cashbackApplied > 0) {
+        message += `• Cashback usado: -R$ ${cashbackApplied.toFixed(2).replace('.', ',')}\n`;
+      }
       message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
       message += `${divider}\n\n`;
       message += `👉 _Pedido gerado por DeliveryPro_`;
