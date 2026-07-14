@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
   const rawSlug = (slugParam || pathSlug || "").split("/").filter(Boolean)[0] ?? "";
   const slug = decodeURIComponent(rawSlug).toLowerCase().trim();
 
-  const requestedOrigin = url.searchParams.get("origin") || "https://sistemadeliveryads.lovable.app";
+  const requestedOrigin = url.searchParams.get("origin") || "https://deliverypro.site";
   const origin = requestedOrigin.replace(/\/$/, "");
   const storeUrl = slug ? `${origin}/${slug}` : origin;
 
