@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Save, MessageCircle, Settings } from 'lucide-react';
+import { Loader2, Save, MessageCircle, Settings, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -11,6 +11,7 @@ interface GlobalSettings {
   owner_whatsapp: string;
   subscription_price: string;
   default_trial_days: string;
+  landing_pixel_id: string;
 }
 
 export function GlobalSettingsTab() {
