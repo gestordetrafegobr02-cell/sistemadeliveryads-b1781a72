@@ -100,6 +100,7 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   // Pending orders trigger the looping alert + flashing border.
   const pendingCount = orders.filter(
     (o) => !o.status || o.status === 'pending'
