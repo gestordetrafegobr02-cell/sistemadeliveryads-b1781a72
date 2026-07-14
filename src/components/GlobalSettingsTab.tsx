@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Save, MessageCircle, Settings } from 'lucide-react';
+import { Loader2, Save, MessageCircle, Settings, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -11,6 +11,7 @@ interface GlobalSettings {
   owner_whatsapp: string;
   subscription_price: string;
   default_trial_days: string;
+  landing_pixel_id: string;
 }
 
 export function GlobalSettingsTab() {
@@ -18,6 +19,7 @@ export function GlobalSettingsTab() {
     owner_whatsapp: '',
     subscription_price: '97',
     default_trial_days: '7',
+    landing_pixel_id: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +41,7 @@ export function GlobalSettingsTab() {
         owner_whatsapp: '',
         subscription_price: '97',
         default_trial_days: '7',
+    landing_pixel_id: '',
       };
 
       data?.forEach((item) => {
@@ -59,11 +62,12 @@ export function GlobalSettingsTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      // Direct upsert to global_settings table for reliability
+      // Upsert to global_settings (insert if missing, update if present)
       const entries = [
         { key: 'owner_whatsapp', value: settings.owner_whatsapp },
         { key: 'subscription_price', value: settings.subscription_price },
         { key: 'default_trial_days', value: settings.default_trial_days },
+        { key: 'landing_pixel_id', value: settings.landing_pixel_id.trim() },
       ];
 
       for (const entry of entries) {
@@ -194,6 +198,36 @@ Enviado pelo painel Master Admin`;
             Quantidade de dias de teste gratuito para novas lojas.
           </p>
         </div>
+
+        {/* Landing Page Meta Pixel */}
+        <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <Label htmlFor="landing_pixel_id" className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" />
+            Pixel Meta (Facebook / Instagram Ads) — Página de Vendas
+          </Label>
+          <Input
+            id="landing_pixel_id"
+            type="text"
+            inputMode="numeric"
+            placeholder="Ex: 123456789012345"
+            value={settings.landing_pixel_id}
+            onChange={(e) =>
+              setSettings({ ...settings, landing_pixel_id: e.target.value.replace(/\D/g, '') })
+            }
+          />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Cole o <strong>ID numérico do Pixel</strong> (15 a 20 dígitos) do Gerenciador de Eventos da Meta.
+            Ele será carregado na landing page e disparará automaticamente:
+            <br />
+            • <strong>PageView</strong> ao abrir a página
+            <br />
+            • <strong>Lead</strong> ao enviar o formulário de cadastro
+            <br />
+            • <strong>CompleteRegistration</strong> quando a loja for criada com sucesso
+          </p>
+        </div>
+
+
 
         {/* Save Button */}
         <Button onClick={handleSave} disabled={saving} className="w-full gap-2">

@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useGlobalSettings } from '@/hooks/useGlobalSettings';
+import { loadLandingPixel, trackLandingEvent } from '@/lib/landingPixel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -75,10 +77,19 @@ export default function Index() {
   const formRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { settings: globalSettings } = useGlobalSettings();
+
+  // Load Meta Pixel (landing) once the ID is available and fire PageView
+  useEffect(() => {
+    if (globalSettings.landing_pixel_id) {
+      loadLandingPixel(globalSettings.landing_pixel_id);
+    }
+  }, [globalSettings.landing_pixel_id]);
 
   const scrollToForm = () => {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
 
   const generateSlug = (name: string) => {
     const base = name
@@ -110,8 +121,13 @@ export default function Index() {
     }
 
     setLoading(true);
+    // Meta Pixel: signup intent (before creating account)
+    trackLandingEvent('Lead', { content_name: 'landing_signup', segment: selectedNiche });
 
     try {
+
+
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -152,6 +168,17 @@ export default function Index() {
         .eq('id', storeId);
 
       const nicheLabel = NICHE_OPTIONS.find(n => n.slug === selectedNiche)?.name || 'Outro';
+
+      // Meta Pixel: conversion completed
+      trackLandingEvent('CompleteRegistration', {
+        content_name: 'store_created',
+        segment: nicheLabel,
+        value: globalSettings.subscription_price,
+        currency: 'BRL',
+        status: 'trial',
+      });
+
+
       
       toast({ 
         title: '🎉 Loja criada com sucesso!', 
