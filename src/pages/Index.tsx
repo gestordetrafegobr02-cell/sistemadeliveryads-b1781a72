@@ -9,6 +9,8 @@ import { SystemShowcase } from '@/components/landing/SystemShowcase';
 import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { Floating3DScene } from '@/components/landing/Floating3DScene';
+import { ScrollReveal } from '@/components/landing/ScrollReveal';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import { 
   TrendingUp, 
