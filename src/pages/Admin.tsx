@@ -172,6 +172,7 @@ export default function Admin() {
         recovery_message_template: storeData.recovery_message_template,
         primary_color: storeData.primary_color ?? null,
         store_template_style: storeData.store_template_style ?? 'default',
+        auto_print: (storeData as { auto_print?: boolean }).auto_print ?? false,
       };
       setStore(mappedStore);
       setStoreName(storeData.name);
