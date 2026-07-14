@@ -62,11 +62,12 @@ export function GlobalSettingsTab() {
   async function handleSave() {
     setSaving(true);
     try {
-      // Direct upsert to global_settings table for reliability
+      // Upsert to global_settings (insert if missing, update if present)
       const entries = [
         { key: 'owner_whatsapp', value: settings.owner_whatsapp },
         { key: 'subscription_price', value: settings.subscription_price },
         { key: 'default_trial_days', value: settings.default_trial_days },
+        { key: 'landing_pixel_id', value: settings.landing_pixel_id.trim() },
       ];
 
       for (const entry of entries) {
