@@ -27,42 +27,9 @@ export default function OrderStatus() {
   const { id } = useParams<{ id: string }>();
   const [search] = useSearchParams();
   const token = search.get('token') || '';
-  const mpPaid = search.get('mp_paid') === '1';
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // After approved Mercado Pago payment, open the customer's WhatsApp once
-  // with their permanent tracking link, then clear the stash so it never fires again.
-  useEffect(() => {
-    if (!id || !mpPaid) return;
-    try {
-      const raw = localStorage.getItem(`mp_paid_stash_${id}`);
-      if (!raw) return;
-      const stash = JSON.parse(raw) as { phone?: string; trackingUrl?: string; storePhone?: string };
-      localStorage.removeItem(`mp_paid_stash_${id}`);
-
-      const trackingUrl = stash.trackingUrl || `${window.location.origin}/pedido/${id}`;
-
-      if (stash.phone) {
-        const customerMsg = encodeURIComponent(
-          `✅ *Pagamento Confirmado!* Seu pedido já foi recebido pela cozinha. Acompanhe o andamento e a entrega em tempo real clicando no link: ${trackingUrl}`,
-        );
-        window.open(`https://wa.me/${stash.phone}?text=${customerMsg}`, '_blank');
-      }
-      if (stash.storePhone) {
-        const merchantMsg = encodeURIComponent(
-          '🚨 *Novo Pedido Recebido!* Mais um pedido foi gerado no seu Cardápio Digital. Acesse seu painel administrativo para iniciar o preparo!',
-        );
-        // Slight delay so the browser doesn't block the second popup
-        window.setTimeout(() => {
-          window.open(`https://wa.me/${stash.storePhone}?text=${merchantMsg}`, '_blank');
-        }, 400);
-      }
-    } catch (err) {
-      console.warn('[mp-paid-redirect] failed to open WhatsApp', err);
-    }
-  }, [id, mpPaid]);
 
   useEffect(() => {
     if (!id) return;
