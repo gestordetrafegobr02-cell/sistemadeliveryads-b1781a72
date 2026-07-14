@@ -41,6 +41,7 @@ import {
   Settings,
   Cog,
   KeyRound,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PlatformMetricsCard from '@/components/PlatformMetricsCard';
@@ -50,6 +51,7 @@ import { CreateStoreManualDialog } from '@/components/CreateStoreManualDialog';
 import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
+import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -117,6 +119,8 @@ export default function SuperAdmin() {
   const [deletingStore, setDeletingStore] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<{ id: string; email: string | null } | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedUserForEmail, setSelectedUserForEmail] = useState<{ id: string; email: string | null } | null>(null);
 
   // Check if current user is master admin
   const isMasterAdmin = user?.email === MASTER_EMAIL;
@@ -438,6 +442,17 @@ export default function SuperAdmin() {
                                       <KeyRound className="w-4 h-4" />
                                     </Button>
                                     <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => {
+                                        setSelectedUserForEmail({ id: store.owner_id, email: store.owner_email });
+                                        setEmailDialogOpen(true);
+                                      }}
+                                      title="Alterar Email de Login"
+                                    >
+                                      <Mail className="w-4 h-4" />
+                                    </Button>
+                                    <Button
                                       variant={store.is_active !== false ? 'outline' : 'default'}
                                       size="icon"
                                       onClick={() => handleToggleActive(store)}
@@ -647,6 +662,17 @@ export default function SuperAdmin() {
           onOpenChange={setPasswordDialogOpen}
           userId={selectedUserForPassword.id}
           userEmail={selectedUserForPassword.email}
+        />
+      )}
+
+      {/* Change Email Dialog */}
+      {selectedUserForEmail && (
+        <ChangeEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          userId={selectedUserForEmail.id}
+          currentEmail={selectedUserForEmail.email}
+          onSuccess={fetchData}
         />
       )}
     </div>
