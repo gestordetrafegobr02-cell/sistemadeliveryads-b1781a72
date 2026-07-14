@@ -657,59 +657,17 @@ export default function Shop() {
             <FeaturedProducts products={featuredProducts} />
           )}
 
-          {showCategorySections ? (
-            <>
-              {productsByCategory.map((category) =>
-                category.products.length > 0 ? (
-                  <section key={category.id}>
-                    <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
-                      <span className="w-2 h-6 bg-primary rounded-full" />
-                      {category.name}
-                    </h2>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      {category.products.map((product) => (
-                        <ProductCard
-                          key={product.id}
-                          id={product.id}
-                          name={product.name}
-                          description={product.description || undefined}
-                          price={product.price}
-                          image_url={product.image_url || undefined}
-                          hasModifiers={productsWithModifiers.has(product.id)}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : null
-              )}
-
-              {uncategorizedProducts.length > 0 && (
-                <section>
-                  <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
-                    <span className="w-2 h-6 bg-primary rounded-full" />
-                    Geral
-                  </h2>
-                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    {uncategorizedProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        id={product.id}
-                        name={product.name}
-                        description={product.description || undefined}
-                        price={product.price}
-                        image_url={product.image_url || undefined}
-                        hasModifiers={productsWithModifiers.has(product.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {filteredProducts.map((product) => (
+          {(() => {
+            // Renders either a grouped size-picker card or a standard product card.
+            // Grouping is only visual — DB records for each size stay untouched.
+            const renderEntry = (entry: ProductEntry) => {
+              if (entry.kind === 'group') {
+                return <GroupedProductCard key={entry.key} group={entry} />;
+              }
+              const product = entry.product;
+              return (
                 <ProductCard
-                  key={product.id}
+                  key={entry.key}
                   id={product.id}
                   name={product.name}
                   description={product.description || undefined}
@@ -717,9 +675,49 @@ export default function Shop() {
                   image_url={product.image_url || undefined}
                   hasModifiers={productsWithModifiers.has(product.id)}
                 />
-              ))}
-            </div>
-          )}
+              );
+            };
+
+            if (showCategorySections) {
+              return (
+                <>
+                  {productsByCategory.map((category) => {
+                    if (category.products.length === 0) return null;
+                    const entries = groupProductsBySize(category.products);
+                    return (
+                      <section key={category.id}>
+                        <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
+                          <span className="w-2 h-6 bg-primary rounded-full" />
+                          {category.name}
+                        </h2>
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                          {entries.map(renderEntry)}
+                        </div>
+                      </section>
+                    );
+                  })}
+
+                  {uncategorizedProducts.length > 0 && (
+                    <section>
+                      <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
+                        <span className="w-2 h-6 bg-primary rounded-full" />
+                        Geral
+                      </h2>
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        {groupProductsBySize(uncategorizedProducts).map(renderEntry)}
+                      </div>
+                    </section>
+                  )}
+                </>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {groupProductsBySize(filteredProducts).map(renderEntry)}
+              </div>
+            );
+          })()}
 
           {filteredProducts.length === 0 && (
             <div className="text-center py-16">
