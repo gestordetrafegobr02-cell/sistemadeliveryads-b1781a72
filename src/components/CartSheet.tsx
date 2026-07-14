@@ -291,6 +291,18 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             savedOrderId = createdOrder[0].order_id;
             sessionToken = createdOrder[0].customer_session_token;
             try { await markAsConverted(savedOrderId); } catch (e) { console.warn('[Cart] markAsConverted failed:', e); }
+            // Process cashback: redeem applied + earn new
+            if (cashbackConfig.enabled && (phoneDigits || phone)) {
+              try {
+                await supabase.rpc('process_order_cashback', {
+                  p_store_id: storeId,
+                  p_order_id: savedOrderId,
+                  p_customer_phone: phoneDigits || phone,
+                  p_redeem_amount: cashbackApplied,
+                  p_earn_base: grandTotal,
+                });
+              } catch (e) { console.warn('[Cashback] failed:', e); }
+            }
           }
         } catch (err) {
           console.error('[Order] save exception, continuing to WhatsApp anyway:', err);
