@@ -443,12 +443,29 @@ export default function Admin() {
                 Ver Loja
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccountDialogOpen(true)}
+              className="gap-2"
+              title="Alterar email e senha"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Minha Conta</span>
+            </Button>
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </header>
+
+      <AccountSettingsDialog
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
+        currentEmail={user?.email}
+      />
+
 
       {/* Persistent overlay: blocks until merchant unlocks audio alerts */}
       {!alertsUnlocked && (
