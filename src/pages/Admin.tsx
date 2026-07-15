@@ -39,6 +39,7 @@ import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 
 interface StoreData {
   id: string;
@@ -1035,6 +1036,11 @@ export default function Admin() {
                 <CardTitle className="font-display text-xl">Pedidos Recentes</CardTitle>
               </CardHeader>
               <CardContent>
+                {store && (
+                  <div className="mb-4">
+                    <PushNotificationToggle storeId={store.id} />
+                  </div>
+                )}
                 {!store ? (
                   <p className="text-muted-foreground text-center py-8">
                     Crie sua loja primeiro para ver pedidos.
