@@ -112,6 +112,27 @@ export function TeamTab({ storeId }: { storeId: string }) {
     load();
   };
 
+  const regenerate = async (m: Member) => {
+    if (!m.email) return toast.error('Email do membro indisponível');
+    if (!confirm(`Gerar nova senha para ${m.email}? A senha antiga deixará de funcionar.`)) return;
+    const phoneInput = window.prompt('WhatsApp do membro (com DDD) para enviar o novo acesso:', '') || '';
+    const cleanPhone = phoneInput.replace(/\D/g, '');
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-store-member', {
+        body: { storeId, email: m.email, role: m.role === 'owner' ? 'attendant' : m.role },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.tempPassword) {
+        setTempCred({ email: m.email, password: data.tempPassword, phone: cleanPhone });
+        toast.success('Nova senha gerada — envie no WhatsApp abaixo.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao regenerar acesso');
+    }
+  };
+
   const copy = (v: string) => {
     navigator.clipboard.writeText(v).then(() => toast.success('Copiado'));
   };
