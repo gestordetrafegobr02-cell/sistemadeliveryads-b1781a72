@@ -12,6 +12,8 @@ import { FAQSection } from '@/components/landing/FAQSection';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 import { Icon3D } from '@/components/landing/Icon3D';
 import { WhatsAppLeadModal } from '@/components/landing/WhatsAppLeadModal';
+import { AnimatedBackground } from '@/components/landing/AnimatedBackground';
+import { Floating3DScene } from '@/components/landing/Floating3DScene';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import hero3d from '@/assets/hero-3d-app.png';
@@ -19,6 +21,12 @@ import icon3dStore from '@/assets/icon-3d-store.png';
 import icon3dLocation from '@/assets/icon-3d-location.png';
 import icon3dWallet from '@/assets/icon-3d-wallet.png';
 import icon3dDelivery from '@/assets/icon-3d-delivery.png';
+import icon3dSmartphone from '@/assets/landing/icon3d-smartphone.png';
+import icon3dBag from '@/assets/landing/icon3d-bag.png';
+import icon3dScooter from '@/assets/landing/icon3d-scooter.png';
+import icon3dChart from '@/assets/landing/icon3d-chart.png';
+import icon3dChat from '@/assets/landing/icon3d-chat.png';
+import icon3dPrinter from '@/assets/landing/icon3d-printer.png';
 import {
   Store,
   Mail,
@@ -55,14 +63,12 @@ const HOW_STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Palette, title: 'Cardápio personalizável', description: 'Customize cores, logos e layout do seu cardápio digital.' },
-  { icon: LayoutGrid, title: 'PDV, retirada, delivery e mesas', description: 'Múltiplas formas de atendimento em um só painel.' },
-  { icon: Monitor, title: 'Painel para gestão completa', description: 'Controle total dos pedidos, produtos e vendas.' },
-  { icon: InfinityIcon, title: 'Sem limites de produtos e pedidos', description: 'Cadastre quantos produtos e receba quantos pedidos precisar.' },
-  { icon: Printer, title: 'Impressão automática', description: 'Imprima automaticamente os pedidos na cozinha.' },
-  { icon: Smartphone, title: 'Controle via celular', description: 'Gerencie seu negócio de qualquer lugar pelo smartphone.' },
-  { icon: Users2, title: 'Usuários e permissões', description: 'Controle de acesso para diferentes níveis de usuário.' },
-  { icon: BarChart3, title: 'Relatórios de vendas e clientes', description: 'Analise suas vendas e conheça melhor seus clientes.' },
+  { img: icon3dSmartphone, glow: 'hsl(25 95% 55%)', title: 'Cardápio personalizável', description: 'Customize cores, logos e layout do seu cardápio digital.' },
+  { img: icon3dBag,        glow: 'hsl(25 95% 55%)', title: 'PDV, retirada, delivery e mesas', description: 'Múltiplas formas de atendimento em um só painel.' },
+  { img: icon3dChart,      glow: 'hsl(145 70% 50%)', title: 'Painel de gestão completa', description: 'Controle total de pedidos, produtos e vendas.' },
+  { img: icon3dChat,       glow: 'hsl(145 70% 50%)', title: 'Pedidos direto no WhatsApp', description: 'Zero fricção pro cliente, alta conversão pra loja.' },
+  { img: icon3dPrinter,    glow: 'hsl(25 95% 55%)', title: 'Impressão automática', description: 'Imprima automaticamente os pedidos na cozinha.' },
+  { img: icon3dScooter,    glow: 'hsl(0 85% 55%)', title: 'Delivery e retirada', description: 'Fluxo completo pra entregas locais e balcão.' },
 ];
 
 export default function Index() {
