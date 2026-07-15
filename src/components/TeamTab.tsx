@@ -160,7 +160,10 @@ export function TeamTab({ storeId }: { storeId: string }) {
               `📧 Email: ${tempCred.email}\n` +
               `🔑 Senha temporária: ${tempCred.password}\n\n` +
               `Depois de entrar, abra o menu do navegador e toque em *"Adicionar à tela de início"* para instalar o app.`;
-            const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            const waNumber = tempCred.phone
+              ? (tempCred.phone.startsWith('55') ? tempCred.phone : `55${tempCred.phone}`)
+              : '';
+            const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(shareText)}`;
             return (
               <div className="mt-4 p-4 rounded-lg border border-primary/40 bg-primary/5 space-y-3">
                 <p className="text-sm font-semibold">✅ Acesso criado — envie os dados ao membro:</p>
