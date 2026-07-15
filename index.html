@@ -65,13 +65,21 @@
         }
 
         if (!isStoreRoute) {
+          const ADMIN_ROUTES = new Set(['auth', 'admin', 'super-admin', 'onboarding']);
+          const isAdminRoute = ADMIN_ROUTES.has(slug);
+          const adminName = 'DeliveryPro Admin';
+          const landingName = 'DeliveryPro';
           setManifest({
-            name: 'DeliveryPro',
-            short_name: 'DeliveryPro',
-            description: 'DeliveryPro - Plataforma white-label de cardápio digital e pedidos online',
-            start_url: '/',
+            name: isAdminRoute ? adminName : landingName,
+            short_name: isAdminRoute ? 'Admin' : 'DeliveryPro',
+            description: isAdminRoute
+              ? 'Painel administrativo da sua loja no DeliveryPro'
+              : 'DeliveryPro - Plataforma white-label de cardápio digital e pedidos online',
+            start_url: isAdminRoute ? '/admin' : '/',
+            id: isAdminRoute ? '/admin' : '/',
             scope: '/',
             display: 'standalone',
+            orientation: 'portrait-primary',
             background_color: '#0a0a0a',
             theme_color: '#f59e0b',
             icons: [
@@ -79,6 +87,10 @@
               { src: defaultIcon, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
             ]
           });
+          if (isAdminRoute) {
+            document.title = adminName;
+            setMeta('meta[name="apple-mobile-web-app-title"]', 'content', 'Admin');
+          }
           return;
         }
 
