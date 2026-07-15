@@ -160,10 +160,23 @@ export default function Admin() {
   const fetchData = useCallback(async () => {
     if (!user) return;
 
+    // Resolve membership: owner OR team member (attendant/manager/kitchen)
+    const { data: myStore } = await supabase.rpc('get_my_store');
+    const membership = Array.isArray(myStore) ? myStore[0] : null;
+
+    if (!membership?.store_id) {
+      setStore(null);
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+
+    setRole(membership.role as 'owner' | 'manager' | 'attendant' | 'kitchen');
+
     const { data: storeData } = await supabase
       .from('stores')
       .select('*')
-      .eq('owner_id', user.id)
+      .eq('id', membership.store_id)
       .maybeSingle();
 
     if (storeData) {
