@@ -1220,6 +1220,21 @@ export default function Admin() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Team Tab */}
+          <TabsContent value="team">
+            {store ? (
+              <TeamTab storeId={store.id} />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">
+                    Crie sua loja primeiro para gerenciar a equipe.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
         </Tabs>
 
         {/* Product Dialog */}
