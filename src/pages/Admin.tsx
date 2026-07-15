@@ -232,6 +232,72 @@ export default function Admin() {
     if (user) fetchData();
   }, [user, fetchData]);
 
+  // Personalize PWA manifest + title with store name and role
+  useEffect(() => {
+    if (!store?.name) return;
+    const roleLabels: Record<string, string> = {
+      owner: 'Admin',
+      manager: 'Gerente',
+      attendant: 'Atendente',
+      kitchen: 'Cozinha',
+    };
+    const roleLabel = role ? roleLabels[role] ?? 'Admin' : 'Admin';
+    const appName = `${store.name} - ${roleLabel}`;
+    const shortName = role && role !== 'owner' ? roleLabel : store.name;
+    const icon = store.logo_url || `${window.location.origin}/logo.png?v=4`;
+    const themeColor = store.primary_color || '#f59e0b';
+
+    document.title = appName;
+    const setMeta = (selector: string, attr: string, value: string) => {
+      const el = document.head.querySelector(selector) as HTMLMetaElement | null;
+      if (el) el.setAttribute(attr, value);
+    };
+    setMeta('meta[name="apple-mobile-web-app-title"]', 'content', shortName);
+    setMeta('meta[name="theme-color"]', 'content', themeColor);
+
+    const manifest = {
+      name: appName,
+      short_name: shortName,
+      description: `Painel ${roleLabel} da loja ${store.name}`,
+      start_url: '/admin',
+      id: `/admin?store=${store.slug}`,
+      scope: '/',
+      display: 'standalone',
+      orientation: 'portrait-primary',
+      background_color: '#0a0a0a',
+      theme_color: themeColor,
+      icons: [
+        { src: icon, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: icon, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    };
+    const href =
+      'data:application/manifest+json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(manifest));
+    let link = document.head.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'manifest');
+      document.head.appendChild(link);
+    }
+    link.setAttribute('href', href);
+
+    const setIcon = (rel: string, sizes?: string) => {
+      const sel = `link[rel="${rel}"]` + (sizes ? `[sizes="${sizes}"]` : '');
+      const el = document.head.querySelector(sel) as HTMLLinkElement | null;
+      if (el) el.setAttribute('href', icon);
+    };
+    setIcon('icon');
+    setIcon('shortcut icon');
+    setIcon('apple-touch-icon');
+    setIcon('apple-touch-icon', '152x152');
+    setIcon('apple-touch-icon', '167x167');
+    setIcon('apple-touch-icon', '180x180');
+  }, [store?.name, store?.slug, store?.logo_url, store?.primary_color, role]);
+
+
+
   // Realtime subscription for orders (new-order notification)
   useEffect(() => {
     const storeId = store?.id;
