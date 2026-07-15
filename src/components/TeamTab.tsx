@@ -36,9 +36,10 @@ export function TeamTab({ storeId }: { storeId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role>('attendant');
   const [inviting, setInviting] = useState(false);
-  const [tempCred, setTempCred] = useState<{ email: string; password: string } | null>(null);
+  const [tempCred, setTempCred] = useState<{ email: string; password: string; phone: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +58,7 @@ export function TeamTab({ storeId }: { storeId: string }) {
       toast.error('Digite um email válido');
       return;
     }
+    const cleanPhone = phone.replace(/\D/g, '');
     setInviting(true);
     try {
       const { data, error } = await supabase.functions.invoke('invite-store-member', {
@@ -65,12 +67,13 @@ export function TeamTab({ storeId }: { storeId: string }) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.tempPassword) {
-        setTempCred({ email: em, password: data.tempPassword });
-        toast.success('Usuário criado! Envie a senha temporária ao membro.');
+        setTempCred({ email: em, password: data.tempPassword, phone: cleanPhone });
+        toast.success('Convite pronto — envie no WhatsApp abaixo.');
       } else {
         toast.success('Membro adicionado à equipe.');
       }
       setEmail('');
+      setPhone('');
       await load();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao convidar');
