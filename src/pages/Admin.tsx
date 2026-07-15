@@ -100,6 +100,7 @@ export default function Admin() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const [store, setStore] = useState<StoreData | null>(null);
+  const [role, setRole] = useState<'owner' | 'manager' | 'attendant' | 'kitchen' | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -108,6 +109,16 @@ export default function Admin() {
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+
+  const isOwner = role === 'owner';
+  const canManage = role === 'owner' || role === 'manager';
+  const canSeeOrders = role !== null; // all roles see orders
+  const canSeePdv = role === 'owner' || role === 'manager' || role === 'attendant';
+  const canSeeReports = canManage;
+  const canSeeRecovery = canManage;
+  const canSeeStoreSettings = canManage;
+  const canSeeTeam = isOwner;
+
   // Pending orders trigger the looping alert + flashing border.
   const pendingCount = orders.filter(
     (o) => !o.status || o.status === 'pending'
