@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         success: true,
         userId: targetUserId,
         tempPassword,
-        alreadyExisted: !tempPassword,
+        alreadyExisted: !!existingProfile?.id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
