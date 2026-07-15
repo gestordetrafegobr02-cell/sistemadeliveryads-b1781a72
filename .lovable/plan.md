@@ -1,44 +1,53 @@
-## Parte 3: PDV com Mesas
+# Plano de melhorias
 
-Sistema de Ponto de Venda integrado ao painel Admin para atendimento presencial (balcão + mesas), reaproveitando produtos, categorias, cashback e impressão já existentes.
+Três frentes em paralelo. Foco em resultado visível: landing mais premium, admin mais leve, e banco de imagens que já vem cheio pras lojas novas.
 
-### Banco de dados
+## 1. Landing page — 3D real + fundo animado
 
-Nova migration com:
+**Ícones 3D realistas**
+- Gerar 6 novos ícones 3D premium (glass/clay style, sombras profundas, iluminação studio) via `imagegen`:
+  - Smartphone com cardápio, sacola de delivery, moto/entrega, gráfico de crescimento, balão WhatsApp, cartão de fidelidade.
+- Substituir os ícones lucide simples em `Floating3DScene.tsx` e nos cards de features por esses PNGs 3D usando o componente `Icon3D` já existente (com float + tilt).
+- Trocar os ícones da seção "Como funciona" e do "Ecossistema" pelos novos assets.
 
-- **`tables`** — mesas físicas da loja (`store_id`, `number`, `label`, `seats`, `status`: `free|occupied|reserved`, `sort_order`).
-- **`pdv_sessions`** — comanda aberta (mesa ou balcão). Campos: `store_id`, `table_id` (nullable → balcão), `opened_by` (user_id do atendente), `customer_name`, `customer_phone`, `status`: `open|closed|canceled`, `subtotal`, `discount`, `total`, `payment_method`, `opened_at`, `closed_at`.
-- **`pdv_session_items`** — itens da comanda. Campos: `session_id`, `product_id`, `name`, `unit_price`, `quantity`, `modifiers` (jsonb), `note`, `sent_to_kitchen_at`.
-- RLS: apenas `owner` + `store_members` com role `manager` ou `attendant` operam PDV; `kitchen` apenas lê itens enviados.
-- Realtime habilitado em `tables`, `pdv_sessions`, `pdv_session_items` (KDS + atualização de mapa de mesas).
-- Função `close_pdv_session(session_id, payment_method)` — fecha comanda, cria um registro em `orders` (origem `pdv`), aplica cashback via `process_order_cashback`, libera a mesa.
+**Fundo animado global (leve)**
+- Novo componente `AnimatedBackground.tsx` fixo atrás do conteúdo da landing:
+  - Grid de pontos em SVG com deslocamento sutil (CSS/Framer),
+  - 2–3 blobs de gradiente (orange/emerald) com `filter: blur` fazendo drift lento em loop infinito,
+  - Camada de "noise" bem sutil pra dar textura.
+- Performance: `will-change: transform`, `prefers-reduced-motion` respeitado, `pointer-events: none`.
 
-### Frontend
+## 2. Painel Admin — limpeza e navegação
 
-Nova aba **"PDV"** no `Admin.tsx` (visível para owner/manager/attendant).
+- Auditar `Admin.tsx` e componentes:
+  - Remover badge de versão `v1.1.x-clean` e `DemoModeBanner` se não estiver ativo.
+  - Consolidar abas duplicadas/pouco usadas (agrupar "Impressão", "Cashback", "Upsell" em uma única aba **Configurações da Loja** com sub-seções).
+  - Ordem final das abas: **Dashboard · Pedidos · PDV · Produtos · Categorias · Loja · Equipe**.
+- Header do Admin: reduzir altura, mover link da loja + copiar pra um botão único com dropdown, manter só ThemeToggle + Sair visíveis.
+- Sidebar/tabs mobile: usar scroll horizontal com snap em vez de wrap quebrando linhas.
+- Remover imports/variáveis mortos que a limpeza revelar.
 
-**Layout mobile-first, 3 telas:**
+## 3. Banco de imagens compartilhado — extrair fotos reais das lojas
 
-1. **Mapa de mesas** — grid de cards coloridos (verde = livre, laranja = ocupada, azul = reservada) + botão "Balcão / Viagem" no topo. Toque na mesa livre abre nova comanda; toque em ocupada abre a comanda existente.
-2. **Comanda aberta** — busca de produto (mesma lista do catálogo), lista de itens adicionados, subtotal ao vivo, botões: `+ Item`, `Enviar p/ cozinha` (imprime cupom da cozinha via `printReceipt.ts`), `Fechar conta`.
-3. **Fechamento** — resumo, seleção de forma de pagamento (Dinheiro / Cartão / PIX), aplicação opcional de cashback do cliente (reaproveita `get_cashback_balance` por telefone), botão "Finalizar & Imprimir" que chama a RPC `close_pdv_session`, imprime cupom do cliente e volta ao mapa.
+**Coleta**
+- Query em `products` de todas as lojas ativas com `image_url` não nulo.
+- Agrupar por categoria (Hambúrgueres, Pizzas, Açaí, Bebidas, Sobremesas, Acompanhamentos, Sorvetes, Milkshakes).
+- Deduplicar por URL.
 
-**Arquivos novos:**
+**Publicação**
+- Nova tabela `public.menu_image_bank`:
+  - `id uuid pk`, `category text`, `name text`, `url text`, `sort_order int`, `created_at timestamptz`.
+  - RLS: SELECT liberado pra `authenticated`, INSERT/UPDATE/DELETE só `master_admin`.
+  - GRANTs explícitos.
+- Seed inicial via migration: inserir todas as URLs coletadas (com nome inferido do produto).
+- Refatorar `src/utils/menuAssets.ts` + `MenuImagePicker.tsx` pra ler do banco (hook `useMenuImageBank`) em vez do array hard-coded, mantendo fallback pro array atual se a query falhar.
 
-- `src/components/pdv/PdvTab.tsx` — container + roteamento interno das 3 telas.
-- `src/components/pdv/TablesMap.tsx` — grid de mesas + botão balcão.
-- `src/components/pdv/SessionEditor.tsx` — edição da comanda (busca produto, lista, envio p/ cozinha).
-- `src/components/pdv/SessionCheckout.tsx` — tela de fechamento com pagamento + cashback.
-- `src/components/pdv/TableManagerDialog.tsx` — CRUD de mesas (owner/manager) acessível a partir do mapa.
-- `src/lib/pdv.ts` — helpers de RPC/subscription realtime.
+**Uso**
+- No editor de produto, o picker agora mostra dezenas de opções reais organizadas por categoria — loja nova cria produto e já tem foto profissional disponível sem upload.
 
-**Arquivos alterados:**
+## Detalhes técnicos
 
-- `src/pages/Admin.tsx` — nova aba "PDV" com ícone, condicionada ao papel do usuário.
-- `src/lib/printReceipt.ts` — extensão para imprimir cupom de cozinha (só itens + mesa) e cupom cliente (com total + pagamento).
-
-### Fora de escopo (fica pra próxima)
-
-- Divisão de conta por pessoa.
-- Impressora térmica dedicada por rede (usaremos o mesmo `window.print` já implementado).
-- Fluxo de caixa/abertura de turno.
+- Assets 3D: salvos em `src/assets/landing/` como PNG com transparência, importados como ES6 modules.
+- Fundo animado: puro CSS + Framer, sem canvas/webgl (mantém FPS no mobile).
+- Migration única pra criar `menu_image_bank` + seed + GRANTs + RLS.
+- Nenhuma mudança em auth, checkout ou WhatsApp flow.

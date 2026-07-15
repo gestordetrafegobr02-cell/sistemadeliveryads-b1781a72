@@ -1,5 +1,5 @@
-import { MENU_ASSET_BANK } from '@/utils/menuAssets';
-import { Check } from 'lucide-react';
+import { useMenuImageBank } from '@/hooks/useMenuImageBank';
+import { Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MenuImagePickerProps {
@@ -8,6 +8,8 @@ interface MenuImagePickerProps {
 }
 
 export function MenuImagePicker({ value, onSelect }: MenuImagePickerProps) {
+  const { categories, loading } = useMenuImageBank();
+
   return (
     <div className="space-y-4 rounded-lg border border-border bg-secondary/40 p-3">
       <div>
@@ -16,10 +18,19 @@ export function MenuImagePicker({ value, onSelect }: MenuImagePickerProps) {
           Imagens prontas em alta resolução — sem upload necessário.
         </p>
       </div>
-      {MENU_ASSET_BANK.map((category) => (
+
+      {loading && (
+        <div className="flex items-center justify-center py-6 text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando imagens...
+        </div>
+      )}
+
+      {categories.map((category) => (
         <div key={category.id} className="space-y-2">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{category.label}</p>
-          <div className="grid grid-cols-3 gap-2">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {category.label} <span className="text-muted-foreground/60">({category.items.length})</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {category.items.map((item) => {
               const active = value === item.url;
               return (

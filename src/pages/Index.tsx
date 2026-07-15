@@ -12,6 +12,8 @@ import { FAQSection } from '@/components/landing/FAQSection';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 import { Icon3D } from '@/components/landing/Icon3D';
 import { WhatsAppLeadModal } from '@/components/landing/WhatsAppLeadModal';
+import { AnimatedBackground } from '@/components/landing/AnimatedBackground';
+import { Floating3DScene } from '@/components/landing/Floating3DScene';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
 import hero3d from '@/assets/hero-3d-app.png';
@@ -19,6 +21,12 @@ import icon3dStore from '@/assets/icon-3d-store.png';
 import icon3dLocation from '@/assets/icon-3d-location.png';
 import icon3dWallet from '@/assets/icon-3d-wallet.png';
 import icon3dDelivery from '@/assets/icon-3d-delivery.png';
+import icon3dSmartphone from '@/assets/landing/icon3d-smartphone.png';
+import icon3dBag from '@/assets/landing/icon3d-bag.png';
+import icon3dScooter from '@/assets/landing/icon3d-scooter.png';
+import icon3dChart from '@/assets/landing/icon3d-chart.png';
+import icon3dChat from '@/assets/landing/icon3d-chat.png';
+import icon3dPrinter from '@/assets/landing/icon3d-printer.png';
 import {
   Store,
   Mail,
@@ -29,14 +37,6 @@ import {
   Leaf,
   IceCream,
   UtensilsCrossed,
-  Palette,
-  Monitor,
-  Infinity as InfinityIcon,
-  Printer,
-  Smartphone,
-  Users2,
-  BarChart3,
-  LayoutGrid,
   MessageCircle,
 } from 'lucide-react';
 
@@ -55,14 +55,12 @@ const HOW_STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Palette, title: 'Cardápio personalizável', description: 'Customize cores, logos e layout do seu cardápio digital.' },
-  { icon: LayoutGrid, title: 'PDV, retirada, delivery e mesas', description: 'Múltiplas formas de atendimento em um só painel.' },
-  { icon: Monitor, title: 'Painel para gestão completa', description: 'Controle total dos pedidos, produtos e vendas.' },
-  { icon: InfinityIcon, title: 'Sem limites de produtos e pedidos', description: 'Cadastre quantos produtos e receba quantos pedidos precisar.' },
-  { icon: Printer, title: 'Impressão automática', description: 'Imprima automaticamente os pedidos na cozinha.' },
-  { icon: Smartphone, title: 'Controle via celular', description: 'Gerencie seu negócio de qualquer lugar pelo smartphone.' },
-  { icon: Users2, title: 'Usuários e permissões', description: 'Controle de acesso para diferentes níveis de usuário.' },
-  { icon: BarChart3, title: 'Relatórios de vendas e clientes', description: 'Analise suas vendas e conheça melhor seus clientes.' },
+  { img: icon3dSmartphone, glow: 'hsl(25 95% 55%)', title: 'Cardápio personalizável', description: 'Customize cores, logos e layout do seu cardápio digital.' },
+  { img: icon3dBag,        glow: 'hsl(25 95% 55%)', title: 'PDV, retirada, delivery e mesas', description: 'Múltiplas formas de atendimento em um só painel.' },
+  { img: icon3dChart,      glow: 'hsl(145 70% 50%)', title: 'Painel de gestão completa', description: 'Controle total de pedidos, produtos e vendas.' },
+  { img: icon3dChat,       glow: 'hsl(145 70% 50%)', title: 'Pedidos direto no WhatsApp', description: 'Zero fricção pro cliente, alta conversão pra loja.' },
+  { img: icon3dPrinter,    glow: 'hsl(25 95% 55%)', title: 'Impressão automática', description: 'Imprima automaticamente os pedidos na cozinha.' },
+  { img: icon3dScooter,    glow: 'hsl(0 85% 55%)', title: 'Delivery e retirada', description: 'Fluxo completo pra entregas locais e balcão.' },
 ];
 
 export default function Index() {
@@ -149,7 +147,9 @@ export default function Index() {
   const priceFmt = price.toFixed(2).replace('.', ',');
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+      <AnimatedBackground />
+      <div className="relative z-10">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/85 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
@@ -247,12 +247,12 @@ export default function Index() {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Alguns dos nossos recursos</h2>
             <p className="text-foreground/60 max-w-2xl mx-auto">Funcionalidades completas para automatizar e otimizar todo o processo de vendas do seu negócio.</p>
           </ScrollReveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
-              <ScrollReveal key={i} direction="up" delay={(i % 4) * 0.05}>
-                <div className="h-full p-6 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center mb-4 shadow-md">
-                    <f.icon className="w-5 h-5 text-white" />
+              <ScrollReveal key={i} direction="up" delay={(i % 3) * 0.08}>
+                <div className="h-full p-6 rounded-2xl bg-card/80 backdrop-blur border border-border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 transition-all flex flex-col items-center text-center">
+                  <div className="mb-4">
+                    <Icon3D src={f.img} alt={f.title} size={96} delay={i * 0.05} glowColor={f.glow} />
                   </div>
                   <h3 className="font-semibold mb-2">{f.title}</h3>
                   <p className="text-sm text-foreground/60 leading-relaxed">{f.description}</p>
@@ -267,6 +267,9 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {/* Ecossistema 3D */}
+      <Floating3DScene />
 
       {/* Pricing */}
       <div id="precos">
@@ -366,6 +369,7 @@ export default function Index() {
       </motion.button>
 
       <WhatsAppLeadModal open={leadModalOpen} onOpenChange={setLeadModalOpen} />
+      </div>
     </div>
   );
 }

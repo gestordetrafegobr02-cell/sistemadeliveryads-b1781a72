@@ -1,78 +1,24 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import {
-  Smartphone,
-  ShoppingBag,
-  TrendingUp,
-  Zap,
-  BarChart3,
-  MessageCircle,
-} from 'lucide-react';
+import iconSmartphone from '@/assets/landing/icon3d-smartphone.png';
+import iconBag from '@/assets/landing/icon3d-bag.png';
+import iconScooter from '@/assets/landing/icon3d-scooter.png';
+import iconChart from '@/assets/landing/icon3d-chart.png';
+import iconChat from '@/assets/landing/icon3d-chat.png';
+import iconPrinter from '@/assets/landing/icon3d-printer.png';
 
 const floatingCards = [
-  {
-    icon: Smartphone,
-    label: 'App na Tela',
-    color: 'from-blue-500 to-cyan-500',
-    x: '-42%',
-    y: '-30%',
-    rotate: -12,
-    delay: 0,
-  },
-  {
-    icon: ShoppingBag,
-    label: 'Pedidos WhatsApp',
-    color: 'from-emerald-500 to-teal-500',
-    x: '38%',
-    y: '-25%',
-    rotate: 10,
-    delay: 0.1,
-  },
-  {
-    icon: TrendingUp,
-    label: '+15% Ticket',
-    color: 'from-orange-500 to-red-500',
-    x: '-50%',
-    y: '20%',
-    rotate: 8,
-    delay: 0.2,
-  },
-  {
-    icon: MessageCircle,
-    label: 'Upsell Auto',
-    color: 'from-purple-500 to-pink-500',
-    x: '45%',
-    y: '25%',
-    rotate: -8,
-    delay: 0.3,
-  },
-  {
-    icon: BarChart3,
-    label: 'Relatórios',
-    color: 'from-indigo-500 to-blue-500',
-    x: '0%',
-    y: '-45%',
-    rotate: 0,
-    delay: 0.4,
-  },
-  {
-    icon: Zap,
-    label: 'Setup 5min',
-    color: 'from-amber-500 to-yellow-500',
-    x: '0%',
-    y: '42%',
-    rotate: 0,
-    delay: 0.5,
-  },
+  { img: iconSmartphone, label: 'App na Tela',       x: '-46%', y: '-30%', rotate: -10, delay: 0.00 },
+  { img: iconBag,        label: 'Sacola de Entrega', x: '42%',  y: '-25%', rotate: 8,   delay: 0.10 },
+  { img: iconScooter,    label: 'Delivery Ágil',     x: '-52%', y: '20%',  rotate: 6,   delay: 0.20 },
+  { img: iconChat,       label: 'WhatsApp Direto',   x: '48%',  y: '25%',  rotate: -8,  delay: 0.30 },
+  { img: iconChart,      label: '+15% Ticket',       x: '0%',   y: '-46%', rotate: 0,   delay: 0.40 },
+  { img: iconPrinter,    label: 'Impressão Auto',    x: '0%',   y: '44%',  rotate: 0,   delay: 0.50 },
 ];
 
 export function Floating3DScene() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'end start'],
-  });
-
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start end', 'end start'] });
   const y1 = useTransform(scrollYProgress, [0, 1], [-40, 40]);
   const y2 = useTransform(scrollYProgress, [0, 1], [40, -40]);
   const rotate = useTransform(scrollYProgress, [0, 1], [-8, 8]);
@@ -80,16 +26,15 @@ export function Floating3DScene() {
   return (
     <section
       ref={containerRef}
-      className="relative py-24 md:py-32 px-4 overflow-hidden bg-gradient-to-b from-background via-secondary/40 to-background"
+      className="relative py-24 md:py-32 px-4 overflow-hidden"
     >
-      {/* Ambient glow */}
       <motion.div
         style={{ y: y1 }}
         className="absolute top-10 left-1/4 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none"
       />
       <motion.div
         style={{ y: y2 }}
-        className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-emerald/10 blur-3xl pointer-events-none"
+        className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"
       />
 
       <div className="max-w-5xl mx-auto text-center relative">
@@ -126,20 +71,18 @@ export function Floating3DScene() {
           Cardápio, pedidos, upsell e relatórios — integrados e prontos pra usar
         </motion.p>
 
-        {/* 3D Floating Stage */}
         <div
           className="relative mx-auto"
           style={{
             perspective: '1200px',
             perspectiveOrigin: '50% 50%',
-            height: 'min(560px, 90vw)',
-            maxWidth: '520px',
+            height: 'min(580px, 92vw)',
+            maxWidth: '560px',
           }}
         >
-          {/* Central glow disc */}
           <motion.div
             style={{ rotate }}
-            className="absolute inset-0 m-auto w-56 h-56 rounded-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent blur-2xl"
+            className="absolute inset-0 m-auto w-64 h-64 rounded-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent blur-2xl"
           />
 
           {/* Central hub */}
@@ -162,89 +105,48 @@ export function Floating3DScene() {
             </div>
           </motion.div>
 
-          {/* Orbiting cards */}
-          {floatingCards.map((card, i) => {
-            const Icon = card.icon;
-            return (
+          {/* Orbiting 3D icons */}
+          {floatingCards.map((card, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.3, rotateZ: card.rotate * 3 }}
+              whileInView={{ opacity: 1, scale: 1, rotateZ: card.rotate }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{
+                duration: 0.9,
+                delay: card.delay,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="absolute top-1/2 left-1/2 z-10"
+              style={{
+                x: card.x,
+                y: card.y,
+                translateX: '-50%',
+                translateY: '-50%',
+                transformStyle: 'preserve-3d',
+              }}
+            >
               <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.3, rotateZ: card.rotate * 3 }}
-                whileInView={{
-                  opacity: 1,
-                  scale: 1,
-                  rotateZ: card.rotate,
-                }}
-                viewport={{ once: true, margin: '-80px' }}
+                animate={{ y: [0, -10, 0] }}
                 transition={{
-                  duration: 0.8,
-                  delay: card.delay,
-                  ease: [0.22, 1, 0.36, 1],
+                  duration: 3 + i * 0.35,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
                 }}
-                className="absolute top-1/2 left-1/2 z-10"
-                style={{
-                  x: card.x,
-                  y: card.y,
-                  translateX: '-50%',
-                  translateY: '-50%',
-                  transformStyle: 'preserve-3d',
-                }}
+                className="flex flex-col items-center gap-2"
               >
-                <motion.div
-                  animate={{
-                    y: [0, -8, 0],
-                  }}
-                  transition={{
-                    duration: 3 + i * 0.3,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  className="group"
-                >
-                  <div
-                    className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${card.color} p-[2px] shadow-xl`}
-                    style={{
-                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    <div className="w-full h-full rounded-2xl bg-card/95 backdrop-blur flex flex-col items-center justify-center gap-1.5">
-                      <div className={`w-7 h-7 md:w-9 md:h-9 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center shadow-md`}>
-                        <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" strokeWidth={2.5} />
-                      </div>
-                      <span className="text-[8px] md:text-[10px] font-semibold text-foreground/80 whitespace-nowrap px-1 leading-none">
-                        {card.label}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
+                <img
+                  src={card.img}
+                  alt={card.label}
+                  loading="lazy"
+                  className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-[0_20px_25px_rgba(0,0,0,0.35)]"
+                />
+                <span className="text-[10px] md:text-xs font-semibold text-foreground/80 whitespace-nowrap bg-card/80 backdrop-blur px-2 py-0.5 rounded-full border border-border">
+                  {card.label}
+                </span>
               </motion.div>
-            );
-          })}
-
-          {/* Connecting lines (SVG) */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.4))' }}
-          >
-            <defs>
-              <radialGradient id="lineGrad">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.6" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            <motion.circle
-              cx="50%"
-              cy="50%"
-              r="120"
-              fill="none"
-              stroke="url(#lineGrad)"
-              strokeWidth="1"
-              strokeDasharray="4 6"
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 0.6 }}
-              viewport={{ once: true }}
-              transition={{ duration: 2 }}
-            />
-          </svg>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
