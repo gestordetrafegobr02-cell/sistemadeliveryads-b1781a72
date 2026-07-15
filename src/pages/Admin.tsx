@@ -12,11 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
 import { TeamTab } from '@/components/TeamTab';
+import { PdvTab } from '@/components/pdv/PdvTab';
 
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
@@ -574,6 +575,10 @@ export default function Admin() {
             <TabsTrigger value="reports" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Relatórios
+            </TabsTrigger>
+            <TabsTrigger value="pdv" className="gap-2">
+              <Utensils className="w-4 h-4" />
+              PDV
             </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="w-4 h-4" />
@@ -1216,6 +1221,19 @@ export default function Admin() {
                   <p className="text-muted-foreground text-center">
                     Crie sua loja primeiro para ver relatórios.
                   </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* PDV Tab */}
+          <TabsContent value="pdv">
+            {store ? (
+              <PdvTab storeId={store.id} storeName={store.name} canManageTables />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">Crie sua loja primeiro para usar o PDV.</p>
                 </CardContent>
               </Card>
             )}
