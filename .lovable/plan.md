@@ -1,104 +1,44 @@
-## Objetivo
-Deixar a DeliveryPro com a mesma proposta e estrutura do PedidosZapp, mantendo a identidade laranja/preta, e adicionar dois recursos que faltam: multi-usuários com permissões e PDV com controle de mesas.
+## Parte 3: PDV com Mesas
 
----
+Sistema de Ponto de Venda integrado ao painel Admin para atendimento presencial (balcão + mesas), reaproveitando produtos, categorias, cashback e impressão já existentes.
 
-## Parte 1 — Redesign da Landing Page (`src/pages/Index.tsx`)
+### Banco de dados
 
-Replicar as seções na mesma ordem e proporção do PedidosZapp:
+Nova migration com:
 
-### 1.1 Header simples
-- Logo DeliveryPro à esquerda
-- Menu: **Preços · Cadastro · Entrar** (botão laranja)
-- Sem hero pesado de 3D — versão mais leve e comercial
+- **`tables`** — mesas físicas da loja (`store_id`, `number`, `label`, `seats`, `status`: `free|occupied|reserved`, `sort_order`).
+- **`pdv_sessions`** — comanda aberta (mesa ou balcão). Campos: `store_id`, `table_id` (nullable → balcão), `opened_by` (user_id do atendente), `customer_name`, `customer_phone`, `status`: `open|closed|canceled`, `subtotal`, `discount`, `total`, `payment_method`, `opened_at`, `closed_at`.
+- **`pdv_session_items`** — itens da comanda. Campos: `session_id`, `product_id`, `name`, `unit_price`, `quantity`, `modifiers` (jsonb), `note`, `sent_to_kitchen_at`.
+- RLS: apenas `owner` + `store_members` com role `manager` ou `attendant` operam PDV; `kitchen` apenas lê itens enviados.
+- Realtime habilitado em `tables`, `pdv_sessions`, `pdv_session_items` (KDS + atualização de mapa de mesas).
+- Função `close_pdv_session(session_id, payment_method)` — fecha comanda, cria um registro em `orders` (origem `pdv`), aplica cashback via `process_order_cashback`, libera a mesa.
 
-### 1.2 Hero
-- Título grande: "Cardápio digital e gestor de pedidos por **R$ 49,90/mês**" (mantém preço atual)
-- Subtítulo: "7 dias grátis sem compromisso"
-- Dois CTAs: **"Chamar no WhatsApp"** (outline) e **"Cadastrar"** (laranja sólido)
-- Mockup celular + painel admin lado direito (reaproveitar `PhoneMockup` + screenshot painel)
+### Frontend
 
-### 1.3 Seção "Como funciona?"
-4 passos com ícones coloridos em quadrado arredondado:
-1. Seu negócio online (loja) 
-2. Endereço de entrega (pin)
-3. Forma de pagamento (carteira)
-4. E por fim, Delivery (caminhão)
+Nova aba **"PDV"** no `Admin.tsx` (visível para owner/manager/attendant).
 
-Badge inferior: "Processo 100% automatizado"
+**Layout mobile-first, 3 telas:**
 
-### 1.4 Grid "Nossos recursos" (8 cards)
-Cards uniformes com ícone gradient + título + descrição:
-1. Cardápio personalizável
-2. PDV, retirada, delivery e mesas
-3. Painel para gestão completa
-4. Sem limites de produtos e pedidos
-5. Impressão automática
-6. Controle via celular
-7. Usuários e permissões
-8. Relatórios de vendas e clientes
+1. **Mapa de mesas** — grid de cards coloridos (verde = livre, laranja = ocupada, azul = reservada) + botão "Balcão / Viagem" no topo. Toque na mesa livre abre nova comanda; toque em ocupada abre a comanda existente.
+2. **Comanda aberta** — busca de produto (mesma lista do catálogo), lista de itens adicionados, subtotal ao vivo, botões: `+ Item`, `Enviar p/ cozinha` (imprime cupom da cozinha via `printReceipt.ts`), `Fechar conta`.
+3. **Fechamento** — resumo, seleção de forma de pagamento (Dinheiro / Cartão / PIX), aplicação opcional de cashback do cliente (reaproveita `get_cashback_balance` por telefone), botão "Finalizar & Imprimir" que chama a RPC `close_pdv_session`, imprime cupom do cliente e volta ao mapa.
 
-### 1.5 Mockup grande do painel admin + impressora térmica
+**Arquivos novos:**
 
-### 1.6 Pricing (manter atual R$ 49,90 com destaque)
+- `src/components/pdv/PdvTab.tsx` — container + roteamento interno das 3 telas.
+- `src/components/pdv/TablesMap.tsx` — grid de mesas + botão balcão.
+- `src/components/pdv/SessionEditor.tsx` — edição da comanda (busca produto, lista, envio p/ cozinha).
+- `src/components/pdv/SessionCheckout.tsx` — tela de fechamento com pagamento + cashback.
+- `src/components/pdv/TableManagerDialog.tsx` — CRUD de mesas (owner/manager) acessível a partir do mapa.
+- `src/lib/pdv.ts` — helpers de RPC/subscription realtime.
 
-### 1.7 FAQ + Footer (manter os componentes existentes)
+**Arquivos alterados:**
 
-**Remover:** `Floating3DScene`, `Tilt3DCard` e mockups exagerados 3D — landing fica mais "SaaS comercial", menos "produto premium abstrato".
+- `src/pages/Admin.tsx` — nova aba "PDV" com ícone, condicionada ao papel do usuário.
+- `src/lib/printReceipt.ts` — extensão para imprimir cupom de cozinha (só itens + mesa) e cupom cliente (com total + pagamento).
 
----
+### Fora de escopo (fica pra próxima)
 
-## Parte 2 — Usuários e Permissões (multi-operadores por loja)
-
-### 2.1 Banco de dados
-- Enum `store_role`: `owner`, `manager`, `attendant`, `kitchen`
-- Tabela `store_members(store_id, user_id, role, created_at)` com GRANT + RLS
-- Função `has_store_role(store_id, user_id, role)` security definer
-- Policies em `orders`, `products`, `categories` etc. estendidas para aceitar membros da loja (não só `owner_id`)
-
-### 2.2 UI (Admin panel — nova sub-aba "Equipe")
-- Listar membros atuais com role
-- Convidar por email (edge function `invite-store-member`: cria user via service_role se não existe, envia senha temporária, insere em `store_members`)
-- Alterar role (dropdown)
-- Remover membro
-- Apenas `owner` pode gerenciar equipe
-
-### 2.3 Filtragem por permissão
-- `attendant`: só vê Pedidos
-- `kitchen`: só vê Pedidos com botão imprimir
-- `manager`: tudo exceto Equipe/Financeiro
-- `owner`: tudo
-
----
-
-## Parte 3 — PDV com Mesas (atendimento presencial)
-
-### 3.1 Banco de dados
-- Tabela `store_tables(id, store_id, number, name, status, current_order_id)` — status: `livre`, `ocupada`, `aguardando_pagamento`
-- Coluna `orders.table_id` + `orders.channel` (`delivery` | `pickup` | `table`)
-
-### 3.2 UI (nova aba "PDV" no Admin)
-- Grid visual de mesas (cards coloridos por status)
-- Clicar em mesa → abre modal PDV:
-  - Buscador de produtos (mesmo componente do cardápio interno)
-  - Carrinho da comanda
-  - Botões: **Enviar para cozinha** (cria order status=`preparing`), **Adicionar itens**, **Fechar conta** (marca `aguardando_pagamento`), **Pagar** (finaliza)
-- Impressão automática de comanda para cozinha ao enviar
-
-### 3.3 Cadastro de mesas
-- Aba "Loja" ganha seção "Mesas": adicionar/remover/renomear mesas
-
----
-
-## Ordem de entrega
-1. **Parte 1** (landing) — visual imediato, 1 mensagem
-2. **Parte 2** (usuários/permissões) — infra + UI, 1 mensagem
-3. **Parte 3** (PDV mesas) — mais complexo, 1 mensagem
-
-## Detalhes técnicos
-- Migration única por parte
-- Reutilizar `PrintCashbackSettings`, `printOrderReceipt`, componentes shadcn existentes
-- Nenhuma quebra do fluxo WhatsApp atual (delivery continua igual)
-- Cores: manter tokens `--primary` (laranja) e `--background` (preto) já definidos em `index.css`
-
-Confirmando: começo pela **Parte 1 (landing)** assim que aprovar?
+- Divisão de conta por pessoa.
+- Impressora térmica dedicada por rede (usaremos o mesmo `window.print` já implementado).
+- Fluxo de caixa/abertura de turno.
