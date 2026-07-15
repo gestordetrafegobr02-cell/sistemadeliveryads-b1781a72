@@ -1035,6 +1035,11 @@ export default function Admin() {
                 <CardTitle className="font-display text-xl">Pedidos Recentes</CardTitle>
               </CardHeader>
               <CardContent>
+                {store && (
+                  <div className="mb-4">
+                    <PushNotificationToggle storeId={store.id} />
+                  </div>
+                )}
                 {!store ? (
                   <p className="text-muted-foreground text-center py-8">
                     Crie sua loja primeiro para ver pedidos.
