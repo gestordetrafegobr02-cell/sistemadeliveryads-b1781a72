@@ -7,65 +7,57 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { SystemShowcase } from '@/components/landing/SystemShowcase';
-import { SavingsComparisonSection } from '@/components/landing/SavingsComparisonSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
-import { Floating3DScene } from '@/components/landing/Floating3DScene';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
-import { Tilt3DCard } from '@/components/landing/Tilt3DCard';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
-import { 
-  TrendingUp, 
-  ShoppingCart, 
-  BarChart3, 
+import {
   Store,
   Mail,
   Lock,
   ArrowRight,
   CheckCircle2,
-  Zap,
-  Users,
-  Clock,
   Pizza,
   Leaf,
   IceCream,
   UtensilsCrossed,
+  MapPin,
+  Wallet,
+  Truck,
   Palette,
-  LayoutGrid,
+  Monitor,
+  Infinity as InfinityIcon,
+  Printer,
   Smartphone,
-  Sparkles
+  Users2,
+  BarChart3,
+  LayoutGrid,
+  MessageCircle,
 } from 'lucide-react';
 
 const NICHE_OPTIONS = [
-  { 
-    slug: 'burger-shop', 
-    name: 'Hamburgueria', 
-    icon: UtensilsCrossed, 
-    color: 'from-orange-500 to-red-500',
-    description: 'Lanchonetes e fast-food'
-  },
-  { 
-    slug: 'pizza', 
-    name: 'Pizzaria', 
-    icon: Pizza, 
-    color: 'from-red-500 to-yellow-500',
-    description: 'Pizzas e massas'
-  },
-  { 
-    slug: 'acai-shop', 
-    name: 'Açaiteria', 
-    icon: IceCream, 
-    color: 'from-purple-500 to-pink-500',
-    description: 'Açaí e sorvetes'
-  },
-  { 
-    slug: 'grocery', 
-    name: 'Hortifruti', 
-    icon: Leaf, 
-    color: 'from-green-500 to-emerald-500',
-    description: 'Frutas e verduras'
-  },
+  { slug: 'burger-shop', name: 'Hamburgueria', icon: UtensilsCrossed, color: 'from-orange-500 to-red-500', description: 'Lanchonetes e fast-food' },
+  { slug: 'pizza', name: 'Pizzaria', icon: Pizza, color: 'from-red-500 to-yellow-500', description: 'Pizzas e massas' },
+  { slug: 'acai-shop', name: 'Açaiteria', icon: IceCream, color: 'from-purple-500 to-pink-500', description: 'Açaí e sorvetes' },
+  { slug: 'grocery', name: 'Hortifruti', icon: Leaf, color: 'from-green-500 to-emerald-500', description: 'Frutas e verduras' },
+];
+
+const HOW_STEPS = [
+  { icon: Store, title: 'Seu negócio online', description: 'O cliente adiciona os itens do menu no carrinho.', color: 'bg-orange-500' },
+  { icon: MapPin, title: 'Endereço de entrega', description: 'O cliente informa o endereço ou se irá buscar o pedido.', color: 'bg-blue-500' },
+  { icon: Wallet, title: 'Forma de pagamento', description: 'O cliente seleciona a forma de pagamento.', color: 'bg-emerald-500' },
+  { icon: Truck, title: 'E por fim, Delivery', description: 'O pedido chega no painel e pode ser preparado e entregue.', color: 'bg-purple-500' },
+];
+
+const FEATURES = [
+  { icon: Palette, title: 'Cardápio personalizável', description: 'Customize cores, logos e layout do seu cardápio digital.' },
+  { icon: LayoutGrid, title: 'PDV, retirada, delivery e mesas', description: 'Múltiplas formas de atendimento em um só painel.' },
+  { icon: Monitor, title: 'Painel para gestão completa', description: 'Controle total dos pedidos, produtos e vendas.' },
+  { icon: InfinityIcon, title: 'Sem limites de produtos e pedidos', description: 'Cadastre quantos produtos e receba quantos pedidos precisar.' },
+  { icon: Printer, title: 'Impressão automática', description: 'Imprima automaticamente os pedidos na cozinha.' },
+  { icon: Smartphone, title: 'Controle via celular', description: 'Gerencie seu negócio de qualquer lugar pelo smartphone.' },
+  { icon: Users2, title: 'Usuários e permissões', description: 'Controle de acesso para diferentes níveis de usuário.' },
+  { icon: BarChart3, title: 'Relatórios de vendas e clientes', description: 'Analise suas vendas e conheça melhor seus clientes.' },
 ];
 
 export default function Index() {
@@ -79,551 +71,316 @@ export default function Index() {
   const navigate = useNavigate();
   const { settings: globalSettings } = useGlobalSettings();
 
-  // Load Meta Pixel (landing) once the ID is available and fire PageView
   useEffect(() => {
-    if (globalSettings.landing_pixel_id) {
-      loadLandingPixel(globalSettings.landing_pixel_id);
-    }
+    if (globalSettings.landing_pixel_id) loadLandingPixel(globalSettings.landing_pixel_id);
   }, [globalSettings.landing_pixel_id]);
 
-  const scrollToForm = () => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   const generateSlug = (name: string) => {
-    const base = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    const suffix = Date.now().toString(36).slice(-4);
-    return `${base}-${suffix}`;
+    const base = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `${base}-${Date.now().toString(36).slice(-4)}`;
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!storeName.trim() || !email.trim() || !password.trim()) {
-      toast({ title: 'Preencha todos os campos', variant: 'destructive' });
-      return;
+      toast({ title: 'Preencha todos os campos', variant: 'destructive' }); return;
     }
-
     if (password.length < 6) {
-      toast({ title: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
-      return;
+      toast({ title: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' }); return;
     }
-
-    if (!selectedNiche) {
-      toast({ title: 'Selecione o tipo do seu negócio', variant: 'destructive' });
-      return;
-    }
-
     setLoading(true);
-    // Meta Pixel: signup intent (before creating account)
     trackLandingEvent('Lead', { content_name: 'landing_signup', segment: selectedNiche });
-
     try {
-
-
-
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
+        email: email.trim(), password,
         options: { emailRedirectTo: `${window.location.origin}/admin` }
       });
-
       if (authError) throw authError;
       if (!authData.user) throw new Error('Erro ao criar conta');
-
-      // If signUp didn't return a session (email confirmation required),
-      // sign in immediately so the RPC call below is authenticated.
       if (!authData.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (signInError) {
-          console.warn('[Signup] auto sign-in after signup failed:', signInError);
-          throw new Error('Conta criada, mas não conseguimos iniciar sessão automaticamente. Faça login.');
-        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (signInError) throw new Error('Conta criada, mas não conseguimos iniciar sessão automaticamente. Faça login.');
       }
-
       const slug = generateSlug(storeName.trim());
       const { data: storeId, error: storeError } = await supabase.rpc('create_user_store_with_template', {
-        p_store_name: storeName.trim(),
-        p_store_slug: slug,
-        p_template_slug: selectedNiche
+        p_store_name: storeName.trim(), p_store_slug: slug, p_template_slug: selectedNiche
       });
-
       if (storeError) throw storeError;
-
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-      
-      await supabase
-        .from('stores')
-        .update({ trial_expires_at: sevenDaysFromNow.toISOString() })
-        .eq('id', storeId);
-
+      await supabase.from('stores').update({ trial_expires_at: sevenDaysFromNow.toISOString() }).eq('id', storeId);
       const nicheLabel = NICHE_OPTIONS.find(n => n.slug === selectedNiche)?.name || 'Outro';
-
-      // Meta Pixel: conversion completed
       trackLandingEvent('CompleteRegistration', {
-        content_name: 'store_created',
-        segment: nicheLabel,
-        value: globalSettings.subscription_price,
-        currency: 'BRL',
-        status: 'trial',
+        content_name: 'store_created', segment: nicheLabel,
+        value: globalSettings.subscription_price, currency: 'BRL', status: 'trial',
       });
-
-
-      
-      toast({ 
-        title: '🎉 Loja criada com sucesso!', 
-        description: 'Você tem 7 dias grátis para testar.' 
-      });
-
-      sendLeadNotification({
-        storeName: storeName.trim(),
-        email: email.trim(),
-        segment: nicheLabel,
-      }).catch(console.error);
-
+      toast({ title: '🎉 Loja criada com sucesso!', description: 'Você tem 7 dias grátis para testar.' });
+      sendLeadNotification({ storeName: storeName.trim(), email: email.trim(), segment: nicheLabel }).catch(console.error);
       navigate('/admin');
     } catch (error: any) {
-      console.error('Signup error:', error, {
-        message: error?.message,
-        status: error?.status,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-      });
       const raw = (error?.message || '').toLowerCase();
       let message = 'Erro ao criar conta. Tente novamente.';
-      if (raw.includes('already registered') || raw.includes('already been registered') || raw.includes('user already')) {
-        message = 'Este e-mail já está cadastrado. Faça login.';
-      } else if (raw.includes('pwned') || raw.includes('weak') || raw.includes('compromised') || raw.includes('leaked')) {
-        message = 'Esta senha é muito comum / vazada. Escolha uma senha mais forte (8+ caracteres, com números e símbolos).';
-      } else if (raw.includes('password') && raw.includes('short')) {
-        message = 'A senha é muito curta. Use pelo menos 6 caracteres.';
-      } else if (raw.includes('invalid') && raw.includes('email')) {
-        message = 'E-mail inválido.';
-      } else if (raw.includes('slug') || raw.includes('already in use')) {
-        message = 'O nome dessa loja gerou um link em uso. Tente um nome ligeiramente diferente.';
-      } else if (raw.includes('rate')) {
-        message = 'Muitas tentativas. Aguarde alguns segundos e tente novamente.';
-      } else if (error?.message) {
-        message = `Erro: ${error.message}`;
-      }
+      if (raw.includes('already registered') || raw.includes('already been registered') || raw.includes('user already')) message = 'Este e-mail já está cadastrado. Faça login.';
+      else if (raw.includes('pwned') || raw.includes('weak') || raw.includes('compromised') || raw.includes('leaked')) message = 'Esta senha é muito comum / vazada. Escolha uma senha mais forte.';
+      else if (raw.includes('password') && raw.includes('short')) message = 'A senha é muito curta. Use pelo menos 6 caracteres.';
+      else if (raw.includes('invalid') && raw.includes('email')) message = 'E-mail inválido.';
+      else if (raw.includes('slug') || raw.includes('already in use')) message = 'Esse nome gerou um link em uso. Tente um nome ligeiramente diferente.';
+      else if (raw.includes('rate')) message = 'Muitas tentativas. Aguarde alguns segundos e tente novamente.';
+      else if (error?.message) message = `Erro: ${error.message}`;
       toast({ title: message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const features = [
-    {
-      icon: Sparkles,
-      title: 'Design de Alto Nível',
-      description: 'Templates inteligentes (Hamburgueria, Pizzaria, Açaí) com animações fluidas e interface de última geração.',
-      image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-orange-600/90 via-orange-700/40 to-transparent',
-    },
-    {
-      icon: Palette,
-      title: 'Visual Personalizado',
-      description: 'Altere cores, fontes e estilos para combinar 100% com a identidade visual da sua marca.',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-purple-700/90 via-fuchsia-800/40 to-transparent',
-    },
-    {
-      icon: LayoutGrid,
-      title: 'Navegação por Categorias',
-      description: 'Barra inteligente "Sticky" que facilita a escolha do cliente e aumenta o ticket médio.',
-      image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-rose-700/90 via-red-800/40 to-transparent',
-    },
-    {
-      icon: Smartphone,
-      title: 'Mobile-First Real',
-      description: 'Otimizado para 2 colunas no celular, exibindo mais produtos com menos esforço de navegação.',
-      image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-slate-900/90 via-slate-800/50 to-transparent',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Upsell Inteligente',
-      description: 'Sugira combos e adicionais no momento certo da compra. Aumente seu ticket médio automaticamente.',
-      image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-amber-700/90 via-yellow-800/40 to-transparent',
-    },
-    {
-      icon: ShoppingCart,
-      title: 'Recupere Vendas Perdidas',
-      description: 'Carrinhos abandonados? Recupere clientes com mensagens automáticas via WhatsApp.',
-      image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=800&auto=format&fit=crop&q=80',
-      tint: 'from-emerald-700/90 via-green-800/40 to-transparent',
-    },
-  ];
-
-  const stats = [
-    { icon: Users, value: '+500', label: 'Lojas ativas' },
-    { icon: Zap, value: '+15%', label: 'Aumento no ticket' },
-    { icon: Clock, value: '< 5min', label: 'Setup completo' },
-  ];
+  const price = globalSettings.subscription_price || 49.9;
+  const priceFmt = price.toFixed(2).replace('.', ',');
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-end">
-          <div className="flex items-center gap-3">
+      <nav className="sticky top-0 z-50 bg-background/85 backdrop-blur-md border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png?v=5" alt="DeliveryPro" className="w-8 h-8" />
+            <span className="font-bold text-lg tracking-tight">DeliveryPro</span>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            <a href="#precos" className="hidden sm:inline text-sm text-foreground/70 hover:text-foreground transition-colors">Preços</a>
+            <button onClick={scrollToForm} className="hidden sm:inline text-sm text-foreground/70 hover:text-foreground transition-colors">Cadastro</button>
             <Link to="/auth">
-              <Button variant="ghost" className="text-foreground/80 hover:text-foreground">
-                Entrar
-              </Button>
+              <Button className="bg-primary hover:bg-primary/90 text-white h-9 px-5 rounded-lg">Entrar</Button>
             </Link>
-            <Button 
-              onClick={scrollToForm}
-              className="bg-primary hover:bg-primary/90 text-white hidden sm:flex"
-            >
-              Começar Grátis
-            </Button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-16 text-center relative">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald/10 text-emerald text-sm font-medium mb-6">
-            <Zap className="w-4 h-4" />
-            Zero taxas por pedido
+      {/* Hero */}
+      <header className="relative overflow-hidden border-b border-border">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+        <div className="relative max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20 pb-16 md:pb-24 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
+              Cardápio digital e gestor de pedidos por{' '}
+              <span className="text-primary">R$ {priceFmt}/mês</span>
+            </h1>
+            <p className="text-lg text-foreground/70 mb-8">
+              <strong className="text-foreground">7 dias grátis</strong> sem compromisso.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={`https://wa.me/${(globalSettings.support_whatsapp || '5511999999999').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Quero saber mais sobre a DeliveryPro.')}`}
+                target="_blank" rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 font-medium transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" /> Chamar no WhatsApp
+              </a>
+              <Button onClick={scrollToForm} className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-base gap-2">
+                Cadastrar <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="mt-6 text-sm text-foreground/60">✓ Sem cartão de crédito &nbsp; ✓ Setup em 5 min &nbsp; ✓ Cancele quando quiser</p>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-6 leading-[1.1]">
-            O cardápio digital<br />
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              que vende mais
-            </span>
-          </h1>
-          
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Seja hamburgueria, açaiteria, pizzaria ou hortifruti: 
-            <strong className="text-foreground/80"> aumente seu ticket médio com upsell inteligente</strong> e receba pedidos direto no WhatsApp.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button 
-              size="lg"
-              onClick={scrollToForm}
-              className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg shadow-primary/20"
-            >
-              Começar Meu Teste Grátis
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <p className="text-sm text-muted-foreground mb-8">
-            ✓ 7 dias grátis &nbsp;&nbsp; ✓ Sem cartão de crédito &nbsp;&nbsp; ✓ Cancele quando quiser
-          </p>
-
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-6 md:gap-12">
-            {stats.map((stat, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-primary" />
+          {/* Hero visual: admin panel + phone overlap */}
+          <div className="relative h-[380px] md:h-[440px]">
+            <div className="absolute inset-x-0 top-4 bg-neutral-950 border border-white/10 rounded-2xl shadow-2xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                <span className="ml-3 text-xs text-white/50">DeliveryPro · Painel</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[10px]">
+                <div className="col-span-1 space-y-1.5 border-r border-white/10 pr-2">
+                  {['Pedidos', 'Cardápio', 'Categorias', 'Locais', 'Configurações'].map(x => (
+                    <div key={x} className="px-2 py-1.5 rounded bg-white/5 text-white/70">{x}</div>
+                  ))}
                 </div>
-                <div className="text-left">
-                  <p className="text-xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <div className="col-span-2 space-y-1.5">
+                  <div className="flex gap-1">
+                    {['NOVO', 'EM PREP', 'PRONTO', 'FINALIZADO'].map(t => (
+                      <div key={t} className="flex-1 text-center py-1 rounded bg-primary/20 text-primary text-[9px] font-bold">{t}</div>
+                    ))}
+                  </div>
+                  {[
+                    { n: 'Antônio F.', v: '64,90', s: 'Pago', c: 'bg-emerald-500/20 text-emerald-400' },
+                    { n: 'José A.', v: '32,70', s: 'PIX', c: 'bg-yellow-500/20 text-yellow-400' },
+                    { n: 'Maria S.', v: '48,00', s: 'Dinheiro', c: 'bg-blue-500/20 text-blue-400' },
+                  ].map((r, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 rounded p-2">
+                      <div>
+                        <div className="text-white text-[10px] font-medium">{r.n}</div>
+                        <div className="text-white/50">R$ {r.v}</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded ${r.c} text-[9px] font-bold`}>{r.s}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
+            {/* Phone overlay */}
+            <div className="absolute left-2 md:left-6 bottom-0 w-[150px] md:w-[180px]">
+              <div className="bg-neutral-900 rounded-[1.5rem] p-1.5 shadow-2xl">
+                <div className="bg-white rounded-[1.2rem] overflow-hidden aspect-[9/19]">
+                  <div className="h-6 bg-primary text-white flex items-center justify-between px-2 text-[8px]">
+                    <span>Cardápio</span><span>●●●</span>
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    <div className="h-8 bg-primary/10 rounded" />
+                    <div className="flex gap-1"><span className="text-[7px] px-1.5 py-0.5 rounded bg-primary text-white">Lanches</span><span className="text-[7px] px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-700">Bebidas</span></div>
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex gap-1.5 items-center p-1 border border-neutral-200 rounded">
+                        <div className="w-8 h-8 bg-neutral-200 rounded" />
+                        <div className="flex-1">
+                          <div className="h-1.5 bg-neutral-300 rounded w-3/4 mb-1" />
+                          <div className="h-1.5 bg-neutral-200 rounded w-1/2" />
+                        </div>
+                        <div className="text-[7px] text-primary font-bold">R$ 12</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* System Showcase - Phone Mockups Carousel (Templates) */}
-      <section className="py-16 md:py-24 bg-secondary">
-        <div className="max-w-7xl mx-auto">
-          <ScrollReveal direction="up" className="text-center mb-12 px-4">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              Templates Prontos
-            </span>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Um sistema para cada segmento
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Cardápios otimizados para hamburguerias, açaiterias, pizzarias e hortifrutis
-            </p>
-          </ScrollReveal>
-
-          <ScrollReveal direction="zoom" delay={0.15}>
-            <SystemShowcase onCtaClick={scrollToForm} />
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* 3D Floating Ecosystem Scene */}
-      <Floating3DScene />
-
-      {/* Savings Comparison Section */}
-      <ScrollReveal direction="up">
-        <SavingsComparisonSection onCtaClick={scrollToForm} />
-      </ScrollReveal>
-
-      {/* Features Grid */}
-      <section className="py-20 md:py-24 px-4 md:px-6">
+      {/* Como funciona */}
+      <section className="py-16 md:py-24 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
-          <ScrollReveal direction="up" className="text-center mb-16">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                Funcionalidades
-              </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald/10 text-emerald text-xs font-bold uppercase tracking-wider animate-pulse">
-                Nova Versão 2.0
-              </span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Uma experiência de App Nativo,<br className="hidden sm:block" /> sem precisar baixar nada.
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Templates premium, navegação fluida e design que converte
-            </p>
+          <ScrollReveal direction="up" className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">Como funciona?</h2>
+            <p className="text-foreground/60 max-w-2xl mx-auto">Veja como é simples o processo do momento que você envia o link até a venda.</p>
           </ScrollReveal>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <ScrollReveal
-                key={index}
-                direction="up"
-                delay={index * 0.08}
-              >
-                <Tilt3DCard className="h-full">
-                  <article
-                    className="group relative h-full min-h-[340px] rounded-3xl overflow-hidden border border-border/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] bg-card"
-                  >
-                    {/* Real photo background */}
-                    <img
-                      src={feature.image}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-[1200ms] ease-out"
-                      style={{ transform: 'translateZ(0px)' }}
-                    />
-                    {/* Cinematic tint */}
-                    <div className={`absolute inset-0 bg-gradient-to-t ${feature.tint}`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/10" />
-
-                    {/* Floating 3D glass icon */}
-                    <div
-                      className="absolute top-6 left-6"
-                      style={{ transform: 'translateZ(60px)' }}
-                    >
-                      <div className="relative w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-xl border border-white/25 flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(0,0,0,0.6)]">
-                        <feature.icon className="w-7 h-7 text-white drop-shadow-lg" strokeWidth={2} />
-                        <span className="absolute -inset-px rounded-2xl bg-gradient-to-br from-white/40 to-transparent opacity-60 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    {/* Content pushed forward */}
-                    <div
-                      className="absolute inset-x-0 bottom-0 p-7"
-                      style={{ transform: 'translateZ(40px)' }}
-                    >
-                      <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-md">
-                        {feature.title}
-                      </h3>
-                      <p className="text-white/85 leading-relaxed text-[15px]">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </article>
-                </Tilt3DCard>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {HOW_STEPS.map((step, i) => (
+              <ScrollReveal key={i} direction="up" delay={i * 0.1} className="text-center">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${step.color} flex items-center justify-center shadow-lg`}>
+                  <step.icon className="w-8 h-8 text-white" strokeWidth={2.2} />
+                </div>
+                <h3 className="font-bold text-primary mb-2">{step.title}</h3>
+                <p className="text-sm text-foreground/60">{step.description}</p>
               </ScrollReveal>
             ))}
+          </div>
+          <div className="mt-12 text-center">
+            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+              ⚡ Processo 100% automatizado
+            </span>
           </div>
         </div>
       </section>
 
+      {/* Recursos */}
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-secondary/40 border-y border-border">
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal direction="up" className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">Alguns dos nossos recursos</h2>
+            <p className="text-foreground/60 max-w-2xl mx-auto">Funcionalidades completas para automatizar e otimizar todo o processo de vendas do seu negócio.</p>
+          </ScrollReveal>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {FEATURES.map((f, i) => (
+              <ScrollReveal key={i} direction="up" delay={(i % 4) * 0.05}>
+                <div className="h-full p-6 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center mb-4 shadow-md">
+                    <f.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="font-semibold mb-2">{f.title}</h3>
+                  <p className="text-sm text-foreground/60 leading-relaxed">{f.description}</p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+              ⚡ E muito mais funcionalidades sendo adicionadas constantemente
+            </span>
+          </div>
+        </div>
+      </section>
 
+      {/* Pricing */}
+      <div id="precos">
+        <ScrollReveal direction="up">
+          <PricingSection onCtaClick={scrollToForm} />
+        </ScrollReveal>
+      </div>
 
-      {/* Pricing Section */}
-      <ScrollReveal direction="up">
-        <PricingSection onCtaClick={scrollToForm} />
-      </ScrollReveal>
-
-      {/* FAQ Section */}
+      {/* FAQ */}
       <ScrollReveal direction="up">
         <FAQSection />
       </ScrollReveal>
 
-
-
-      {/* Signup Form */}
-      <section ref={formRef} className="py-20 md:py-24 pb-48 md:pb-56 px-4 md:px-6">
+      {/* Signup */}
+      <section ref={formRef} className="py-20 md:py-24 px-4 md:px-6">
         <div className="max-w-lg mx-auto">
           <div className="bg-card rounded-3xl p-8 md:p-10 shadow-xl border border-border">
             <div className="text-center mb-8">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-emerald/10 text-emerald text-sm font-medium mb-4">
-                🎁 7 dias grátis
-              </span>
-              <h3 className="text-2xl font-bold text-foreground mb-2">
-                Crie sua loja agora
-              </h3>
-              <p className="text-muted-foreground">
-                Setup em menos de 5 minutos
-              </p>
+              <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-sm font-medium mb-4">🎁 7 dias grátis</span>
+              <h3 className="text-2xl font-bold mb-2">Crie sua loja agora</h3>
+              <p className="text-foreground/60">Setup em menos de 5 minutos</p>
             </div>
-
             <form onSubmit={handleSignup} className="space-y-5">
-              {/* Niche Selection */}
               <div className="space-y-3">
-                <Label className="text-foreground/80 font-medium">Tipo do seu negócio</Label>
+                <Label className="font-medium">Tipo do seu negócio</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {NICHE_OPTIONS.map((niche) => {
-                    const IconComponent = niche.icon;
-                    const isSelected = selectedNiche === niche.slug;
+                    const Icon = niche.icon;
+                    const selected = selectedNiche === niche.slug;
                     return (
-                      <button
-                        key={niche.slug}
-                        type="button"
-                        onClick={() => setSelectedNiche(niche.slug)}
-                        className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5 shadow-md' 
-                            : 'border-border hover:border-primary/50 bg-card'
-                        }`}
-                      >
+                      <button key={niche.slug} type="button" onClick={() => setSelectedNiche(niche.slug)}
+                        className={`relative p-4 rounded-xl border-2 transition-all text-left ${selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
                         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${niche.color} flex items-center justify-center mb-2`}>
-                          <IconComponent className="w-5 h-5 text-white" />
+                          <Icon className="w-5 h-5 text-white" />
                         </div>
-                        <p className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-foreground'}`}>
-                          {niche.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{niche.description}</p>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2">
-                            <CheckCircle2 className="w-5 h-5 text-primary" />
-                          </div>
-                        )}
+                        <p className={`font-semibold text-sm ${selected ? 'text-primary' : ''}`}>{niche.name}</p>
+                        <p className="text-xs text-foreground/50 mt-0.5">{niche.description}</p>
+                        {selected && <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-primary" />}
                       </button>
                     );
                   })}
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="storeName" className="text-foreground/80 font-medium">Nome da sua Loja</Label>
+                <Label htmlFor="storeName" className="font-medium">Nome da sua Loja</Label>
                 <div className="relative">
-                  <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="storeName"
-                    type="text"
-                    placeholder="Ex: Burger do João"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
-                    maxLength={100}
-                  />
+                  <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+                  <Input id="storeName" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ex: Burger do João" className="pl-12 h-12 rounded-xl" maxLength={100} />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground/80 font-medium">E-mail</Label>
+                <Label htmlFor="email" className="font-medium">E-mail</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
-                    maxLength={255}
-                  />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="pl-12 h-12 rounded-xl" maxLength={255} />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground/80 font-medium">Senha</Label>
+                <Label htmlFor="password" className="font-medium">Senha</Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-12 bg-secondary border-border focus:border-primary focus:ring-primary rounded-xl text-foreground placeholder:text-muted-foreground"
-                    minLength={6}
-                  />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/40" />
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="pl-12 h-12 rounded-xl" minLength={6} />
                 </div>
               </div>
-
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20"
-              >
+              <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg shadow-primary/20">
                 {loading ? 'Criando sua loja...' : 'Começar meu Teste Grátis'}
               </Button>
             </form>
-
-            <p className="text-xs text-muted-foreground text-center mt-6">
-              Após 7 dias, apenas R$ 49,90/mês. Cancele quando quiser.
-            </p>
+            <p className="text-xs text-foreground/50 text-center mt-6">Após 7 dias, apenas R$ {priceFmt}/mês. Cancele quando quiser.</p>
           </div>
-
-          {/* Trust Signals */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mt-8 mb-8 text-sm text-muted-foreground">
-            {['Setup em 5 min', 'Sem taxas ocultas', 'Cancele quando quiser'].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-          
-          {/* Extra bottom spacing text */}
-          <p className="text-center text-sm text-emerald font-medium pb-8">
-            ✓ 7 dias grátis • Sem compromisso
-          </p>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-16 px-4 md:px-6 bg-gradient-to-r from-primary to-primary/80">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Pronto para vender mais?
-          </h2>
-          <p className="text-white/80 text-lg mb-8">
-            Junte-se a mais de 500 lojas que já aumentaram suas vendas
-          </p>
-          <Button 
-            size="lg"
-            onClick={scrollToForm}
-            className="h-14 px-8 text-lg bg-white text-primary hover:bg-white/90 gap-2 shadow-lg"
-          >
-            Começar Meu Teste Grátis
-            <ArrowRight className="w-5 h-5" />
-          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 md:px-6 border-t border-border bg-background">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} DeliveryPro. Todos os direitos reservados.
-          </p>
+      <footer className="py-10 px-4 md:px-6 border-t border-border">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png?v=5" alt="DeliveryPro" className="w-6 h-6" />
+            <span className="font-semibold">DeliveryPro</span>
+          </div>
+          <p className="text-sm text-foreground/60">© {new Date().getFullYear()} DeliveryPro. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>
