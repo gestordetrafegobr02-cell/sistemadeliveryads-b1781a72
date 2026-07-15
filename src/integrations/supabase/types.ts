@@ -183,6 +183,33 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_image_bank: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          url?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           address: string | null
