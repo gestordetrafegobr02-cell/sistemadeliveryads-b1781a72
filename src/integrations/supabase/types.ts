@@ -243,6 +243,139 @@ export type Database = {
           },
         ]
       }
+      pdv_session_items: {
+        Row: {
+          created_at: string
+          id: string
+          modifiers: Json
+          name: string
+          note: string | null
+          product_id: string | null
+          quantity: number
+          sent_to_kitchen_at: string | null
+          session_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modifiers?: Json
+          name: string
+          note?: string | null
+          product_id?: string | null
+          quantity?: number
+          sent_to_kitchen_at?: string | null
+          session_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modifiers?: Json
+          name?: string
+          note?: string | null
+          product_id?: string | null
+          quantity?: number
+          sent_to_kitchen_at?: string | null
+          session_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_session_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_session_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_sessions: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          discount: number
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          payment_method: string | null
+          status: string
+          store_id: string
+          subtotal: number
+          table_id: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          payment_method?: string | null
+          status?: string
+          store_id: string
+          subtotal?: number
+          table_id?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          payment_method?: string | null
+          status?: string
+          store_id?: string
+          subtotal?: number
+          table_id?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_sessions_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_orders: {
         Row: {
           created_at: string
@@ -635,6 +768,57 @@ export type Database = {
           },
         ]
       }
+      tables: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          number: number
+          seats: number
+          sort_order: number
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          number: number
+          seats?: number
+          sort_order?: number
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          number?: number
+          seats?: number
+          sort_order?: number
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tables_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tables_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upsell_rules: {
         Row: {
           created_at: string
@@ -758,6 +942,15 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_pdv_session: { Args: { p_session_id: string }; Returns: undefined }
+      close_pdv_session: {
+        Args: {
+          p_payment_method: string
+          p_redeem_cashback?: number
+          p_session_id: string
+        }
+        Returns: Json
+      }
       create_public_order: {
         Args: {
           p_address?: string
@@ -1034,6 +1227,15 @@ export type Database = {
       mark_abandoned_cart_converted: {
         Args: { p_cart_id: string; p_order_id?: string }
         Returns: undefined
+      }
+      open_pdv_session: {
+        Args: {
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_store_id: string
+          p_table_id?: string
+        }
+        Returns: string
       }
       process_order_cashback: {
         Args: {
