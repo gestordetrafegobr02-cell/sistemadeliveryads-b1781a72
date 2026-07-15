@@ -575,6 +575,10 @@ export default function Admin() {
               <BarChart3 className="w-4 h-4" />
               Relatórios
             </TabsTrigger>
+            <TabsTrigger value="team" className="gap-2">
+              <Users className="w-4 h-4" />
+              Equipe
+            </TabsTrigger>
           </TabsList>
 
           {/* Store Tab */}
