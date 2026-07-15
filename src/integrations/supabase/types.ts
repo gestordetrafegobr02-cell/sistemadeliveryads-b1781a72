@@ -411,6 +411,51 @@ export type Database = {
         }
         Relationships: []
       }
+      store_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          role: Database["public"]["Enums"]["store_role"]
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["store_role"]
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["store_role"]
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_members_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_members_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_secrets: {
         Row: {
           mercadopago_access_token: string | null
@@ -806,6 +851,14 @@ export type Database = {
         Returns: number
       }
       get_global_setting: { Args: { setting_key: string }; Returns: string }
+      get_my_store: {
+        Args: never
+        Returns: {
+          is_owner: boolean
+          role: Database["public"]["Enums"]["store_role"]
+          store_id: string
+        }[]
+      }
       get_order_by_id: {
         Args: { p_order_id: string }
         Returns: {
@@ -921,6 +974,10 @@ export type Database = {
         }[]
       }
       get_store_pixel_by_slug: { Args: { store_slug: string }; Returns: string }
+      get_store_role: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["store_role"]
+      }
       get_store_stats: {
         Args: { p_end_date?: string; p_start_date?: string; p_store_id: string }
         Returns: Json
@@ -942,12 +999,38 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_store_access: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_store_mercadopago_token: {
         Args: { _store_id: string }
         Returns: boolean
       }
+      has_store_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["store_role"][]
+          _store_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_master_admin: { Args: never; Returns: boolean }
+      is_store_owner: {
+        Args: { _store_id: string; _user_id: string }
+        Returns: boolean
+      }
+      list_store_members: {
+        Args: { p_store_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["store_role"]
+          user_id: string
+        }[]
+      }
       mark_abandoned_cart_converted: {
         Args: { p_cart_id: string; p_order_id?: string }
         Returns: undefined
@@ -989,6 +1072,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      store_role: "owner" | "manager" | "attendant" | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1117,6 +1201,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      store_role: ["owner", "manager", "attendant", "kitchen"],
     },
   },
 } as const
