@@ -374,6 +374,7 @@ export default function Index() {
       </motion.button>
 
       <WhatsAppLeadModal open={leadModalOpen} onOpenChange={setLeadModalOpen} />
+      </div>
     </div>
   );
 }
