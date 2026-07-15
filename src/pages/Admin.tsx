@@ -1226,6 +1226,19 @@ export default function Admin() {
             )}
           </TabsContent>
 
+          {/* PDV Tab */}
+          <TabsContent value="pdv">
+            {store ? (
+              <PdvTab storeId={store.id} storeName={store.name} canManageTables />
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-8">
+                  <p className="text-muted-foreground text-center">Crie sua loja primeiro para usar o PDV.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           {/* Team Tab */}
           <TabsContent value="team">
             {store ? (
