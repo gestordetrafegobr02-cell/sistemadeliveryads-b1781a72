@@ -39,7 +39,19 @@ export function TeamTab({ storeId }: { storeId: string }) {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role>('attendant');
   const [inviting, setInviting] = useState(false);
+  const [storeName, setStoreName] = useState<string>('');
   const [tempCred, setTempCred] = useState<{ email: string; password: string; phone: string } | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('stores_public')
+      .select('name')
+      .eq('id', storeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setStoreName(data.name as string);
+      });
+  }, [storeId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -154,11 +166,14 @@ export function TeamTab({ storeId }: { storeId: string }) {
 
           {tempCred && (() => {
             const loginUrl = `${SITE_URL}/auth`;
+            const brand = storeName ? `${storeName} (via DeliveryPro)` : 'DeliveryPro';
+            const roleLabel = ROLE_LABELS[role] || 'Membro';
             const shareText =
-              `👋 Você foi adicionado como membro da equipe no *DeliveryPro*.\n\n` +
+              `👋 Você foi adicionado como *${roleLabel}* da equipe *${brand}*.\n\n` +
               `🔗 Acesse: ${loginUrl}\n` +
               `📧 Email: ${tempCred.email}\n` +
               `🔑 Senha temporária: ${tempCred.password}\n\n` +
+              `Depois de entrar, abra o menu do navegador e toque em *"Adicionar à tela de início"* para instalar o app.`;
               `Depois de entrar, abra o menu do navegador e toque em *"Adicionar à tela de início"* para instalar o app.`;
             const waNumber = tempCred.phone
               ? (tempCred.phone.startsWith('55') ? tempCred.phone : `55${tempCred.phone}`)
