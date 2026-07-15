@@ -77,14 +77,11 @@ export default function Auth() {
       return;
     }
     
-    // For regular users, check if they have a store
-    const { data } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('owner_id', user.id)
-      .maybeSingle();
+    // For regular users, check if they own OR are member of a store
+    const { data: membership } = await supabase.rpc('get_my_store');
+    const hasStore = Array.isArray(membership) ? membership.length > 0 : !!membership;
 
-    if (data) {
+    if (hasStore) {
       navigate('/admin', { replace: true });
     } else {
       navigate('/onboarding', { replace: true });
