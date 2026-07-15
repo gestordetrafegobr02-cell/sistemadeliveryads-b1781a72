@@ -169,7 +169,7 @@ export default function Index() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href={`https://wa.me/${(globalSettings.support_whatsapp || '5511999999999').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Quero saber mais sobre a DeliveryPro.')}`}
+                href={`https://wa.me/${((globalSettings as any).support_whatsapp || '5511999999999').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Quero saber mais sobre a DeliveryPro.')}`}
                 target="_blank" rel="noreferrer"
                 className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 font-medium transition-colors"
               >
