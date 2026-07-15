@@ -86,9 +86,47 @@
     @apply border-border;
   }
 
+  html {
+    /* Prevent iOS text auto-zoom on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', sans-serif;
+    /* Fluid, momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    /* Avoid double-tap zoom on interactive UI */
+    touch-action: manipulation;
+  }
+
+  /* PWA safe areas (notch / home indicator) */
+  @supports (padding: max(0px)) {
+    body {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  }
+
+  /* Enforce 44px minimum touch targets on mobile per Apple HIG */
+  @media (max-width: 768px) {
+    button,
+    [role="button"],
+    a.btn,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"] {
+      min-height: 44px;
+    }
+    /* Inputs at 16px to prevent iOS focus zoom */
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+      min-height: 44px;
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {
