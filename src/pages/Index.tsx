@@ -37,14 +37,6 @@ import {
   Leaf,
   IceCream,
   UtensilsCrossed,
-  Palette,
-  Monitor,
-  Infinity as InfinityIcon,
-  Printer,
-  Smartphone,
-  Users2,
-  BarChart3,
-  LayoutGrid,
   MessageCircle,
 } from 'lucide-react';
 
