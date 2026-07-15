@@ -62,6 +62,14 @@ export default function Onboarding() {
   }, [user]);
 
   async function checkExistingStore() {
+    // If the user is a member (not owner) of a store, send them straight to admin
+    const { data: membership } = await supabase.rpc('get_my_store');
+    const memberRow = Array.isArray(membership) ? membership[0] : membership;
+    if (memberRow && memberRow.is_owner === false) {
+      navigate('/admin', { replace: true });
+      return;
+    }
+
     const { data: storeData } = await supabase
       .from('stores')
       .select('id, name, slug')
