@@ -396,58 +396,66 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* Step 3: Success Tutorial */}
+        {/* Step 3: Welcome / Success */}
         {step === 3 && (
-          <Card className="bg-card border-border animate-fade-in">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-500" />
+          <Card className="bg-card border-border animate-fade-in overflow-hidden p-0">
+            {/* Green welcome header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-5 flex items-center gap-3">
+              <PartyPopper className="w-7 h-7 text-white shrink-0" />
+              <h2 className="font-display text-xl md:text-2xl font-bold text-white">
+                Bem-vindo ao DeliveryPro!
+              </h2>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="text-center space-y-1">
+                <h3 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                  Conta criada com sucesso!
+                </h3>
+                <p className="text-muted-foreground">Vamos configurar seu cardápio digital?</p>
               </div>
-              <CardTitle className="font-display text-2xl">
-                🎉 Seu cardápio de {createdNiche} está pronto!
-              </CardTitle>
-              <CardDescription>
-                Siga os próximos passos para começar a vender
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Tutorial Steps */}
-              <div className="space-y-4">
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                    <span className="font-bold text-primary">1</span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Cardápio pronto!</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Seu cardápio de {createdNiche} já está configurado com produtos de exemplo.
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                    <Settings className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Altere os preços</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Acesse a aba "Produtos" para ajustar nomes, descrições e preços.
-                    </p>
-                  </div>
+              {/* Next steps info box */}
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-5 h-5 text-sky-500" />
+                  <h4 className="font-bold text-foreground">Próximos passos:</h4>
                 </div>
+                <ol className="space-y-2 text-sm text-foreground/90 list-decimal list-inside marker:font-bold marker:text-foreground">
+                  <li><span className="font-bold">Adicione seus produtos</span> — Cadastre os itens do seu menu com categoria, fotos, preços e descrições</li>
+                  <li><span className="font-bold">Organize suas categorias</span> — Ajuste a ordem das categorias do seu cardápio (Ex: Pizzas, Bebidas, Sobremesas)</li>
+                  <li><span className="font-bold">Locais de entrega</span> — Cadastre cidades e bairros atendidos com valores de frete</li>
+                  <li><span className="font-bold">Formas de pagamento</span> — Cadastre os pagamentos aceitos no seu restaurante</li>
+                  <li><span className="font-bold">Personalize seu cardápio</span> — Cores, fonte, logo, horários de funcionamento, etc</li>
+                  <li><span className="font-bold">Compartilhe seu link</span> — Envie o link do cardápio para seus clientes!</li>
+                </ol>
+              </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                    <CreditCard className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">Configure seu PIX</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Adicione sua chave PIX e WhatsApp na aba "Loja" para receber pagamentos.
-                    </p>
-                  </div>
-                </div>
+              {/* Quick action cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { icon: ShoppingCart, title: 'Produtos', desc: 'Cadastre seus itens', tab: 'products' },
+                  { icon: Tags, title: 'Categorias', desc: 'Organize seu cardápio', tab: 'products' },
+                  { icon: Palette, title: 'Personalização', desc: 'Customize seu cardápio', tab: 'store' },
+                ].map(({ icon: Icon, title, desc, tab }) => (
+                  <button
+                    key={title}
+                    onClick={() => navigate(`/admin?tab=${tab}`)}
+                    className="group p-5 rounded-xl border-2 border-border bg-secondary/40 hover:border-primary hover:bg-primary/5 transition-all text-center"
+                  >
+                    <Icon className="w-8 h-8 mx-auto mb-2 text-primary group-hover:scale-110 transition-transform" />
+                    <h5 className="font-bold text-foreground">{title}</h5>
+                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tip banner */}
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-2">
+                <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-foreground/90">
+                  <span className="font-bold">Dica:</span> Você pode importar seu cardápio automaticamente! Acesse <span className="font-bold">Cardápio &gt; Importar</span>
+                </p>
               </div>
 
               <Button
@@ -457,7 +465,7 @@ export default function Onboarding() {
                 Ir para o Painel
                 <ArrowRight className="w-4 h-4" />
               </Button>
-            </CardContent>
+            </div>
           </Card>
         )}
       </div>
