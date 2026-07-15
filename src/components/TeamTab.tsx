@@ -114,7 +114,7 @@ export function TeamTab({ storeId }: { storeId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={invite} className="grid gap-4 md:grid-cols-[1fr,180px,auto] items-end">
+          <form onSubmit={invite} className="grid gap-4 md:grid-cols-2 items-end">
             <div className="space-y-2">
               <Label htmlFor="member-email">Email do membro</Label>
               <Input
@@ -123,6 +123,16 @@ export function TeamTab({ storeId }: { storeId: string }) {
                 placeholder="membro@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="member-phone">WhatsApp (com DDD)</Label>
+              <Input
+                id="member-phone"
+                type="tel"
+                placeholder="Ex: 11 91234-5678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -136,8 +146,8 @@ export function TeamTab({ storeId }: { storeId: string }) {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={inviting}>
-              {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Convidar'}
+            <Button type="submit" disabled={inviting} className="w-full md:w-auto md:justify-self-end">
+              {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gerar convite'}
             </Button>
           </form>
           <p className="text-xs text-muted-foreground mt-3">{ROLE_HINT[role]}</p>
