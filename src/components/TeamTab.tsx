@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, Trash2, Copy, Users, Share2 } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Copy, Users, Share2, KeyRound } from 'lucide-react';
 import { SITE_URL } from '@/lib/siteConfig';
 import { toast } from 'sonner';
 
@@ -110,6 +110,27 @@ export function TeamTab({ storeId }: { storeId: string }) {
     if (error) return toast.error(error.message);
     toast.success('Membro removido');
     load();
+  };
+
+  const regenerate = async (m: Member) => {
+    if (!m.email) return toast.error('Email do membro indisponível');
+    if (!confirm(`Gerar nova senha para ${m.email}? A senha antiga deixará de funcionar.`)) return;
+    const phoneInput = window.prompt('WhatsApp do membro (com DDD) para enviar o novo acesso:', '') || '';
+    const cleanPhone = phoneInput.replace(/\D/g, '');
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-store-member', {
+        body: { storeId, email: m.email, role: m.role === 'owner' ? 'attendant' : m.role },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.tempPassword) {
+        setTempCred({ email: m.email, password: data.tempPassword, phone: cleanPhone });
+        toast.success('Nova senha gerada — envie no WhatsApp abaixo.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao regenerar acesso');
+    }
   };
 
   const copy = (v: string) => {
@@ -259,6 +280,9 @@ export function TeamTab({ storeId }: { storeId: string }) {
                       <SelectItem value="kitchen">{ROLE_LABELS.kitchen}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button variant="outline" size="sm" onClick={() => regenerate(m)} className="gap-1">
+                    <KeyRound className="w-3 h-3" /> Nova senha
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => remove(m)} className="text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
