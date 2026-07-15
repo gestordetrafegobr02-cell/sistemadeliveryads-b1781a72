@@ -100,6 +100,7 @@ export default function Admin() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const [store, setStore] = useState<StoreData | null>(null);
+  const [role, setRole] = useState<'owner' | 'manager' | 'attendant' | 'kitchen' | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -108,6 +109,16 @@ export default function Admin() {
   const [abandonedCount, setAbandonedCount] = useState(0);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+
+  const isOwner = role === 'owner';
+  const canManage = role === 'owner' || role === 'manager';
+  const canSeeOrders = role !== null; // all roles see orders
+  const canSeePdv = role === 'owner' || role === 'manager' || role === 'attendant';
+  const canSeeReports = canManage;
+  const canSeeRecovery = canManage;
+  const canSeeStoreSettings = canManage;
+  const canSeeTeam = isOwner;
+
   // Pending orders trigger the looping alert + flashing border.
   const pendingCount = orders.filter(
     (o) => !o.status || o.status === 'pending'
@@ -149,10 +160,23 @@ export default function Admin() {
   const fetchData = useCallback(async () => {
     if (!user) return;
 
+    // Resolve membership: owner OR team member (attendant/manager/kitchen)
+    const { data: myStore } = await supabase.rpc('get_my_store');
+    const membership = Array.isArray(myStore) ? myStore[0] : null;
+
+    if (!membership?.store_id) {
+      setStore(null);
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+
+    setRole(membership.role as 'owner' | 'manager' | 'attendant' | 'kitchen');
+
     const { data: storeData } = await supabase
       .from('stores')
       .select('*')
-      .eq('owner_id', user.id)
+      .eq('id', membership.store_id)
       .maybeSingle();
 
     if (storeData) {
@@ -551,45 +575,62 @@ export default function Admin() {
         <Tabs defaultValue="orders" className="space-y-6">
           <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
             <TabsList className="bg-secondary inline-flex w-max min-w-full">
-              <TabsTrigger value="orders" className="gap-2">
-                <ClipboardList className="w-4 h-4" />
-                Pedidos
-              </TabsTrigger>
-              <TabsTrigger value="pdv" className="gap-2">
-                <Utensils className="w-4 h-4" />
-                PDV
-              </TabsTrigger>
-              <TabsTrigger value="products" className="gap-2">
-                <Package className="w-4 h-4" />
-                Produtos
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-2">
-                <Tag className="w-4 h-4" />
-                Categorias
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Relatórios
-              </TabsTrigger>
-              <TabsTrigger value="recovery" className="gap-2 relative">
-                <Flame className="w-4 h-4" />
-                Radar
-                {abandonedCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
-                    {abandonedCount > 9 ? '9+' : abandonedCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="store" className="gap-2">
-                <Store className="w-4 h-4" />
-                Loja
-              </TabsTrigger>
-              <TabsTrigger value="team" className="gap-2">
-                <Users className="w-4 h-4" />
-                Equipe
-              </TabsTrigger>
+              {canSeeOrders && (
+                <TabsTrigger value="orders" className="gap-2">
+                  <ClipboardList className="w-4 h-4" />
+                  Pedidos
+                </TabsTrigger>
+              )}
+              {canSeePdv && (
+                <TabsTrigger value="pdv" className="gap-2">
+                  <Utensils className="w-4 h-4" />
+                  PDV
+                </TabsTrigger>
+              )}
+              {canManage && (
+                <TabsTrigger value="products" className="gap-2">
+                  <Package className="w-4 h-4" />
+                  Produtos
+                </TabsTrigger>
+              )}
+              {canManage && (
+                <TabsTrigger value="categories" className="gap-2">
+                  <Tag className="w-4 h-4" />
+                  Categorias
+                </TabsTrigger>
+              )}
+              {canSeeReports && (
+                <TabsTrigger value="reports" className="gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Relatórios
+                </TabsTrigger>
+              )}
+              {canSeeRecovery && (
+                <TabsTrigger value="recovery" className="gap-2 relative">
+                  <Flame className="w-4 h-4" />
+                  Radar
+                  {abandonedCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
+                      {abandonedCount > 9 ? '9+' : abandonedCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
+              {canSeeStoreSettings && (
+                <TabsTrigger value="store" className="gap-2">
+                  <Store className="w-4 h-4" />
+                  Loja
+                </TabsTrigger>
+              )}
+              {canSeeTeam && (
+                <TabsTrigger value="team" className="gap-2">
+                  <Users className="w-4 h-4" />
+                  Equipe
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
+
 
           {/* Store Tab */}
           <TabsContent value="store">
