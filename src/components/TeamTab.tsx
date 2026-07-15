@@ -280,6 +280,9 @@ export function TeamTab({ storeId }: { storeId: string }) {
                       <SelectItem value="kitchen">{ROLE_LABELS.kitchen}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button variant="outline" size="sm" onClick={() => regenerate(m)} className="gap-1">
+                    <KeyRound className="w-3 h-3" /> Nova senha
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => remove(m)} className="text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
