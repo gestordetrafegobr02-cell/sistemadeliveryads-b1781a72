@@ -18,7 +18,7 @@ import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
 import { TeamTab } from '@/components/TeamTab';
 import { PdvTab } from '@/components/pdv/PdvTab';
-import { ThemeToggle } from '@/components/ThemeToggle';
+
 
 import { toast } from 'sonner';
 import { OrderStatusBadge, getAllStatuses } from '@/components/OrderStatusBadge';
