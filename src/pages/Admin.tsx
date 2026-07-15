@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
