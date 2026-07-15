@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Plus, ImageOff } from 'lucide-react';
 import { useCart, CartItemModifier } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
+import { toast } from 'sonner';
 
 interface Modifier {
   id: string;
   name: string;
   price: number;
   is_available: boolean;
+  group_name: string | null;
+  group_max: number | null;
+  group_sort: number | null;
+  sort_order: number | null;
 }
 
 interface ProductModifierSelectProps {
@@ -49,38 +54,70 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
       .select('*')
       .eq('product_id', product.id)
       .eq('is_available', true)
-      .order('sort_order');
+      .order('group_sort', { ascending: true, nullsFirst: false })
+      .order('sort_order', { ascending: true });
 
-    setModifiers(data || []);
+    setModifiers((data as Modifier[]) || []);
     setLoading(false);
   }
 
-  function toggleModifier(id: string) {
+  // Group modifiers by group_name (nulls go to "Adicionais")
+  const groups = useMemo(() => {
+    const map = new Map<string, { name: string; max: number | null; items: Modifier[]; order: number }>();
+    modifiers.forEach((m, i) => {
+      const key = m.group_name?.trim() || 'Adicionais';
+      const existing = map.get(key);
+      if (existing) {
+        existing.items.push(m);
+        if (m.group_max != null && (existing.max == null || m.group_max < existing.max)) {
+          existing.max = m.group_max;
+        }
+      } else {
+        map.set(key, {
+          name: key,
+          max: m.group_max ?? null,
+          items: [m],
+          order: m.group_sort ?? i,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.order - b.order);
+  }, [modifiers]);
+
+  function countSelectedInGroup(items: Modifier[]) {
+    return items.filter((m) => selectedModifiers.has(m.id)).length;
+  }
+
+  function toggleModifier(m: Modifier, groupItems: Modifier[], max: number | null) {
     setSelectedModifiers((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+      if (next.has(m.id)) {
+        next.delete(m.id);
       } else {
-        next.add(id);
+        if (max != null) {
+          const currentCount = groupItems.filter((it) => next.has(it.id)).length;
+          if (currentCount >= max) {
+            toast.error(`Máximo de ${max} item${max > 1 ? 's' : ''} neste grupo`);
+            return prev;
+          }
+        }
+        next.add(m.id);
       }
       return next;
     });
   }
 
-  // Calculate total price
   const selectedModifiersList = modifiers.filter((m) => selectedModifiers.has(m.id));
-  const modifiersTotal = selectedModifiersList.reduce((sum, m) => sum + m.price, 0);
+  const modifiersTotal = selectedModifiersList.reduce((sum, m) => sum + Number(m.price), 0);
   const totalPrice = product.price + modifiersTotal;
 
   function handleAddToCart() {
     hapticClick();
-    
     const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m) => ({
       id: m.id,
       name: m.name,
-      price: m.price,
+      price: Number(m.price),
     }));
-
     addItem({
       id: product.id,
       name: product.name,
@@ -89,7 +126,6 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
       modifiers: cartModifiers.length > 0 ? cartModifiers : undefined,
       observation: observation.trim() || undefined,
     });
-
     onOpenChange(false);
   }
 
@@ -97,21 +133,14 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">
-            {product.name}
-          </DialogTitle>
+          <DialogTitle className="font-display text-xl">{product.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Product info */}
           <div className="flex gap-4">
             <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-secondary flex items-center justify-center">
               {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <ImageOff className="w-6 h-6 text-muted-foreground" />
               )}
@@ -126,42 +155,73 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
             </div>
           </div>
 
-          {/* Modifiers section */}
           {loading ? (
             <div className="flex justify-center py-6">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-          ) : modifiers.length > 0 ? (
-            <div className="space-y-3">
-              <Label className="text-foreground font-medium">Adicionais</Label>
-              <div className="space-y-2">
-                {modifiers.map((modifier) => (
-                  <div
-                    key={modifier.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedModifiers.has(modifier.id)
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-secondary hover:border-primary/50'
-                    }`}
-                    onClick={() => toggleModifier(modifier.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={selectedModifiers.has(modifier.id)}
-                        onCheckedChange={() => toggleModifier(modifier.id)}
-                      />
-                      <span className="font-medium">{modifier.name}</span>
+          ) : groups.length > 0 ? (
+            <div className="space-y-5">
+              {groups.map((group) => {
+                const count = countSelectedInGroup(group.items);
+                return (
+                  <div key={group.name} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-foreground font-semibold text-base">{group.name}</Label>
+                        {group.max != null && (
+                          <p className="text-xs text-muted-foreground">
+                            Escolha até {group.max} {group.max > 1 ? 'itens' : 'item'}
+                          </p>
+                        )}
+                      </div>
+                      {group.max != null && (
+                        <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-full">
+                          {count}/{group.max}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-primary font-semibold">
-                      + R$ {Number(modifier.price).toFixed(2).replace('.', ',')}
-                    </span>
+                    <div className="space-y-2">
+                      {group.items.map((modifier) => {
+                        const isSelected = selectedModifiers.has(modifier.id);
+                        const disabled =
+                          !isSelected && group.max != null && count >= group.max;
+                        return (
+                          <div
+                            key={modifier.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'border-primary bg-primary/10'
+                                : disabled
+                                  ? 'border-border bg-secondary/50 opacity-50 cursor-not-allowed'
+                                  : 'border-border bg-secondary hover:border-primary/50 cursor-pointer'
+                            }`}
+                            onClick={() => !disabled && toggleModifier(modifier, group.items, group.max)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                disabled={disabled}
+                                onCheckedChange={() => !disabled && toggleModifier(modifier, group.items, group.max)}
+                              />
+                              <span className="font-medium">{modifier.name}</span>
+                            </div>
+                            {Number(modifier.price) > 0 ? (
+                              <span className="text-primary font-semibold">
+                                + R$ {Number(modifier.price).toFixed(2).replace('.', ',')}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-emerald font-medium">Grátis</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           ) : null}
 
-          {/* Observation field */}
           <div className="space-y-2">
             <Label className="text-foreground font-medium">Observações (opcional)</Label>
             <textarea
@@ -182,10 +242,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
               R$ {totalPrice.toFixed(2).replace('.', ',')}
             </p>
           </div>
-          <Button
-            onClick={handleAddToCart}
-            className="btn-glow bg-primary text-primary-foreground gap-2"
-          >
+          <Button onClick={handleAddToCart} className="btn-glow bg-primary text-primary-foreground gap-2">
             <Plus className="w-4 h-4" />
             Adicionar ao Carrinho
           </Button>

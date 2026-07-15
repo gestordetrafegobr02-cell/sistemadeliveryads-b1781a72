@@ -448,6 +448,9 @@ export type Database = {
       product_modifiers: {
         Row: {
           created_at: string
+          group_max: number | null
+          group_name: string | null
+          group_sort: number | null
           id: string
           is_available: boolean
           name: string
@@ -457,6 +460,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          group_max?: number | null
+          group_name?: string | null
+          group_sort?: number | null
           id?: string
           is_available?: boolean
           name: string
@@ -466,6 +472,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          group_max?: number | null
+          group_name?: string | null
+          group_sort?: number | null
           id?: string
           is_available?: boolean
           name?: string
