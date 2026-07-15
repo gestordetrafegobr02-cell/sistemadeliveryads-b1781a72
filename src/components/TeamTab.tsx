@@ -39,7 +39,19 @@ export function TeamTab({ storeId }: { storeId: string }) {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role>('attendant');
   const [inviting, setInviting] = useState(false);
+  const [storeName, setStoreName] = useState<string>('');
   const [tempCred, setTempCred] = useState<{ email: string; password: string; phone: string } | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('stores_public')
+      .select('name')
+      .eq('id', storeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setStoreName(data.name as string);
+      });
+  }, [storeId]);
 
   const load = useCallback(async () => {
     setLoading(true);
