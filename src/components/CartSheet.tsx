@@ -225,13 +225,20 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     setSubmitting(true);
 
     try {
-      // ===== Resolve store WhatsApp (with global fallback) =====
-      let storePhoneDigits = (whatsapp || '').replace(/\D/g, '');
+      // ===== Resolve store WhatsApp (with global fallback + BR country-code guard) =====
+      const normalizeBr = (raw: string): string => {
+        const d = (raw || '').replace(/\D/g, '');
+        if (!d) return '';
+        if (d.length >= 12 && d.startsWith('55')) return d;
+        if (d.length === 10 || d.length === 11) return '55' + d;
+        return d;
+      };
+      let storePhoneDigits = normalizeBr(whatsapp || '');
       if (!storePhoneDigits) {
         console.error('[Checkout] Store WhatsApp missing on props — trying global fallback.');
         try {
           const { data: fallback } = await supabase.rpc('get_global_setting', { setting_key: 'owner_whatsapp' });
-          storePhoneDigits = (fallback || '').replace(/\D/g, '');
+          storePhoneDigits = normalizeBr(fallback || '');
         } catch (e) {
           console.error('[Checkout] Failed to fetch global owner_whatsapp:', e);
         }
