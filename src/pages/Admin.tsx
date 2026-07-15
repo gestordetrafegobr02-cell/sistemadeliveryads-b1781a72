@@ -575,45 +575,62 @@ export default function Admin() {
         <Tabs defaultValue="orders" className="space-y-6">
           <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
             <TabsList className="bg-secondary inline-flex w-max min-w-full">
-              <TabsTrigger value="orders" className="gap-2">
-                <ClipboardList className="w-4 h-4" />
-                Pedidos
-              </TabsTrigger>
-              <TabsTrigger value="pdv" className="gap-2">
-                <Utensils className="w-4 h-4" />
-                PDV
-              </TabsTrigger>
-              <TabsTrigger value="products" className="gap-2">
-                <Package className="w-4 h-4" />
-                Produtos
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-2">
-                <Tag className="w-4 h-4" />
-                Categorias
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Relatórios
-              </TabsTrigger>
-              <TabsTrigger value="recovery" className="gap-2 relative">
-                <Flame className="w-4 h-4" />
-                Radar
-                {abandonedCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
-                    {abandonedCount > 9 ? '9+' : abandonedCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="store" className="gap-2">
-                <Store className="w-4 h-4" />
-                Loja
-              </TabsTrigger>
-              <TabsTrigger value="team" className="gap-2">
-                <Users className="w-4 h-4" />
-                Equipe
-              </TabsTrigger>
+              {canSeeOrders && (
+                <TabsTrigger value="orders" className="gap-2">
+                  <ClipboardList className="w-4 h-4" />
+                  Pedidos
+                </TabsTrigger>
+              )}
+              {canSeePdv && (
+                <TabsTrigger value="pdv" className="gap-2">
+                  <Utensils className="w-4 h-4" />
+                  PDV
+                </TabsTrigger>
+              )}
+              {canManage && (
+                <TabsTrigger value="products" className="gap-2">
+                  <Package className="w-4 h-4" />
+                  Produtos
+                </TabsTrigger>
+              )}
+              {canManage && (
+                <TabsTrigger value="categories" className="gap-2">
+                  <Tag className="w-4 h-4" />
+                  Categorias
+                </TabsTrigger>
+              )}
+              {canSeeReports && (
+                <TabsTrigger value="reports" className="gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Relatórios
+                </TabsTrigger>
+              )}
+              {canSeeRecovery && (
+                <TabsTrigger value="recovery" className="gap-2 relative">
+                  <Flame className="w-4 h-4" />
+                  Radar
+                  {abandonedCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
+                      {abandonedCount > 9 ? '9+' : abandonedCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
+              {canSeeStoreSettings && (
+                <TabsTrigger value="store" className="gap-2">
+                  <Store className="w-4 h-4" />
+                  Loja
+                </TabsTrigger>
+              )}
+              {canSeeTeam && (
+                <TabsTrigger value="team" className="gap-2">
+                  <Users className="w-4 h-4" />
+                  Equipe
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
+
 
           {/* Store Tab */}
           <TabsContent value="store">
