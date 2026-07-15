@@ -183,82 +183,37 @@ export default function Index() {
               <strong className="text-foreground">7 dias grátis</strong> sem compromisso.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href={`https://wa.me/${((globalSettings as any).support_whatsapp || '5511999999999').replace(/\D/g, '')}?text=${encodeURIComponent('Olá! Quero saber mais sobre a DeliveryPro.')}`}
-                target="_blank" rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 font-medium transition-colors"
+              <Button
+                onClick={() => setLeadModalOpen(true)}
+                className="h-12 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-base gap-2 shadow-lg shadow-emerald-500/30"
               >
-                <MessageCircle className="w-5 h-5" /> Chamar no WhatsApp
-              </a>
-              <Button onClick={scrollToForm} className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-base gap-2">
-                Cadastrar <ArrowRight className="w-4 h-4" />
+                <MessageCircle className="w-5 h-5" /> Solicitar meu cardápio
+              </Button>
+              <Button onClick={scrollToForm} variant="outline" className="h-12 px-6 rounded-xl font-semibold text-base gap-2">
+                Cadastrar sozinho <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
             <p className="mt-6 text-sm text-foreground/60">✓ Sem cartão de crédito &nbsp; ✓ Setup em 5 min &nbsp; ✓ Cancele quando quiser</p>
           </div>
 
-          {/* Hero visual: admin panel + phone overlap */}
-          <div className="relative h-[380px] md:h-[440px]">
-            <div className="absolute inset-x-0 top-4 bg-neutral-950 border border-white/10 rounded-2xl shadow-2xl p-3 md:p-4">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                <span className="ml-3 text-xs text-white/50">DeliveryPro · Painel</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-[10px]">
-                <div className="col-span-1 space-y-1.5 border-r border-white/10 pr-2">
-                  {['Pedidos', 'Cardápio', 'Categorias', 'Locais', 'Configurações'].map(x => (
-                    <div key={x} className="px-2 py-1.5 rounded bg-white/5 text-white/70">{x}</div>
-                  ))}
-                </div>
-                <div className="col-span-2 space-y-1.5">
-                  <div className="flex gap-1">
-                    {['NOVO', 'EM PREP', 'PRONTO', 'FINALIZADO'].map(t => (
-                      <div key={t} className="flex-1 text-center py-1 rounded bg-primary/20 text-primary text-[9px] font-bold">{t}</div>
-                    ))}
-                  </div>
-                  {[
-                    { n: 'Antônio F.', v: '64,90', s: 'Pago', c: 'bg-emerald-500/20 text-emerald-400' },
-                    { n: 'José A.', v: '32,70', s: 'PIX', c: 'bg-yellow-500/20 text-yellow-400' },
-                    { n: 'Maria S.', v: '48,00', s: 'Dinheiro', c: 'bg-blue-500/20 text-blue-400' },
-                  ].map((r, i) => (
-                    <div key={i} className="flex items-center justify-between bg-white/5 rounded p-2">
-                      <div>
-                        <div className="text-white text-[10px] font-medium">{r.n}</div>
-                        <div className="text-white/50">R$ {r.v}</div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded ${r.c} text-[9px] font-bold`}>{r.s}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {/* Phone overlay */}
-            <div className="absolute left-2 md:left-6 bottom-0 w-[150px] md:w-[180px]">
-              <div className="bg-neutral-900 rounded-[1.5rem] p-1.5 shadow-2xl">
-                <div className="bg-white rounded-[1.2rem] overflow-hidden aspect-[9/19]">
-                  <div className="h-6 bg-primary text-white flex items-center justify-between px-2 text-[8px]">
-                    <span>Cardápio</span><span>●●●</span>
-                  </div>
-                  <div className="p-2 space-y-1.5">
-                    <div className="h-8 bg-primary/10 rounded" />
-                    <div className="flex gap-1"><span className="text-[7px] px-1.5 py-0.5 rounded bg-primary text-white">Lanches</span><span className="text-[7px] px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-700">Bebidas</span></div>
-                    {[1,2,3].map(i => (
-                      <div key={i} className="flex gap-1.5 items-center p-1 border border-neutral-200 rounded">
-                        <div className="w-8 h-8 bg-neutral-200 rounded" />
-                        <div className="flex-1">
-                          <div className="h-1.5 bg-neutral-300 rounded w-3/4 mb-1" />
-                          <div className="h-1.5 bg-neutral-200 rounded w-1/2" />
-                        </div>
-                        <div className="text-[7px] text-primary font-bold">R$ 12</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Hero visual: 3D app illustration with parallax */}
+          <motion.div
+            ref={heroRef as any}
+            style={{ y: heroY, rotate: heroRotate, scale: heroScale }}
+            className="relative h-[380px] md:h-[500px] flex items-center justify-center"
+          >
+            <div className="absolute inset-0 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-3xl" />
+            <motion.img
+              src={hero3d}
+              alt="App DeliveryPro em 3D"
+              width={1024}
+              height={1024}
+              className="relative z-10 max-h-full w-auto drop-shadow-2xl"
+              style={{ filter: 'drop-shadow(0 40px 60px hsl(var(--primary) / 0.3))' }}
+              animate={{ y: [0, -12, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </motion.div>
         </div>
       </header>
 
@@ -271,9 +226,9 @@ export default function Index() {
           </ScrollReveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {HOW_STEPS.map((step, i) => (
-              <ScrollReveal key={i} direction="up" delay={i * 0.1} className="text-center">
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${step.color} flex items-center justify-center shadow-lg`}>
-                  <step.icon className="w-8 h-8 text-white" strokeWidth={2.2} />
+              <ScrollReveal key={i} direction="up" delay={i * 0.12} className="text-center">
+                <div className="mb-4 flex justify-center">
+                  <Icon3D src={step.img} alt={step.title} size={128} delay={i * 0.15} glowColor={step.glow} />
                 </div>
                 <h3 className="font-bold text-primary mb-2">{step.title}</h3>
                 <p className="text-sm text-foreground/60">{step.description}</p>
