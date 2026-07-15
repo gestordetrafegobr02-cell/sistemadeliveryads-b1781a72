@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, Trash2, Copy, Users } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Copy, Users, Share2 } from 'lucide-react';
+import { SITE_URL } from '@/lib/siteConfig';
 import { toast } from 'sonner';
 
 type Role = 'manager' | 'attendant' | 'kitchen';
@@ -138,26 +139,58 @@ export function TeamTab({ storeId }: { storeId: string }) {
           </form>
           <p className="text-xs text-muted-foreground mt-3">{ROLE_HINT[role]}</p>
 
-          {tempCred && (
-            <div className="mt-4 p-4 rounded-lg border border-primary/40 bg-primary/5 space-y-2">
-              <p className="text-sm font-medium">Senha temporária gerada — envie ao membro:</p>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-mono">Email:</span>
-                <code className="bg-background px-2 py-1 rounded">{tempCred.email}</code>
-                <Button size="sm" variant="ghost" onClick={() => copy(tempCred.email)}>
-                  <Copy className="w-3 h-3" />
-                </Button>
+          {tempCred && (() => {
+            const loginUrl = `${SITE_URL}/auth`;
+            const shareText =
+              `👋 Você foi adicionado como membro da equipe no *DeliveryPro*.\n\n` +
+              `🔗 Acesse: ${loginUrl}\n` +
+              `📧 Email: ${tempCred.email}\n` +
+              `🔑 Senha temporária: ${tempCred.password}\n\n` +
+              `Depois de entrar, abra o menu do navegador e toque em *"Adicionar à tela de início"* para instalar o app.`;
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            return (
+              <div className="mt-4 p-4 rounded-lg border border-primary/40 bg-primary/5 space-y-3">
+                <p className="text-sm font-semibold">✅ Acesso criado — envie os dados ao membro:</p>
+                <div className="grid gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 text-muted-foreground">Link:</span>
+                    <code className="flex-1 bg-background px-2 py-1 rounded truncate">{loginUrl}</code>
+                    <Button size="sm" variant="ghost" onClick={() => copy(loginUrl)}>
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 text-muted-foreground">Email:</span>
+                    <code className="flex-1 bg-background px-2 py-1 rounded truncate">{tempCred.email}</code>
+                    <Button size="sm" variant="ghost" onClick={() => copy(tempCred.email)}>
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-16 text-muted-foreground">Senha:</span>
+                    <code className="flex-1 bg-background px-2 py-1 rounded font-mono">{tempCred.password}</code>
+                    <Button size="sm" variant="ghost" onClick={() => copy(tempCred.password)}>
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button size="sm" onClick={() => copy(shareText)} className="gap-2">
+                    <Copy className="w-3 h-3" /> Copiar mensagem completa
+                  </Button>
+                  <Button size="sm" variant="outline" asChild className="gap-2">
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer">
+                      <Share2 className="w-3 h-3" /> Enviar no WhatsApp
+                    </a>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setTempCred(null)}>Fechar</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Guarde a senha agora — ela não será mostrada novamente.
+                </p>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-mono">Senha:</span>
-                <code className="bg-background px-2 py-1 rounded">{tempCred.password}</code>
-                <Button size="sm" variant="ghost" onClick={() => copy(tempCred.password)}>
-                  <Copy className="w-3 h-3" />
-                </Button>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setTempCred(null)}>Fechar</Button>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
