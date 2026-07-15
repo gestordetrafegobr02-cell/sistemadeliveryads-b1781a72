@@ -484,7 +484,7 @@ export default function Admin() {
               <ShieldCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Minha Conta</span>
             </Button>
-            <ThemeToggle />
+            
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="w-5 h-5" />
             </Button>
