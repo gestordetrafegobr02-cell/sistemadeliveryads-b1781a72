@@ -548,7 +548,7 @@ export default function Admin() {
 
 
         <Tabs defaultValue="orders" className="space-y-6">
-          <div className="-mx-4 px-4 overflow-x-auto scrollbar-none">
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
             <TabsList className="bg-secondary inline-flex w-max min-w-full">
               <TabsTrigger value="orders" className="gap-2">
                 <ClipboardList className="w-4 h-4" />
