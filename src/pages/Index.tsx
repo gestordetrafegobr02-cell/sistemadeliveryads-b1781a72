@@ -276,6 +276,9 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Ecossistema 3D */}
+      <Floating3DScene />
+
       {/* Pricing */}
       <div id="precos">
         <ScrollReveal direction="up">
