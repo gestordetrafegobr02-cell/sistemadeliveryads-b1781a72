@@ -53,18 +53,22 @@ Deno.serve(async (req) => {
     if (storeErr || !store) throw new Error('Store not found')
     if (store.owner_id !== user.id) throw new Error('Only the store owner can invite members')
 
-    // Find existing user by email
+    // Find existing user by email — always (re)generate a temp password so
+    // the owner can share fresh credentials with the invited member.
     let targetUserId: string | null = null
-    let tempPassword: string | null = null
+    const tempPassword: string = genPassword(12)
 
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles').select('id').eq('email', emailRaw).maybeSingle()
 
     if (existingProfile?.id) {
       targetUserId = existingProfile.id
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+        password: tempPassword,
+        email_confirm: true,
+      })
+      if (updErr) throw new Error(updErr.message)
     } else {
-      // Create user with temp password
-      tempPassword = genPassword(12)
       const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email: emailRaw,
         password: tempPassword,
