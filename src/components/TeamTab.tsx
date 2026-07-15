@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, UserPlus, Trash2, Copy, Users } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Copy, Users, Share2 } from 'lucide-react';
+import { SITE_URL } from '@/lib/siteConfig';
 import { toast } from 'sonner';
 
 type Role = 'manager' | 'attendant' | 'kitchen';
