@@ -353,6 +353,22 @@ export default function Index() {
           <p className="text-sm text-foreground/60">© {new Date().getFullYear()} DeliveryPro. Todos os direitos reservados.</p>
         </div>
       </footer>
+
+      {/* Floating WhatsApp FAB */}
+      <motion.button
+        onClick={() => setLeadModalOpen(true)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 1, type: 'spring', stiffness: 200 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-500/50 flex items-center justify-center animate-pulse-glow"
+        aria-label="Solicitar cardápio no WhatsApp"
+      >
+        <MessageCircle className="w-7 h-7" />
+      </motion.button>
+
+      <WhatsAppLeadModal open={leadModalOpen} onOpenChange={setLeadModalOpen} />
     </div>
   );
 }
