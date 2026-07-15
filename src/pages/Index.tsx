@@ -155,7 +155,9 @@ export default function Index() {
   const priceFmt = price.toFixed(2).replace('.', ',');
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+      <AnimatedBackground />
+      <div className="relative z-10">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-background/85 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
@@ -253,12 +255,12 @@ export default function Index() {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Alguns dos nossos recursos</h2>
             <p className="text-foreground/60 max-w-2xl mx-auto">Funcionalidades completas para automatizar e otimizar todo o processo de vendas do seu negócio.</p>
           </ScrollReveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
-              <ScrollReveal key={i} direction="up" delay={(i % 4) * 0.05}>
-                <div className="h-full p-6 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center mb-4 shadow-md">
-                    <f.icon className="w-5 h-5 text-white" />
+              <ScrollReveal key={i} direction="up" delay={(i % 3) * 0.08}>
+                <div className="h-full p-6 rounded-2xl bg-card/80 backdrop-blur border border-border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 transition-all flex flex-col items-center text-center">
+                  <div className="mb-4">
+                    <Icon3D src={f.img} alt={f.title} size={96} delay={i * 0.05} glowColor={f.glow} />
                   </div>
                   <h3 className="font-semibold mb-2">{f.title}</h3>
                   <p className="text-sm text-foreground/60 leading-relaxed">{f.description}</p>
