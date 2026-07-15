@@ -10,7 +10,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
+import { Icon3D } from '@/components/landing/Icon3D';
+import { WhatsAppLeadModal } from '@/components/landing/WhatsAppLeadModal';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { sendLeadNotification } from '@/lib/whatsappLeadNotification';
+import hero3d from '@/assets/hero-3d-app.png';
+import icon3dStore from '@/assets/icon-3d-store.png';
+import icon3dLocation from '@/assets/icon-3d-location.png';
+import icon3dWallet from '@/assets/icon-3d-wallet.png';
+import icon3dDelivery from '@/assets/icon-3d-delivery.png';
 import {
   Store,
   Mail,
@@ -43,10 +51,10 @@ const NICHE_OPTIONS = [
 ];
 
 const HOW_STEPS = [
-  { icon: Store, title: 'Seu negócio online', description: 'O cliente adiciona os itens do menu no carrinho.', color: 'bg-orange-500' },
-  { icon: MapPin, title: 'Endereço de entrega', description: 'O cliente informa o endereço ou se irá buscar o pedido.', color: 'bg-blue-500' },
-  { icon: Wallet, title: 'Forma de pagamento', description: 'O cliente seleciona a forma de pagamento.', color: 'bg-emerald-500' },
-  { icon: Truck, title: 'E por fim, Delivery', description: 'O pedido chega no painel e pode ser preparado e entregue.', color: 'bg-purple-500' },
+  { img: icon3dStore, glow: 'hsl(25 95% 53%)', title: 'Seu negócio online', description: 'O cliente adiciona os itens do menu no carrinho.' },
+  { img: icon3dLocation, glow: 'hsl(210 90% 60%)', title: 'Endereço de entrega', description: 'O cliente informa o endereço ou se irá buscar o pedido.' },
+  { img: icon3dWallet, glow: 'hsl(145 63% 49%)', title: 'Forma de pagamento', description: 'O cliente seleciona a forma de pagamento.' },
+  { img: icon3dDelivery, glow: 'hsl(270 70% 60%)', title: 'E por fim, Delivery', description: 'O pedido chega no painel e pode ser preparado e entregue.' },
 ];
 
 const FEATURES = [
@@ -66,10 +74,17 @@ export default function Index() {
   const [password, setPassword] = useState('');
   const [selectedNiche, setSelectedNiche] = useState('burger-shop');
   const [loading, setLoading] = useState(false);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { settings: globalSettings } = useGlobalSettings();
+
+  const { scrollYProgress: heroScroll } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroY = useTransform(heroScroll, [0, 1], [0, 120]);
+  const heroRotate = useTransform(heroScroll, [0, 1], [0, -8]);
+  const heroScale = useTransform(heroScroll, [0, 1], [1, 0.9]);
 
   useEffect(() => {
     if (globalSettings.landing_pixel_id) loadLandingPixel(globalSettings.landing_pixel_id);
