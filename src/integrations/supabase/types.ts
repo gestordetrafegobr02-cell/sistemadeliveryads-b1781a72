@@ -210,6 +210,63 @@ export type Database = {
         }
         Relationships: []
       }
+      modifier_library: {
+        Row: {
+          created_at: string
+          group_max: number | null
+          group_name: string
+          group_sort: number
+          id: string
+          is_available: boolean
+          name: string
+          price: number
+          sort_order: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_max?: number | null
+          group_name?: string
+          group_sort?: number
+          id?: string
+          is_available?: boolean
+          name: string
+          price?: number
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_max?: number | null
+          group_name?: string
+          group_sort?: number
+          id?: string
+          is_available?: boolean
+          name?: string
+          price?: number
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifier_library_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modifier_library_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           address: string | null
@@ -411,6 +468,7 @@ export type Database = {
           group_sort: number | null
           id: string
           is_available: boolean
+          library_item_id: string | null
           name: string
           price: number
           product_id: string
@@ -423,6 +481,7 @@ export type Database = {
           group_sort?: number | null
           id?: string
           is_available?: boolean
+          library_item_id?: string | null
           name: string
           price?: number
           product_id: string
@@ -435,12 +494,20 @@ export type Database = {
           group_sort?: number | null
           id?: string
           is_available?: boolean
+          library_item_id?: string | null
           name?: string
           price?: number
           product_id?: string
           sort_order?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_modifiers_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_library"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_modifiers_product_id_fkey"
             columns: ["product_id"]
@@ -984,6 +1051,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_library_group_to_product: {
+        Args: { p_group_name: string; p_product_id: string }
+        Returns: number
+      }
       cancel_pdv_session: { Args: { p_session_id: string }; Returns: undefined }
       close_pdv_session: {
         Args: {
@@ -1287,6 +1358,10 @@ export type Database = {
           p_redeem_amount: number
           p_store_id: string
         }
+        Returns: number
+      }
+      remove_library_group_from_product: {
+        Args: { p_group_name: string; p_product_id: string }
         Returns: number
       }
       set_store_mercadopago_token: {

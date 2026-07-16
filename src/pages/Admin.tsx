@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
@@ -29,6 +29,7 @@ import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
 import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
+import { ModifierLibraryTab } from '@/components/ModifierLibraryTab';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
 import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
@@ -665,6 +666,12 @@ export default function Admin() {
                   Categorias
                 </TabsTrigger>
               )}
+              {canManage && (
+                <TabsTrigger value="modifiers" className="gap-2">
+                  <Layers className="w-4 h-4" />
+                  Adicionais
+                </TabsTrigger>
+              )}
               {canSeeReports && (
                 <TabsTrigger value="reports" className="gap-2">
                   <BarChart3 className="w-4 h-4" />
@@ -1134,6 +1141,18 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Modifiers Library Tab */}
+          <TabsContent value="modifiers">
+            {store ? (
+              <ModifierLibraryTab
+                storeId={store.id}
+                products={products.map((p) => ({ id: p.id, name: p.name }))}
+              />
+            ) : (
+              <p className="text-muted-foreground text-center py-8">Crie sua loja primeiro.</p>
+            )}
           </TabsContent>
 
           {/* Orders Tab */}
