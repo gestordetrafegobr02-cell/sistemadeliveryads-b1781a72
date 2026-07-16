@@ -321,13 +321,15 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
               <Select value={fGroup} onValueChange={setFGroup}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {existingGroupNames.map((g) => (
+                  {Array.from(new Set([
+                    ...existingGroupNames,
+                    'Acompanhamentos',
+                    'Cremes',
+                    'Frutas',
+                    'Inclusos (Grátis)',
+                  ])).map((g) => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
-                  <SelectItem value="Acompanhamentos">Acompanhamentos</SelectItem>
-                  <SelectItem value="Cremes">Cremes</SelectItem>
-                  <SelectItem value="Frutas">Frutas</SelectItem>
-                  <SelectItem value="Inclusos (Grátis)">Inclusos (Grátis)</SelectItem>
                 </SelectContent>
               </Select>
               <Input
