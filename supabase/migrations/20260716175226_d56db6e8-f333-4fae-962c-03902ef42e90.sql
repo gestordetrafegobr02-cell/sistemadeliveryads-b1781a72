@@ -1,0 +1,2 @@
+UPDATE auth.users SET email = 'ludasilva290491@gmail.com', raw_user_meta_data = COALESCE(raw_user_meta_data,'{}'::jsonb) || jsonb_build_object('email','ludasilva290491@gmail.com'), email_confirmed_at = COALESCE(email_confirmed_at, now()), updated_at = now() WHERE id = (SELECT owner_id FROM public.stores WHERE id = '74fac665-7e1c-4ae5-8b69-12bd12686679');
+UPDATE public.profiles SET email = 'ludasilva290491@gmail.com' WHERE id = (SELECT owner_id FROM public.stores WHERE id = '74fac665-7e1c-4ae5-8b69-12bd12686679');
