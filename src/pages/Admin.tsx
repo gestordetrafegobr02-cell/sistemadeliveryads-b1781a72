@@ -666,6 +666,12 @@ export default function Admin() {
                   Categorias
                 </TabsTrigger>
               )}
+              {canManage && (
+                <TabsTrigger value="modifiers" className="gap-2">
+                  <Layers className="w-4 h-4" />
+                  Adicionais
+                </TabsTrigger>
+              )}
               {canSeeReports && (
                 <TabsTrigger value="reports" className="gap-2">
                   <BarChart3 className="w-4 h-4" />
