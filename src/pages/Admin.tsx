@@ -1143,6 +1143,18 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          {/* Modifiers Library Tab */}
+          <TabsContent value="modifiers">
+            {store ? (
+              <ModifierLibraryTab
+                storeId={store.id}
+                products={products.map((p) => ({ id: p.id, name: p.name }))}
+              />
+            ) : (
+              <p className="text-muted-foreground text-center py-8">Crie sua loja primeiro.</p>
+            )}
+          </TabsContent>
+
           {/* Orders Tab */}
           <TabsContent value="orders">
             <Card className="bg-card border-border">
