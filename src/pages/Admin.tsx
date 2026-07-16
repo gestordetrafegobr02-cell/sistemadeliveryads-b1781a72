@@ -29,6 +29,7 @@ import { CategoryReorder } from '@/components/CategoryReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
 import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
+import { ModifierLibraryTab } from '@/components/ModifierLibraryTab';
 import { OpeningHours } from '@/lib/storeHours';
 import { RecoveryMessageEditor } from '@/components/RecoveryMessageEditor';
 import { RecoveryDelayEditor } from '@/components/RecoveryDelayEditor';
