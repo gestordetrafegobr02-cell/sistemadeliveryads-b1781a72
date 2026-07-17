@@ -615,6 +615,13 @@ export default function SuperAdmin() {
             </Card>
           </TabsContent>
 
+          {/* AI Usage Tab - Master Admin Only */}
+          {isMasterAdmin && (
+            <TabsContent value="ai">
+              <AIUsageTab />
+            </TabsContent>
+          )}
+
           {/* Settings Tab - Master Admin Only */}
           {isMasterAdmin && (
             <TabsContent value="settings">
