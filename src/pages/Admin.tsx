@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers, Sparkles } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
@@ -38,6 +38,7 @@ import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
+import { AIImportMenuDialog } from '@/components/AIImportMenuDialog';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
 import { PushNotificationToggle } from '@/components/PushNotificationToggle';
@@ -108,6 +109,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [abandonedCount, setAbandonedCount] = useState(0);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
@@ -1048,15 +1050,27 @@ export default function Admin() {
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display text-xl">Produtos</CardTitle>
-                <Button
-                  size="sm"
-                  className="gap-2 bg-primary text-primary-foreground"
-                  onClick={() => openProductDialog()}
-                  disabled={!store}
-                >
-                  <Plus className="w-4 h-4" />
-                  Novo Produto
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setAiImportOpen(true)}
+                    disabled={!store}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Importar com IA
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-primary text-primary-foreground"
+                    onClick={() => openProductDialog()}
+                    disabled={!store}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Produto
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {!store ? (
@@ -1462,6 +1476,16 @@ export default function Admin() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {store && (
+          <AIImportMenuDialog
+            open={aiImportOpen}
+            onOpenChange={setAiImportOpen}
+            storeId={store.id}
+            existingCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            onImported={() => fetchData()}
+          />
+        )}
       </main>
     </div>
   );
