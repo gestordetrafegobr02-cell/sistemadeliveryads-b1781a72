@@ -1050,15 +1050,27 @@ export default function Admin() {
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display text-xl">Produtos</CardTitle>
-                <Button
-                  size="sm"
-                  className="gap-2 bg-primary text-primary-foreground"
-                  onClick={() => openProductDialog()}
-                  disabled={!store}
-                >
-                  <Plus className="w-4 h-4" />
-                  Novo Produto
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setAiImportOpen(true)}
+                    disabled={!store}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Importar com IA
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2 bg-primary text-primary-foreground"
+                    onClick={() => openProductDialog()}
+                    disabled={!store}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Produto
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {!store ? (
