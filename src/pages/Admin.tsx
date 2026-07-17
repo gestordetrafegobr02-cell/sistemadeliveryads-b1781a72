@@ -38,6 +38,7 @@ import { UpsellSettingsCard } from '@/components/UpsellSettingsCard';
 import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
+import { AIImportMenuDialog } from '@/components/AIImportMenuDialog';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
 import { PushNotificationToggle } from '@/components/PushNotificationToggle';
