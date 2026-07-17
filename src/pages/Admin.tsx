@@ -1476,6 +1476,16 @@ export default function Admin() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {store && (
+          <AIImportMenuDialog
+            open={aiImportOpen}
+            onOpenChange={setAiImportOpen}
+            storeId={store.id}
+            existingCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            onImported={() => fetchData()}
+          />
+        )}
       </main>
     </div>
   );
