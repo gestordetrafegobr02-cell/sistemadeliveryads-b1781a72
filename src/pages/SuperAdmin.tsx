@@ -315,6 +315,12 @@ export default function SuperAdmin() {
                 Usuários
               </TabsTrigger>
               {isMasterAdmin && (
+                <TabsTrigger value="ai" className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  IA
+                </TabsTrigger>
+              )}
+              {isMasterAdmin && (
                 <TabsTrigger value="settings" className="gap-2">
                   <Cog className="w-4 h-4" />
                   Configurações
