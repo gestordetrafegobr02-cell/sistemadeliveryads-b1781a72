@@ -52,6 +52,8 @@ import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
+import { AIUsageTab } from '@/components/AIUsageTab';
+import { Sparkles } from 'lucide-react';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
