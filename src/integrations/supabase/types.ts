@@ -72,6 +72,45 @@ export type Database = {
           },
         ]
       }
+      ai_usage_logs: {
+        Row: {
+          completion_tokens: number
+          created_at: string
+          error_message: string | null
+          function_name: string
+          id: string
+          model: string | null
+          prompt_tokens: number
+          store_id: string | null
+          success: boolean
+          total_tokens: number
+        }
+        Insert: {
+          completion_tokens?: number
+          created_at?: string
+          error_message?: string | null
+          function_name: string
+          id?: string
+          model?: string | null
+          prompt_tokens?: number
+          store_id?: string | null
+          success?: boolean
+          total_tokens?: number
+        }
+        Update: {
+          completion_tokens?: number
+          created_at?: string
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          model?: string | null
+          prompt_tokens?: number
+          store_id?: string | null
+          success?: boolean
+          total_tokens?: number
+        }
+        Relationships: []
+      }
       cashback_transactions: {
         Row: {
           amount: number
