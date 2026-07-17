@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SYSTEM_PROMPT = `Você é um extrator de cardápios de delivery brasileiros.
 Receba uma imagem (foto de cardápio/flyer) OU um texto solto de menu e retorne SOMENTE JSON válido no formato:
@@ -22,12 +23,45 @@ Regras estritas:
 - Ignore endereços, telefones, horários, condições de entrega.
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
+const MODEL = 'openai/gpt-5.5';
+
+async function logUsage(payload: {
+  store_id?: string | null;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  success: boolean;
+  error_message?: string | null;
+}) {
+  try {
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !key) return;
+    const admin = createClient(url, key);
+    await admin.from('ai_usage_logs').insert({
+      function_name: 'ai-import-menu',
+      model: MODEL,
+      store_id: payload.store_id ?? null,
+      prompt_tokens: payload.prompt_tokens ?? 0,
+      completion_tokens: payload.completion_tokens ?? 0,
+      total_tokens: payload.total_tokens ?? 0,
+      success: payload.success,
+      error_message: payload.error_message ?? null,
+    });
+  } catch (_) {
+    // ignore logging failures
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  let storeId: string | null = null;
 
   try {
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
+      await logUsage({ success: false, error_message: 'LOVABLE_API_KEY não configurada' });
       return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY não configurada' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -35,7 +69,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { image, text } = body as { image?: string; text?: string };
+    const { image, text, store_id } = body as { image?: string; text?: string; store_id?: string };
+    storeId = store_id ?? null;
 
     if (!image && !text) {
       return new Response(JSON.stringify({ error: 'Envie image (base64 data URL) ou text' }), {
@@ -60,7 +95,7 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5.5',
+        model: MODEL,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent },
@@ -77,6 +112,7 @@ Deno.serve(async (req) => {
         : aiRes.status === 402
         ? 'Créditos de IA esgotados. Adicione créditos no workspace.'
         : `Erro na IA: ${errText.slice(0, 200)}`;
+      await logUsage({ store_id: storeId, success: false, error_message: msg });
       return new Response(JSON.stringify({ error: msg }), {
         status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -84,6 +120,7 @@ Deno.serve(async (req) => {
     }
 
     const data = await aiRes.json();
+    const usage = data?.usage ?? {};
     const content = data?.choices?.[0]?.message?.content ?? '{}';
     let parsed: any;
     try {
@@ -102,10 +139,19 @@ Deno.serve(async (req) => {
       }))
       .filter((it: any) => it.name.length > 0);
 
+    await logUsage({
+      store_id: storeId,
+      prompt_tokens: Number(usage.prompt_tokens ?? 0),
+      completion_tokens: Number(usage.completion_tokens ?? 0),
+      total_tokens: Number(usage.total_tokens ?? 0),
+      success: true,
+    });
+
     return new Response(JSON.stringify({ items: normalized }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e: any) {
+    await logUsage({ store_id: storeId, success: false, error_message: e?.message ?? 'Erro desconhecido' });
     return new Response(JSON.stringify({ error: e?.message ?? 'Erro desconhecido' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

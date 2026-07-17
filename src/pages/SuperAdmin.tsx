@@ -52,6 +52,8 @@ import { DefaultTrialSettings } from '@/components/DefaultTrialSettings';
 import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
+import { AIUsageTab } from '@/components/AIUsageTab';
+import { Sparkles } from 'lucide-react';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -312,6 +314,12 @@ export default function SuperAdmin() {
                 <Users className="w-4 h-4" />
                 Usuários
               </TabsTrigger>
+              {isMasterAdmin && (
+                <TabsTrigger value="ai" className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  IA
+                </TabsTrigger>
+              )}
               {isMasterAdmin && (
                 <TabsTrigger value="settings" className="gap-2">
                   <Cog className="w-4 h-4" />
@@ -606,6 +614,13 @@ export default function SuperAdmin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* AI Usage Tab - Master Admin Only */}
+          {isMasterAdmin && (
+            <TabsContent value="ai">
+              <AIUsageTab />
+            </TabsContent>
+          )}
 
           {/* Settings Tab - Master Admin Only */}
           {isMasterAdmin && (
