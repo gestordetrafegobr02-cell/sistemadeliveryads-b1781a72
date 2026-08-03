@@ -120,6 +120,8 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
     setFMax('');
     setFAvailable(true);
     setFFree(false);
+    setFMin('');
+    setFDefault(false);
     setAddOpen(true);
   }
 
@@ -132,8 +134,11 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
     setFMax(it.group_max != null ? String(it.group_max) : '');
     setFAvailable(it.is_available);
     setFFree(Number(it.price) === 0);
+    setFMin(it.group_min ? String(it.group_min) : '');
+    setFDefault(Boolean(it.is_default));
     setAddOpen(true);
   }
+
 
   async function handleSave() {
     if (!fName.trim()) {
