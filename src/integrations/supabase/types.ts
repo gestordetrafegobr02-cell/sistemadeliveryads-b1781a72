@@ -253,10 +253,12 @@ export type Database = {
         Row: {
           created_at: string
           group_max: number | null
+          group_min: number
           group_name: string
           group_sort: number
           id: string
           is_available: boolean
+          is_default: boolean
           name: string
           price: number
           sort_order: number
@@ -266,10 +268,12 @@ export type Database = {
         Insert: {
           created_at?: string
           group_max?: number | null
+          group_min?: number
           group_name?: string
           group_sort?: number
           id?: string
           is_available?: boolean
+          is_default?: boolean
           name: string
           price?: number
           sort_order?: number
@@ -279,10 +283,12 @@ export type Database = {
         Update: {
           created_at?: string
           group_max?: number | null
+          group_min?: number
           group_name?: string
           group_sort?: number
           id?: string
           is_available?: boolean
+          is_default?: boolean
           name?: string
           price?: number
           sort_order?: number
@@ -503,10 +509,12 @@ export type Database = {
         Row: {
           created_at: string
           group_max: number | null
+          group_min: number
           group_name: string | null
           group_sort: number | null
           id: string
           is_available: boolean
+          is_default: boolean
           library_item_id: string | null
           name: string
           price: number
@@ -516,10 +524,12 @@ export type Database = {
         Insert: {
           created_at?: string
           group_max?: number | null
+          group_min?: number
           group_name?: string | null
           group_sort?: number | null
           id?: string
           is_available?: boolean
+          is_default?: boolean
           library_item_id?: string | null
           name: string
           price?: number
@@ -529,10 +539,12 @@ export type Database = {
         Update: {
           created_at?: string
           group_max?: number | null
+          group_min?: number
           group_name?: string | null
           group_sort?: number | null
           id?: string
           is_available?: boolean
+          is_default?: boolean
           library_item_id?: string | null
           name?: string
           price?: number

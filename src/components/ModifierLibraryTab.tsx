@@ -31,8 +31,11 @@ interface LibraryItem {
   price: number;
   is_available: boolean;
   group_max: number | null;
+  group_min: number;
+  is_default: boolean;
   group_sort: number;
   sort_order: number;
+
 }
 
 interface ProductLite {
@@ -64,6 +67,10 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
   const [fMax, setFMax] = useState('');
   const [fAvailable, setFAvailable] = useState(true);
   const [fFree, setFFree] = useState(false);
+  const [fMin, setFMin] = useState('');
+  const [fDefault, setFDefault] = useState(false);
+
+
 
   useEffect(() => {
     if (storeId) fetchItems();
@@ -113,6 +120,8 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
     setFMax('');
     setFAvailable(true);
     setFFree(false);
+    setFMin('');
+    setFDefault(false);
     setAddOpen(true);
   }
 
@@ -125,8 +134,11 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
     setFMax(it.group_max != null ? String(it.group_max) : '');
     setFAvailable(it.is_available);
     setFFree(Number(it.price) === 0);
+    setFMin(it.group_min ? String(it.group_min) : '');
+    setFDefault(Boolean(it.is_default));
     setAddOpen(true);
   }
+
 
   async function handleSave() {
     if (!fName.trim()) {
@@ -140,6 +152,7 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
       return;
     }
     const groupMax = fMax.trim() ? parseInt(fMax, 10) : null;
+    const groupMin = fMin.trim() ? parseInt(fMin, 10) : 0;
 
     setSaving(true);
     if (editing) {
@@ -150,6 +163,8 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
           price,
           group_name: groupName,
           group_max: groupMax,
+          group_min: groupMin,
+          is_default: fDefault,
           is_available: fAvailable,
         })
         .eq('id', editing.id);
@@ -178,10 +193,13 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
         price,
         group_name: groupName,
         group_max: groupMax,
+        group_min: groupMin,
+        is_default: fDefault,
         is_available: fAvailable,
         group_sort: groupSort,
         sort_order: sortOrder,
       });
+
       if (error) {
         toast.error('Erro: ' + error.message);
       } else {
@@ -344,8 +362,17 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
               <Input value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Ex: Granola" />
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-secondary/50">
-              <Label htmlFor="free-switch">Grátis (incluso)</Label>
+              <Label htmlFor="free-switch">Grátis (sem custo)</Label>
               <Switch id="free-switch" checked={fFree} onCheckedChange={setFFree} />
+            </div>
+            <div className="flex items-center justify-between p-2 rounded bg-secondary/50">
+              <div>
+                <Label htmlFor="default-switch">Já vem incluso</Label>
+                <p className="text-xs text-muted-foreground">
+                  Vem marcado e o cliente pode remover
+                </p>
+              </div>
+              <Switch id="default-switch" checked={fDefault} onCheckedChange={setFDefault} />
             </div>
             {!fFree && (
               <div>
@@ -353,6 +380,16 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
                 <Input value={fPrice} onChange={(e) => setFPrice(e.target.value)} placeholder="3,00" />
               </div>
             )}
+            <div>
+              <Label>Mín. seleções no grupo (obrigatório)</Label>
+              <Input
+                value={fMin}
+                onChange={(e) => setFMin(e.target.value)}
+                placeholder="Ex: 1 (escolha obrigatória)"
+                type="number"
+              />
+            </div>
+
             <div>
               <Label>Máx. seleções no grupo (opcional)</Label>
               <Input
