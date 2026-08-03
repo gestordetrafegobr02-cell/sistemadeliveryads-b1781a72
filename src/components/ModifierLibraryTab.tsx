@@ -152,6 +152,7 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
       return;
     }
     const groupMax = fMax.trim() ? parseInt(fMax, 10) : null;
+    const groupMin = fMin.trim() ? parseInt(fMin, 10) : 0;
 
     setSaving(true);
     if (editing) {
@@ -162,6 +163,8 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
           price,
           group_name: groupName,
           group_max: groupMax,
+          group_min: groupMin,
+          is_default: fDefault,
           is_available: fAvailable,
         })
         .eq('id', editing.id);
@@ -190,10 +193,13 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
         price,
         group_name: groupName,
         group_max: groupMax,
+        group_min: groupMin,
+        is_default: fDefault,
         is_available: fAvailable,
         group_sort: groupSort,
         sort_order: sortOrder,
       });
+
       if (error) {
         toast.error('Erro: ' + error.message);
       } else {
