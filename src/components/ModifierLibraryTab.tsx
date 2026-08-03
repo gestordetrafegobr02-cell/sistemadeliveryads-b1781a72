@@ -362,8 +362,17 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
               <Input value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Ex: Granola" />
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-secondary/50">
-              <Label htmlFor="free-switch">Grátis (incluso)</Label>
+              <Label htmlFor="free-switch">Grátis (sem custo)</Label>
               <Switch id="free-switch" checked={fFree} onCheckedChange={setFFree} />
+            </div>
+            <div className="flex items-center justify-between p-2 rounded bg-secondary/50">
+              <div>
+                <Label htmlFor="default-switch">Já vem incluso</Label>
+                <p className="text-xs text-muted-foreground">
+                  Vem marcado e o cliente pode remover
+                </p>
+              </div>
+              <Switch id="default-switch" checked={fDefault} onCheckedChange={setFDefault} />
             </div>
             {!fFree && (
               <div>
@@ -371,6 +380,16 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
                 <Input value={fPrice} onChange={(e) => setFPrice(e.target.value)} placeholder="3,00" />
               </div>
             )}
+            <div>
+              <Label>Mín. seleções no grupo (obrigatório)</Label>
+              <Input
+                value={fMin}
+                onChange={(e) => setFMin(e.target.value)}
+                placeholder="Ex: 1 (escolha obrigatória)"
+                type="number"
+              />
+            </div>
+
             <div>
               <Label>Máx. seleções no grupo (opcional)</Label>
               <Input
