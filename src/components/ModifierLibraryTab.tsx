@@ -67,6 +67,10 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
   const [fMax, setFMax] = useState('');
   const [fAvailable, setFAvailable] = useState(true);
   const [fFree, setFFree] = useState(false);
+  const [fMin, setFMin] = useState('');
+  const [fDefault, setFDefault] = useState(false);
+
+
 
   useEffect(() => {
     if (storeId) fetchItems();
