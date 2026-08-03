@@ -31,8 +31,11 @@ interface LibraryItem {
   price: number;
   is_available: boolean;
   group_max: number | null;
+  group_min: number;
+  is_default: boolean;
   group_sort: number;
   sort_order: number;
+
 }
 
 interface ProductLite {
