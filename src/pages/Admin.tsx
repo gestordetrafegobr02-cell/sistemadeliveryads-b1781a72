@@ -26,6 +26,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { MenuImagePicker } from '@/components/MenuImagePicker';
 import { getErrorMessage } from '@/lib/errorMapper';
 import { CategoryReorder } from '@/components/CategoryReorder';
+import { ProductReorder } from '@/components/ProductReorder';
 import { StoreHoursEditor } from '@/components/StoreHoursEditor';
 import { WhatsAppNotifyButton } from '@/components/WhatsAppNotifyButton';
 import { ProductModifiersEditor } from '@/components/ProductModifiersEditor';
@@ -1051,6 +1052,18 @@ export default function Admin() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display text-xl">Produtos</CardTitle>
                 <div className="flex gap-2">
+                  {store && products.length > 1 && (
+                    <ProductReorder
+                      products={products.map((p) => ({
+                        id: p.id,
+                        name: p.name,
+                        category_id: p.category_id,
+                        image_url: p.image_url,
+                      }))}
+                      categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                      onReorder={fetchData}
+                    />
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
