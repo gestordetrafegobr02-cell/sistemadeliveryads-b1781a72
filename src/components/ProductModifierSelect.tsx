@@ -171,7 +171,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto p-0 flex flex-col gap-0 border-none sm:border sm:rounded-3xl">
+      <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0 border-none sm:border sm:rounded-3xl">
         <DialogHeader className="p-4 border-b border-border bg-card sticky top-0 z-10">
           <DialogTitle className="font-display text-xl">{product.name}</DialogTitle>
         </DialogHeader>
