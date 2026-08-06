@@ -336,7 +336,6 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
           </div>
         </div>
 
-        </div>
 
         <DialogFooter className="flex-row items-center justify-between gap-4 p-4 border-t border-border bg-card sticky bottom-0 z-10 sm:flex-row">
           <div className="flex flex-col">
