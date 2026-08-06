@@ -157,7 +157,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
     const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m, index) => ({
       id: m.id,
       name: m.name,
-      price: (isOneLiterAcai && index < 5) ? 0 : Number(m.price),
+      price: (hasFreeAddons && index < freeLimit) ? 0 : Number(m.price),
     }));
     const removalNote = removedDefaults.length
       ? `Sem ${removedDefaults.map((m) => m.name).join(', sem ')}`
