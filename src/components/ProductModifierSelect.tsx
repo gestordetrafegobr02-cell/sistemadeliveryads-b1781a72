@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, ImageOff } from 'lucide-react';
+import { Loader2, Plus, ImageOff, Sparkles } from 'lucide-react';
 import { useCart, CartItemModifier } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
 import { toast } from 'sonner';
@@ -31,6 +31,9 @@ interface ProductModifierSelectProps {
     price: number;
     description?: string;
     image_url?: string;
+    has_addons?: boolean;
+    has_free_addons?: boolean;
+    free_addons_limit?: number;
   };
 }
 
@@ -124,13 +127,15 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
 
   const selectedModifiersList = modifiers.filter((m) => selectedModifiers.has(m.id));
   
-  // Logic: "Açaí de 1 Litro" (case-insensitive) gets the first 5 modifiers for free.
-  const isOneLiterAcai = product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro');
+  // Logic: Dynamic free addons based on product configuration
+  const hasFreeAddons = product.has_free_addons ?? (product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro'));
+  const freeLimit = product.free_addons_limit ?? (hasFreeAddons ? 5 : 0);
+  const allowsAddons = product.has_addons ?? true;
   
   const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
     // We determine which items are free based on the ORDER in which they appear in the selected list.
     // The visual UI also reflects this.
-    if (isOneLiterAcai && index < 5) return sum;
+    if (hasFreeAddons && index < freeLimit) return sum;
     return sum + Number(m.price);
   }, 0);
   
@@ -152,7 +157,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
     const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m, index) => ({
       id: m.id,
       name: m.name,
-      price: (isOneLiterAcai && index < 5) ? 0 : Number(m.price),
+      price: (hasFreeAddons && index < freeLimit) ? 0 : Number(m.price),
     }));
     const removalNote = removedDefaults.length
       ? `Sem ${removedDefaults.map((m) => m.name).join(', sem ')}`
@@ -199,8 +204,20 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
             <div className="flex justify-center py-6">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-          ) : groups.length > 0 ? (
+          ) : (groups.length > 0 && allowsAddons) ? (
             <div className="space-y-5">
+              {hasFreeAddons && freeLimit > 0 && (
+                <div className="bg-emerald/10 border border-emerald/20 p-3 rounded-xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500">
+                  <div className="h-8 w-8 rounded-full bg-emerald/20 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="h-4 w-4 text-emerald" />
+                  </div>
+                  <p className="text-xs text-emerald-700 font-medium leading-tight">
+                    Escolha até <span className="font-bold underline">{freeLimit} adicionais grátis!</span>
+                    <br />
+                    <span className="text-[10px] opacity-80">A partir do {freeLimit + 1}º, será cobrado o valor unitário.</span>
+                  </p>
+                </div>
+              )}
               {groups.map((group) => {
                 const count = countSelectedInGroup(group.items);
                 const required = group.min > 0;
@@ -252,10 +269,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                         let displayPrice = Number(modifier.price);
                         let isFreeByRule = false;
                         
-                        if (isOneLiterAcai && isSelected) {
+                        if (hasFreeAddons && isSelected) {
                           // Find index of this modifier in the selected list
                           const selectedIndex = selectedModifiersList.findIndex(sm => sm.id === modifier.id);
-                          if (selectedIndex !== -1 && selectedIndex < 5) {
+                          if (selectedIndex !== -1 && selectedIndex < freeLimit) {
                             displayPrice = 0;
                             isFreeByRule = true;
                           }

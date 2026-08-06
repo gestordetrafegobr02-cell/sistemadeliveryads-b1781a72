@@ -77,6 +77,9 @@ interface Product {
   category_id: string | null;
   is_available: boolean;
   is_featured: boolean;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 interface Order {
@@ -149,6 +152,9 @@ export default function Admin() {
   const [productPrice, setProductPrice] = useState('');
   const [productImage, setProductImage] = useState('');
   const [productCategory, setProductCategory] = useState<string>('');
+  const [hasAddons, setHasAddons] = useState(true);
+  const [hasFreeAddons, setHasFreeAddons] = useState(false);
+  const [freeAddonsLimit, setFreeAddonsLimit] = useState('0');
 
   // Category dialog
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -470,6 +476,9 @@ export default function Admin() {
       setProductPrice(String(product.price));
       setProductImage(product.image_url || '');
       setProductCategory(product.category_id || '');
+      setHasAddons(product.has_addons ?? true);
+      setHasFreeAddons(product.has_free_addons ?? false);
+      setFreeAddonsLimit(String(product.free_addons_limit ?? 0));
     } else {
       setEditingProduct(null);
       setProductName('');
@@ -477,6 +486,9 @@ export default function Admin() {
       setProductPrice('');
       setProductImage('');
       setProductCategory('');
+      setHasAddons(true);
+      setHasFreeAddons(false);
+      setFreeAddonsLimit('0');
     }
     setProductDialogOpen(true);
   }
@@ -491,6 +503,9 @@ export default function Admin() {
       price: parseFloat(productPrice.replace(',', '.')),
       image_url: productImage || null,
       category_id: productCategory || null,
+      has_addons: hasAddons,
+      has_free_addons: hasFreeAddons,
+      free_addons_limit: parseInt(freeAddonsLimit) || 0,
     };
 
     if (editingProduct) {
@@ -1483,7 +1498,50 @@ export default function Admin() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleSaveProduct} className="w-full bg-primary text-primary-foreground">
+              <div className="space-y-4 p-4 glass-card rounded-lg border border-border/40">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Habilitar Adicionais</Label>
+                    <p className="text-xs text-muted-foreground">O cliente poderá escolher adicionais para este produto</p>
+                  </div>
+                  <Switch checked={hasAddons} onCheckedChange={setHasAddons} />
+                </div>
+
+                {hasAddons && (
+                  <>
+                    <div className="pt-2 border-t border-border/30">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Adicionais Grátis</Label>
+                          <p className="text-xs text-muted-foreground">Permitir uma quantidade de adicionais sem custo</p>
+                        </div>
+                        <Switch checked={hasFreeAddons} onCheckedChange={setHasFreeAddons} />
+                      </div>
+                    </div>
+
+                    {hasFreeAddons && (
+                      <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-1">
+                        <Label>Quantidade de Adicionais Grátis</Label>
+                        <Input
+                          type="number"
+                          value={freeAddonsLimit}
+                          onChange={(e) => setFreeAddonsLimit(e.target.value)}
+                          placeholder="Ex: 5"
+                          className="bg-secondary border-border"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Ex: Se definir 5, os primeiros 5 itens selecionados terão preço R$ 0,00.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <Button 
+                onClick={handleSaveProduct} 
+                className="w-full bg-primary text-primary-foreground h-12 rounded-xl text-base font-semibold"
+              >
                 {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
               </Button>
             </div>

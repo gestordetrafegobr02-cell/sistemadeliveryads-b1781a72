@@ -573,6 +573,9 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          free_addons_limit: number | null
+          has_addons: boolean | null
+          has_free_addons: boolean | null
           id: string
           image_url: string | null
           is_available: boolean | null
@@ -587,6 +590,9 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          free_addons_limit?: number | null
+          has_addons?: boolean | null
+          has_free_addons?: boolean | null
           id?: string
           image_url?: string | null
           is_available?: boolean | null
@@ -601,6 +607,9 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          free_addons_limit?: number | null
+          has_addons?: boolean | null
+          has_free_addons?: boolean | null
           id?: string
           image_url?: string | null
           is_available?: boolean | null
