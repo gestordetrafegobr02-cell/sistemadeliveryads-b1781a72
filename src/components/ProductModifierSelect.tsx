@@ -128,6 +128,8 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   const isOneLiterAcai = product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro');
   
   const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
+    // We determine which items are free based on the ORDER in which they appear in the selected list.
+    // The visual UI also reflects this.
     if (isOneLiterAcai && index < 5) return sum;
     return sum + Number(m.price);
   }, 0);
@@ -169,12 +171,12 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0 border-none sm:border sm:rounded-3xl">
+        <DialogHeader className="p-4 border-b border-border bg-card sticky top-0 z-10">
           <DialogTitle className="font-display text-xl">{product.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
           <div className="flex gap-4">
             <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-secondary flex items-center justify-center">
               {product.image_url ? (
@@ -237,7 +239,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                         </span>
                       )}
                     </div>
-                    <div className="flex overflow-x-auto pb-4 gap-3 no-scrollbar scroll-smooth snap-x">
+                    <div className="space-y-1.5 pt-1">
                       {group.items.map((modifier) => {
                         const isSelected = selectedModifiers.has(modifier.id);
                         const disabled =
@@ -262,43 +264,49 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                         return (
                           <div
                             key={modifier.id}
-                            className={`flex-shrink-0 w-[200px] flex flex-col justify-between p-4 rounded-xl border transition-all snap-start ${
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
                               isSelected
-                                ? 'border-primary bg-primary/10 shadow-sm'
+                                ? 'border-primary/40 bg-primary/5 shadow-sm'
                                 : disabled
-                                  ? 'border-border bg-secondary/30 opacity-50 cursor-not-allowed'
-                                  : 'border-border bg-secondary hover:border-primary/50 cursor-pointer shadow-sm'
+                                  ? 'border-border/50 bg-secondary/10 opacity-50 cursor-not-allowed'
+                                  : 'border-border/60 bg-secondary/30 hover:border-primary/30'
                             }`}
                             onClick={() => !disabled && toggleModifier(modifier, group.items, group.max)}
                           >
-                            <div className="flex flex-col gap-2 mb-3">
-                              <div className="flex items-center justify-between">
-                                <Checkbox
-                                  checked={isSelected}
-                                  disabled={disabled}
-                                  onCheckedChange={() => !disabled && toggleModifier(modifier, group.items, group.max)}
-                                  className="h-5 w-5"
-                                />
-                                {isFreeByRule && (
-                                  <span className="text-[10px] bg-emerald/20 text-emerald px-2 py-0.5 rounded-full font-bold uppercase">Grátis</span>
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                disabled={disabled}
+                                onCheckedChange={() => !disabled && toggleModifier(modifier, group.items, group.max)}
+                                className="h-4 w-4"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-foreground leading-tight">
+                                  {modifier.name}
+                                </span>
+                                {isFreeByRule ? (
+                                  <span className="text-[10px] text-emerald font-bold uppercase tracking-tight">
+                                    Grátis
+                                  </span>
+                                ) : displayPrice > 0 ? (
+                                  <span className="text-[10px] text-primary font-bold">
+                                    + R$ {displayPrice.toFixed(2).replace('.', ',')}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-emerald font-medium">
+                                    {modifier.is_default ? 'Incluso' : 'Grátis'}
+                                  </span>
                                 )}
                               </div>
-                              <span className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.5rem]">{modifier.name}</span>
                             </div>
                             
-                            <div className="mt-auto">
-                              {displayPrice > 0 ? (
-                                <span className="text-primary font-bold text-sm">
-                                  + R$ {displayPrice.toFixed(2).replace('.', ',')}
+                            {!isFreeByRule && displayPrice > 0 && isSelected && (
+                              <div className="flex-shrink-0">
+                                <span className="text-xs font-bold text-primary">
+                                  R$ {displayPrice.toFixed(2).replace('.', ',')}
                                 </span>
-                              ) : modifier.is_default ? (
-                                <span className="text-xs text-emerald font-medium bg-emerald/10 px-2 py-1 rounded-md inline-block">
-                                  {isSelected ? 'Incluso' : 'Removido'}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-emerald font-medium bg-emerald/10 px-2 py-1 rounded-md inline-block">Grátis</span>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -328,9 +336,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
-          <div className="flex-1 text-center sm:text-left">
-            <p className="text-sm text-muted-foreground">Total do item</p>
+
+        <DialogFooter className="flex-row items-center justify-between gap-4 p-4 border-t border-border bg-card sticky bottom-0 z-10 sm:flex-row">
+          <div className="flex flex-col">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Total do item</p>
             <p className="text-xl font-bold text-primary">
               R$ {totalPrice.toFixed(2).replace('.', ',')}
             </p>
@@ -338,10 +347,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
           <Button
             onClick={handleAddToCart}
             disabled={!!missingGroup}
-            className="btn-glow bg-primary text-primary-foreground gap-2"
+            className="btn-glow bg-primary text-primary-foreground gap-2 rounded-full h-12 px-6"
           >
             <Plus className="w-4 h-4" />
-            {missingGroup ? 'Escolha as opções' : 'Adicionar ao Carrinho'}
+            {missingGroup ? 'Escolha as opções' : 'Adicionar'}
           </Button>
         </DialogFooter>
       </DialogContent>
