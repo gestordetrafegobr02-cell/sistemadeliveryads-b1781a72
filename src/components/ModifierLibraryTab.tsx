@@ -329,7 +329,7 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
 
       {/* Add/Edit dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-card border-border max-w-md">
+        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar Adicional' : 'Novo Adicional'}</DialogTitle>
           </DialogHeader>

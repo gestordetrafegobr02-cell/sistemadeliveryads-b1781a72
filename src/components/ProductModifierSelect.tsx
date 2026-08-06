@@ -123,7 +123,15 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   }
 
   const selectedModifiersList = modifiers.filter((m) => selectedModifiers.has(m.id));
-  const modifiersTotal = selectedModifiersList.reduce((sum, m) => sum + Number(m.price), 0);
+  
+  // Logic: "Açaí de 1 Litro" (case-insensitive) gets the first 5 modifiers for free.
+  const isOneLiterAcai = product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro');
+  
+  const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
+    if (isOneLiterAcai && index < 5) return sum;
+    return sum + Number(m.price);
+  }, 0);
+  
   const totalPrice = product.price + modifiersTotal;
 
   // Included items the customer removed → informed to the store
@@ -139,10 +147,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
       return;
     }
     hapticClick();
-    const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m) => ({
+    const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m, index) => ({
       id: m.id,
       name: m.name,
-      price: Number(m.price),
+      price: (isOneLiterAcai && index < 5) ? 0 : Number(m.price),
     }));
     const removalNote = removedDefaults.length
       ? `Sem ${removedDefaults.map((m) => m.name).join(', sem ')}`
@@ -229,7 +237,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                         </span>
                       )}
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex overflow-x-auto pb-4 gap-3 no-scrollbar scroll-smooth snap-x">
                       {group.items.map((modifier) => {
                         const isSelected = selectedModifiers.has(modifier.id);
                         const disabled =
@@ -237,37 +245,60 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                           group.max != null &&
                           group.max !== 1 &&
                           count >= group.max;
+                        
+                        // Calculate price to display
+                        let displayPrice = Number(modifier.price);
+                        let isFreeByRule = false;
+                        
+                        if (isOneLiterAcai && isSelected) {
+                          // Find index of this modifier in the selected list
+                          const selectedIndex = selectedModifiersList.findIndex(sm => sm.id === modifier.id);
+                          if (selectedIndex !== -1 && selectedIndex < 5) {
+                            displayPrice = 0;
+                            isFreeByRule = true;
+                          }
+                        }
+
                         return (
                           <div
                             key={modifier.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                            className={`flex-shrink-0 w-[200px] flex flex-col justify-between p-4 rounded-xl border transition-all snap-start ${
                               isSelected
-                                ? 'border-primary bg-primary/10'
+                                ? 'border-primary bg-primary/10 shadow-sm'
                                 : disabled
-                                  ? 'border-border bg-secondary/50 opacity-50 cursor-not-allowed'
-                                  : 'border-border bg-secondary hover:border-primary/50 cursor-pointer'
+                                  ? 'border-border bg-secondary/30 opacity-50 cursor-not-allowed'
+                                  : 'border-border bg-secondary hover:border-primary/50 cursor-pointer shadow-sm'
                             }`}
                             onClick={() => !disabled && toggleModifier(modifier, group.items, group.max)}
                           >
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={isSelected}
-                                disabled={disabled}
-                                onCheckedChange={() => !disabled && toggleModifier(modifier, group.items, group.max)}
-                              />
-                              <span className="font-medium">{modifier.name}</span>
+                            <div className="flex flex-col gap-2 mb-3">
+                              <div className="flex items-center justify-between">
+                                <Checkbox
+                                  checked={isSelected}
+                                  disabled={disabled}
+                                  onCheckedChange={() => !disabled && toggleModifier(modifier, group.items, group.max)}
+                                  className="h-5 w-5"
+                                />
+                                {isFreeByRule && (
+                                  <span className="text-[10px] bg-emerald/20 text-emerald px-2 py-0.5 rounded-full font-bold uppercase">Grátis</span>
+                                )}
+                              </div>
+                              <span className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.5rem]">{modifier.name}</span>
                             </div>
-                            {Number(modifier.price) > 0 ? (
-                              <span className="text-primary font-semibold">
-                                + R$ {Number(modifier.price).toFixed(2).replace('.', ',')}
-                              </span>
-                            ) : modifier.is_default ? (
-                              <span className="text-xs text-emerald font-medium">
-                                {isSelected ? 'Incluso' : 'Removido'}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-emerald font-medium">Grátis</span>
-                            )}
+                            
+                            <div className="mt-auto">
+                              {displayPrice > 0 ? (
+                                <span className="text-primary font-bold text-sm">
+                                  + R$ {displayPrice.toFixed(2).replace('.', ',')}
+                                </span>
+                              ) : modifier.is_default ? (
+                                <span className="text-xs text-emerald font-medium bg-emerald/10 px-2 py-1 rounded-md inline-block">
+                                  {isSelected ? 'Incluso' : 'Removido'}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-emerald font-medium bg-emerald/10 px-2 py-1 rounded-md inline-block">Grátis</span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
