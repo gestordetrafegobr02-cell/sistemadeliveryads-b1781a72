@@ -128,6 +128,8 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   const isOneLiterAcai = product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro');
   
   const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
+    // We determine which items are free based on the ORDER in which they appear in the selected list.
+    // The visual UI also reflects this.
     if (isOneLiterAcai && index < 5) return sum;
     return sum + Number(m.price);
   }, 0);
