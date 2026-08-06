@@ -1498,7 +1498,50 @@ export default function Admin() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleSaveProduct} className="w-full bg-primary text-primary-foreground">
+              <div className="space-y-4 p-4 glass-card rounded-lg border border-border/40">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Habilitar Adicionais</Label>
+                    <p className="text-xs text-muted-foreground">O cliente poderá escolher adicionais para este produto</p>
+                  </div>
+                  <Switch checked={hasAddons} onCheckedChange={setHasAddons} />
+                </div>
+
+                {hasAddons && (
+                  <>
+                    <div className="pt-2 border-t border-border/30">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Adicionais Grátis</Label>
+                          <p className="text-xs text-muted-foreground">Permitir uma quantidade de adicionais sem custo</p>
+                        </div>
+                        <Switch checked={hasFreeAddons} onCheckedChange={setHasFreeAddons} />
+                      </div>
+                    </div>
+
+                    {hasFreeAddons && (
+                      <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-1">
+                        <Label>Quantidade de Adicionais Grátis</Label>
+                        <Input
+                          type="number"
+                          value={freeAddonsLimit}
+                          onChange={(e) => setFreeAddonsLimit(e.target.value)}
+                          placeholder="Ex: 5"
+                          className="bg-secondary border-border"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Ex: Se definir 5, os primeiros 5 itens selecionados terão preço R$ 0,00.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <Button 
+                onClick={handleSaveProduct} 
+                className="w-full bg-primary text-primary-foreground h-12 rounded-xl text-base font-semibold"
+              >
                 {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
               </Button>
             </div>
