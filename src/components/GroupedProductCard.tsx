@@ -4,6 +4,7 @@ import { ChevronRight, ImageOff, Check } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { useCart } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
+import { ProductModifierSelect } from './ProductModifierSelect';
 import type { GroupedProductEntry, ProductVariant } from '@/lib/productGrouping';
 
 interface Props {
