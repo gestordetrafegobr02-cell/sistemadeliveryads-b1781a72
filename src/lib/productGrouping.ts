@@ -22,6 +22,9 @@ export interface ProductVariant {
   price: number;
   image_url: string | null;
   description: string | null;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 export interface GroupedProductEntry {
