@@ -110,6 +110,21 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
     }
   }
 
+  async function handleToggleDefault(id: string, isDefault: boolean) {
+    const { error } = await supabase
+      .from('product_modifiers')
+      .update({ is_default: isDefault })
+      .eq('id', id);
+
+    if (error) {
+      toast.error('Erro ao atualizar');
+    } else {
+      setModifiers((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, is_default: isDefault } : m))
+      );
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -128,23 +143,36 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
           {/* Add new modifier */}
           <div className="p-4 glass-card rounded-lg space-y-3">
             <Label className="text-foreground font-medium">Novo Adicional</Label>
-            <div className="grid grid-cols-5 gap-2">
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ex: Bacon Extra"
-                className="col-span-3 bg-secondary border-border"
-              />
-              <Input
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="3,00"
-                className="bg-secondary border-border"
-              />
+            <div className="grid grid-cols-6 gap-2 items-end">
+              <div className="col-span-3 space-y-1">
+                <Label className="text-xs">Nome</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ex: Bacon Extra"
+                  className="bg-secondary border-border"
+                />
+              </div>
+              <div className="col-span-1 space-y-1">
+                <Label className="text-xs">Preço</Label>
+                <Input
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="3,00"
+                  className="bg-secondary border-border"
+                />
+              </div>
+              <div className="col-span-1 flex flex-col items-center gap-1 mb-2">
+                <Label className="text-[10px] text-muted-foreground">Incluso</Label>
+                <Switch
+                  checked={newIsDefault}
+                  onCheckedChange={setNewIsDefault}
+                />
+              </div>
               <Button
                 onClick={handleAddModifier}
                 disabled={saving}
-                className="bg-primary text-primary-foreground"
+                className="bg-primary text-primary-foreground mb-1"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               </Button>
@@ -176,10 +204,20 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Switch
-                      checked={modifier.is_available}
-                      onCheckedChange={(checked) => handleToggleAvailable(modifier.id, checked)}
-                    />
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground uppercase">Disp.</span>
+                      <Switch
+                        checked={modifier.is_available}
+                        onCheckedChange={(checked) => handleToggleAvailable(modifier.id, checked)}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground uppercase">Incl.</span>
+                      <Switch
+                        checked={modifier.is_default}
+                        onCheckedChange={(checked) => handleToggleDefault(modifier.id, checked)}
+                      />
+                    </div>
                     <Button
                       size="icon"
                       variant="ghost"
