@@ -43,6 +43,8 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   const { addItem } = useCart();
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
   const [selectedModifiers, setSelectedModifiers] = useState<Set<string>>(new Set());
+  // Selection order matters: the first N picks are the free ones.
+  const [selectionOrder, setSelectionOrder] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [observation, setObservation] = useState('');
 
@@ -50,6 +52,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
     if (open) {
       fetchModifiers();
       setSelectedModifiers(new Set());
+      setSelectionOrder([]);
       setObservation('');
     }
   }, [open, product.id]);
@@ -67,7 +70,9 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
     const list = (data as Modifier[]) || [];
     setModifiers(list);
     // Pre-select items that already come included with the product
-    setSelectedModifiers(new Set(list.filter((m) => m.is_default).map((m) => m.id)));
+    const defaults = list.filter((m) => m.is_default).map((m) => m.id);
+    setSelectedModifiers(new Set(defaults));
+    setSelectionOrder(defaults);
     setLoading(false);
   }
 
@@ -104,41 +109,70 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   }
 
   function toggleModifier(m: Modifier, groupItems: Modifier[], max: number | null) {
-    setSelectedModifiers((prev) => {
-      const next = new Set(prev);
-      if (next.has(m.id)) {
+    const isSelected = selectedModifiers.has(m.id);
+    if (isSelected) {
+      setSelectedModifiers((prev) => {
+        const next = new Set(prev);
         next.delete(m.id);
-      } else {
-        if (max === 1) {
-          // Single-choice group: replace current selection
-          groupItems.forEach((it) => next.delete(it.id));
-        } else if (max != null) {
-          const currentCount = groupItems.filter((it) => next.has(it.id)).length;
-          if (currentCount >= max) {
-            toast.error(`Máximo de ${max} item${max > 1 ? 's' : ''} neste grupo`);
-            return prev;
-          }
-        }
+        return next;
+      });
+      setSelectionOrder((prev) => prev.filter((id) => id !== m.id));
+      return;
+    }
+
+    if (max === 1) {
+      const groupIds = groupItems.map((it) => it.id);
+      setSelectedModifiers((prev) => {
+        const next = new Set(prev);
+        groupIds.forEach((id) => next.delete(id));
         next.add(m.id);
+        return next;
+      });
+      setSelectionOrder((prev) => [...prev.filter((id) => !groupIds.includes(id)), m.id]);
+      return;
+    }
+
+    if (max != null) {
+      const currentCount = groupItems.filter((it) => selectedModifiers.has(it.id)).length;
+      if (currentCount >= max) {
+        toast.error(`Máximo de ${max} item${max > 1 ? 's' : ''} neste grupo`);
+        return;
       }
-      return next;
-    });
+    }
+
+    setSelectedModifiers((prev) => new Set(prev).add(m.id));
+    setSelectionOrder((prev) => [...prev.filter((id) => id !== m.id), m.id]);
   }
 
-  const selectedModifiersList = modifiers.filter((m) => selectedModifiers.has(m.id));
-  
-  // Logic: Dynamic free addons based on product configuration
-  const hasFreeAddons = product.has_free_addons ?? (product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro'));
-  const freeLimit = product.free_addons_limit ?? (hasFreeAddons ? 5 : 0);
+  // Ordered by the sequence the customer picked them (free threshold applies in that order)
+  const selectedModifiersList = selectionOrder
+    .map((id) => modifiers.find((m) => m.id === id))
+    .filter((m): m is Modifier => !!m && selectedModifiers.has(m.id));
+
+  // 100% dynamic per product: read the limit configured by the store owner.
   const allowsAddons = product.has_addons !== false;
-  
-  const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
-    // We determine which items are free based on the ORDER in which they appear in the selected list.
-    // The visual UI also reflects this.
-    if (hasFreeAddons && index < freeLimit) return sum;
-    return sum + Number(m.price);
-  }, 0);
-  
+  const freeLimit = Math.max(0, Number(product.free_addons_limit ?? 0));
+  const hasFreeAddons = (product.has_free_addons ?? false) && freeLimit > 0;
+
+  // Ids that are free (either included by default, or inside the free threshold)
+  const freeIds = new Set<string>();
+  let freeUsed = 0;
+  selectedModifiersList.forEach((m) => {
+    if (m.is_default) {
+      freeIds.add(m.id);
+      return;
+    }
+    if (hasFreeAddons && freeUsed < freeLimit) {
+      freeIds.add(m.id);
+      freeUsed += 1;
+    }
+  });
+
+  const modifiersTotal = selectedModifiersList.reduce(
+    (sum, m) => (freeIds.has(m.id) ? sum : sum + Number(m.price)),
+    0
+  );
+
   const totalPrice = product.price + modifiersTotal;
 
   // Included items the customer removed → informed to the store
@@ -154,10 +188,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
       return;
     }
     hapticClick();
-    const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m, index) => ({
+    const cartModifiers: CartItemModifier[] = selectedModifiersList.map((m) => ({
       id: m.id,
       name: m.name,
-      price: (hasFreeAddons && index < freeLimit) ? 0 : Number(m.price),
+      price: freeIds.has(m.id) ? 0 : Number(m.price),
     }));
     const removalNote = removedDefaults.length
       ? `Sem ${removedDefaults.map((m) => m.name).join(', sem ')}`
@@ -212,9 +246,9 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                     <Sparkles className="h-4 w-4 text-emerald" />
                   </div>
                   <p className="text-xs text-emerald-700 font-medium leading-tight">
-                    Escolha até <span className="font-bold underline">{freeLimit} adicionais grátis!</span>
+                    Escolha até <span className="font-bold underline">{freeLimit} adicion{freeLimit > 1 ? 'ais grátis' : 'al grátis'}!</span>
                     <br />
-                    <span className="text-[10px] opacity-80">A partir do {freeLimit + 1}º, será cobrado o valor unitário.</span>
+                    <span className="text-[10px] opacity-80">A partir do {freeLimit + 1}º, será cobrado o valor unitário ({freeUsed}/{freeLimit} usados).</span>
                   </p>
                 </div>
               )}
@@ -269,13 +303,9 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                         let displayPrice = Number(modifier.price);
                         let isFreeByRule = false;
                         
-                        if (hasFreeAddons && isSelected) {
-                          // Find index of this modifier in the selected list
-                          const selectedIndex = selectedModifiersList.findIndex(sm => sm.id === modifier.id);
-                          if (selectedIndex !== -1 && selectedIndex < freeLimit) {
-                            displayPrice = 0;
-                            isFreeByRule = true;
-                          }
+                        if (isSelected && freeIds.has(modifier.id)) {
+                          displayPrice = 0;
+                          isFreeByRule = true;
                         }
 
                         return (

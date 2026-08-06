@@ -504,8 +504,8 @@ export default function Admin() {
       image_url: productImage || null,
       category_id: productCategory || null,
       has_addons: hasAddons,
-      has_free_addons: hasFreeAddons,
-      free_addons_limit: parseInt(freeAddonsLimit) || 0,
+      has_free_addons: hasAddons && hasFreeAddons && (parseInt(freeAddonsLimit) || 0) > 0,
+      free_addons_limit: hasAddons && hasFreeAddons ? Math.max(0, parseInt(freeAddonsLimit) || 0) : 0,
     };
 
     if (editingProduct) {
@@ -1515,7 +1515,14 @@ export default function Admin() {
                           <Label className="text-base">Adicionais Grátis</Label>
                           <p className="text-xs text-muted-foreground">Permitir uma quantidade de adicionais sem custo</p>
                         </div>
-                        <Switch checked={hasFreeAddons} onCheckedChange={setHasFreeAddons} />
+                        <Switch
+                          checked={hasFreeAddons}
+                          onCheckedChange={(v) => {
+                            setHasFreeAddons(v);
+                            if (v && (parseInt(freeAddonsLimit) || 0) <= 0) setFreeAddonsLimit('5');
+                            if (!v) setFreeAddonsLimit('0');
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -1524,6 +1531,7 @@ export default function Admin() {
                         <Label>Quantidade de Adicionais Grátis</Label>
                         <Input
                           type="number"
+                          min={0}
                           value={freeAddonsLimit}
                           onChange={(e) => setFreeAddonsLimit(e.target.value)}
                           placeholder="Ex: 5"

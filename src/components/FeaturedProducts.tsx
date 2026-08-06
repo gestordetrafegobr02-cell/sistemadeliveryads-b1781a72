@@ -72,6 +72,8 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
               description={product.description || undefined}
               price={product.price}
               image_url={product.image_url || undefined}
+              has_free_addons={(product as any).has_free_addons}
+              free_addons_limit={(product as any).free_addons_limit}
             />
           </div>
         ))}
