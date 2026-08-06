@@ -11,6 +11,9 @@ export interface RawProduct {
   image_url: string | null;
   category_id: string | null;
   is_featured: boolean;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 export interface ProductVariant {
