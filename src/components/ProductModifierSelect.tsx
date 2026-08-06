@@ -130,7 +130,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   // Logic: Dynamic free addons based on product configuration
   const hasFreeAddons = product.has_free_addons ?? (product.name.toLowerCase().includes('acai') && product.name.toLowerCase().includes('1 litro'));
   const freeLimit = product.free_addons_limit ?? (hasFreeAddons ? 5 : 0);
-  const allowsAddons = product.has_addons ?? true;
+  const allowsAddons = product.has_addons !== false;
   
   const modifiersTotal = selectedModifiersList.reduce((sum, m, index) => {
     // We determine which items are free based on the ORDER in which they appear in the selected list.

@@ -61,6 +61,9 @@ interface Product {
   image_url: string | null;
   category_id: string | null;
   is_featured: boolean;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 interface ModifierLibraryItem {
@@ -306,6 +309,9 @@ export default function Shop() {
           image_url: sanitizeImageUrl(p.image_url) ?? null,
           category_id: p.category_id,
           is_featured: p.is_featured ?? false,
+          has_addons: p.has_addons !== false,
+          has_free_addons: p.has_free_addons ?? false,
+          free_addons_limit: p.free_addons_limit ?? 0,
         }));
 
         if (libraryResponse.error) {

@@ -476,7 +476,7 @@ export default function Admin() {
       setProductPrice(String(product.price));
       setProductImage(product.image_url || '');
       setProductCategory(product.category_id || '');
-      setHasAddons(product.has_addons ?? true);
+      setHasAddons(product.has_addons !== false);
       setHasFreeAddons(product.has_free_addons ?? false);
       setFreeAddonsLimit(String(product.free_addons_limit ?? 0));
     } else {
@@ -486,9 +486,9 @@ export default function Admin() {
       setProductPrice('');
       setProductImage('');
       setProductCategory('');
-      setHasAddons(true);
-      setHasFreeAddons(false);
-      setFreeAddonsLimit('0');
+    setHasAddons(true);
+    setHasFreeAddons(false);
+    setFreeAddonsLimit('0');
     }
     setProductDialogOpen(true);
   }

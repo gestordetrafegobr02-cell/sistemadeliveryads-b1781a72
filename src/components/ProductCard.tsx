@@ -135,7 +135,7 @@ function ProductCardImpl({ id, name, description, price, image_url, hasModifiers
       <ProductModifierSelect
         open={modifierModalOpen}
         onOpenChange={setModifierModalOpen}
-        product={{ id, name, price, description, image_url }}
+        product={{ id, name, price, description, image_url, has_addons: hasModifiers }}
       />
     </>
   );

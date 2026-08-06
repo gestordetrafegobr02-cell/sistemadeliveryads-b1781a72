@@ -11,6 +11,9 @@ export interface RawProduct {
   image_url: string | null;
   category_id: string | null;
   is_featured: boolean;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 export interface ProductVariant {
@@ -19,6 +22,9 @@ export interface ProductVariant {
   price: number;
   image_url: string | null;
   description: string | null;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 export interface GroupedProductEntry {
@@ -112,6 +118,9 @@ export function groupProductsBySize(products: RawProduct[]): ProductEntry[] {
           price: i.product.price,
           image_url: i.product.image_url,
           description: i.product.description,
+          has_addons: i.product.has_addons,
+          has_free_addons: i.product.has_free_addons,
+          free_addons_limit: i.product.free_addons_limit,
         }))
         .sort((a, b) => a.price - b.price);
       const minPrice = variants[0].price;
