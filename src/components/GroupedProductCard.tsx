@@ -4,7 +4,7 @@ import { ChevronRight, ImageOff, Check } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { useCart } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
-import type { GroupedProductEntry } from '@/lib/productGrouping';
+import type { GroupedProductEntry, ProductVariant } from '@/lib/productGrouping';
 
 interface Props {
   group: GroupedProductEntry;
@@ -19,17 +19,18 @@ function GroupedProductCardImpl({ group }: Props) {
   const [open, setOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [modifierModalOpen, setModifierModalOpen] = useState(false);
 
   const showImage = group.image_url && !imgError;
 
-  const handleSelectVariant = (variantId: string, sizeLabel: string, price: number, image_url: string | null) => {
+  const handleSelectVariant = (variant: ProductVariant) => {
     hapticClick();
-    addItem({
-      id: variantId,
-      name: `${group.baseName} ${sizeLabel}`,
-      price,
-      image_url: image_url ?? undefined,
-    });
+    setSelectedVariant(variant);
+    setModifierModalOpen(true);
+  };
+
+  const onAddComplete = (variantId: string) => {
     setJustAddedId(variantId);
     setTimeout(() => {
       setJustAddedId(null);
@@ -100,6 +101,26 @@ function GroupedProductCardImpl({ group }: Props) {
         </div>
       </motion.button>
 
+      {selectedVariant && (
+        <ProductModifierSelect
+          open={modifierModalOpen}
+          onOpenChange={(isOpen) => {
+            setModifierModalOpen(isOpen);
+            if (!isOpen) onAddComplete(selectedVariant.id);
+          }}
+          product={{
+            id: selectedVariant.id,
+            name: `${group.baseName} ${selectedVariant.sizeLabel}`,
+            price: selectedVariant.price,
+            description: selectedVariant.description ?? undefined,
+            image_url: selectedVariant.image_url ?? undefined,
+            has_addons: selectedVariant.has_addons !== false,
+            has_free_addons: selectedVariant.has_free_addons ?? false,
+            free_addons_limit: selectedVariant.free_addons_limit ?? 0
+          }}
+        />
+      )}
+
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="text-left">
@@ -116,7 +137,7 @@ function GroupedProductCardImpl({ group }: Props) {
                 <button
                   key={v.id}
                   type="button"
-                  onClick={() => handleSelectVariant(v.id, v.sizeLabel, v.price, v.image_url)}
+                  onClick={() => handleSelectVariant(v)}
                   className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
                     added
                       ? 'border-emerald bg-emerald/10'
