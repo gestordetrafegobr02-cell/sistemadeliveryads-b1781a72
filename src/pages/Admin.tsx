@@ -77,6 +77,9 @@ interface Product {
   category_id: string | null;
   is_available: boolean;
   is_featured: boolean;
+  has_addons?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
 interface Order {
@@ -149,6 +152,9 @@ export default function Admin() {
   const [productPrice, setProductPrice] = useState('');
   const [productImage, setProductImage] = useState('');
   const [productCategory, setProductCategory] = useState<string>('');
+  const [hasAddons, setHasAddons] = useState(true);
+  const [hasFreeAddons, setHasFreeAddons] = useState(false);
+  const [freeAddonsLimit, setFreeAddonsLimit] = useState('0');
 
   // Category dialog
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -470,6 +476,9 @@ export default function Admin() {
       setProductPrice(String(product.price));
       setProductImage(product.image_url || '');
       setProductCategory(product.category_id || '');
+      setHasAddons(product.has_addons ?? true);
+      setHasFreeAddons(product.has_free_addons ?? false);
+      setFreeAddonsLimit(String(product.free_addons_limit ?? 0));
     } else {
       setEditingProduct(null);
       setProductName('');
@@ -477,6 +486,9 @@ export default function Admin() {
       setProductPrice('');
       setProductImage('');
       setProductCategory('');
+      setHasAddons(true);
+      setHasFreeAddons(false);
+      setFreeAddonsLimit('0');
     }
     setProductDialogOpen(true);
   }
@@ -491,6 +503,9 @@ export default function Admin() {
       price: parseFloat(productPrice.replace(',', '.')),
       image_url: productImage || null,
       category_id: productCategory || null,
+      has_addons: hasAddons,
+      has_free_addons: hasFreeAddons,
+      free_addons_limit: parseInt(freeAddonsLimit) || 0,
     };
 
     if (editingProduct) {
