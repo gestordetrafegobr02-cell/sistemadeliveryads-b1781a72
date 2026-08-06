@@ -13,6 +13,7 @@ interface Modifier {
   name: string;
   price: number;
   is_available: boolean;
+  is_default: boolean;
   sort_order: number;
 }
 
@@ -30,6 +31,7 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
   // New modifier form
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [newIsDefault, setNewIsDefault] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -66,6 +68,7 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
       product_id: productId,
       name: newName.trim(),
       price: price,
+      is_default: newIsDefault,
       sort_order: modifiers.length,
     });
 
@@ -75,6 +78,7 @@ export function ProductModifiersEditor({ productId, productName }: ProductModifi
       toast.success('Adicional criado!');
       setNewName('');
       setNewPrice('');
+      setNewIsDefault(false);
       fetchModifiers();
     }
     setSaving(false);
