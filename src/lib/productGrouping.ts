@@ -118,6 +118,9 @@ export function groupProductsBySize(products: RawProduct[]): ProductEntry[] {
           price: i.product.price,
           image_url: i.product.image_url,
           description: i.product.description,
+          has_addons: i.product.has_addons,
+          has_free_addons: i.product.has_free_addons,
+          free_addons_limit: i.product.free_addons_limit,
         }))
         .sort((a, b) => a.price - b.price);
       const minPrice = variants[0].price;
