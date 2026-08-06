@@ -716,6 +716,8 @@ export default function Shop() {
                   price={product.price}
                   image_url={product.image_url || undefined}
                   hasModifiers={productsWithModifiers.has(product.id)}
+                  has_free_addons={product.has_free_addons}
+                  free_addons_limit={product.free_addons_limit}
                 />
               );
             };

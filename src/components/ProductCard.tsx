@@ -14,9 +14,11 @@ interface ProductCardProps {
   image_url?: string;
   /** When provided, skips the per-card modifier lookup (parent has already batched it). */
   hasModifiers?: boolean;
+  has_free_addons?: boolean;
+  free_addons_limit?: number;
 }
 
-function ProductCardImpl({ id, name, description, price, image_url, hasModifiers: hasModifiersProp }: ProductCardProps) {
+function ProductCardImpl({ id, name, description, price, image_url, hasModifiers: hasModifiersProp, has_free_addons, free_addons_limit }: ProductCardProps) {
   const { addItem } = useCart();
   const [imgError, setImgError] = useState(false);
   const [hasModifiers, setHasModifiers] = useState(hasModifiersProp ?? false);
@@ -135,7 +137,7 @@ function ProductCardImpl({ id, name, description, price, image_url, hasModifiers
       <ProductModifierSelect
         open={modifierModalOpen}
         onOpenChange={setModifierModalOpen}
-        product={{ id, name, price, description, image_url, has_addons: hasModifiers }}
+        product={{ id, name, price, description, image_url, has_addons: hasModifiers, has_free_addons, free_addons_limit }}
       />
     </>
   );
