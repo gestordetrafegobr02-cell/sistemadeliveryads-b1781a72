@@ -1,26 +1,27 @@
-# Plano de Implementação - Modificadores Inclusos (Padrão)
+# Plano de Padronização de Imagens - Império do Açaí
 
-O usuário deseja que no painel administrativo de produtos seja possível definir quais itens de um grupo de modificadores já vêm inclusos no produto (selecionados por padrão), sendo o restante considerado adicional pago.
+Este plano detalha a geração e atualização de imagens para os produtos da loja "Império do Açaí" (`imperio-do-acai-cnn`), garantindo que todos os itens sigam o padrão visual de alta qualidade já estabelecido na loja.
 
-## Alterações Propostas
+## Análise de Status
+- **Loja:** Império do Açaí (ID: `6c6bb9ea-6976-4fcc-9f0c-7f1f8328d62b`)
+- **Padrão Visual:** Imagens de estúdio, iluminação premium, fundo limpo ou contextualizado com foco no produto (ex: `/acai-morango.jpg`, `/acai-1litro.jpg`).
+- **Produtos Faltantes:** 15 itens identificados sem imagem (principalmente complementos, adicionais e cremes).
 
-### 1. Banco de Dados (Supabase)
-- A coluna `is_default` já existe na tabela `product_modifiers` e `modifier_library`.
-- Garantir que a lógica de aplicação da biblioteca para o produto (`apply_library_group_to_product`) respeite essa coluna.
+## Ações
 
-### 2. Painel Administrativo (`src/components/ProductModifiersEditor.tsx`)
-- Adicionar um `Switch` na listagem de modificadores de um produto específico para marcar/desmarcar o item como "Incluso por padrão" (`is_default`).
-- Adicionar o campo no formulário de criação de novo modificador.
+### 1. Geração de Imagens via IA
+Gerar imagens realistas no estilo "food photography" para os seguintes grupos:
+- **Complementos Crocantes:** Granola, Paçoca, Chocobool, Gotas de Chocolate, M&M's.
+- **Caldas e Líquidos:** Leite Condensado, Calda de Chocolate, Leite em Pó.
+- **Frutas e Adicionais:** Morango, Frutas picadas, Nutella, Bolacha Negresco.
+- **Cremes e Especiais:** Creme de Ninho, Cupuaçu, Mousse de Maracujá.
 
-### 3. Biblioteca de Modificadores (`src/components/ModifierLibraryTab.tsx`)
-- O campo "Já vem incluso" já existe no diálogo de edição (`is_default`), mas precisamos garantir que a interface reflita bem essa distinção.
-- Adicionar um indicativo visual (badge) na listagem da biblioteca para itens inclusos.
+### 2. Atualização do Banco de Dados
+Vincular as novas URLs geradas aos IDs correspondentes na tabela `public.products`.
 
-### 4. Menu Público (`src/components/ProductModifierSelect.tsx`)
-- A lógica de pré-seleção baseada em `is_default` já existe (Linha 70).
-- Vou revisar se a exibição de preço para itens inclusos (R$ 0,00 quando selecionados, ou preço original se forem extras) está clara.
+### 3. Sincronização com Banco de Imagens
+Adicionar as novas imagens à tabela `public.menu_image_bank` para uso futuro em outras lojas com o mesmo padrão.
 
 ## Verificação
-- Criar um produto.
-- Adicionar modificadores e marcar alguns como "Incluso".
-- Abrir o cardápio e verificar se os itens marcados já iniciam selecionados e se o preço total reflete corretamente (itens inclusos geralmente não somam ao preço base se o preço base já contempla o produto completo).
+- Validar se todos os 15 produtos agora possuem `image_url` válida.
+- Visualizar os cards de produtos no preview para garantir a consistência visual.
