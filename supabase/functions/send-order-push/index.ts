@@ -172,8 +172,21 @@ Deno.serve(async (req) => {
     const { data: store } = await admin.from('stores').select('name').eq('id', store_id).maybeSingle();
     const { data: subs } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('store_id', store_id);
 
-    const vapidPub = Deno.env.get('VAPID_PUBLIC_KEY')!;
-    const vapidJwk = JSON.parse(Deno.env.get('VAPID_PRIVATE_JWK')!) as JsonWebKey;
+    if (!subs?.length) {
+      return new Response(JSON.stringify({ ok: true, sent: 0, results: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const vapidPub = Deno.env.get('VAPID_PUBLIC_KEY');
+    const vapidJwkRaw = Deno.env.get('VAPID_PRIVATE_JWK');
+    if (!vapidPub || !vapidJwkRaw) {
+      console.error('Web Push secrets are not configured');
+      return new Response(JSON.stringify({ error: 'Web Push is not configured' }), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const vapidJwk = JSON.parse(vapidJwkRaw) as JsonWebKey;
     const subject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@deliverypro.site';
 
     const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.total || total || 0));
