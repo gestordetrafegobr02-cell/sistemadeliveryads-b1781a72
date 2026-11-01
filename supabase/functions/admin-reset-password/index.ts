@@ -3,81 +3,101 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+const json = (body: Record<string, unknown>, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
+  const contentLength = Number(req.headers.get('content-length') ?? 0)
+  if (contentLength > 4096) {
+    return json({ error: 'Request body too large' }, 413)
+  }
+
   try {
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-
-    // Create client with user's JWT to verify they're master admin
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing authorization header')
+    if (!authHeader) return json({ error: 'Unauthorized' }, 401)
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error('Missing required Supabase environment configuration')
+      return json({ error: 'Server configuration error' }, 500)
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
-    // Get current user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-    if (userError || !user) {
-      throw new Error('Unauthorized: Could not verify user')
+    if (userError || !user) return json({ error: 'Unauthorized' }, 401)
+
+    // Authorization is based on the server-managed admin role, not a client-supplied email.
+    const { data: adminRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
+
+    if (roleError) {
+      console.error('Admin role lookup failed:', roleError.message)
+      return json({ error: 'Authorization could not be verified' }, 500)
+    }
+    if (!adminRole) return json({ error: 'Admin access required' }, 403)
+
+    const rawBody = await req.text()
+    if (rawBody.length > 4096) return json({ error: 'Request body too large' }, 413)
+
+    let body: unknown
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      return json({ error: 'Invalid JSON body' }, 400)
     }
 
-    // Check if user is master admin (hardcoded email check for security)
-    const MASTER_EMAIL = 'igormoises.ads@gmail.com'
-    if (user.email !== MASTER_EMAIL) {
-      throw new Error('Unauthorized: Master admin access required')
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return json({ error: 'Invalid request body' }, 400)
     }
 
-    // Parse request body
-    const { userId, newPassword } = await req.json()
-
-    if (!userId || !newPassword) {
-      throw new Error('Missing required fields: userId and newPassword')
+    const { userId, newPassword } = body as Record<string, unknown>
+    if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+      return json({ error: 'A valid userId is required' }, 400)
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 12 || newPassword.length > 128) {
+      return json({ error: 'Password must contain between 12 and 128 characters' }, 400)
     }
 
-    if (newPassword.length < 6) {
-      throw new Error('Password must be at least 6 characters')
-    }
-
-    // Update user password using admin client
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      { password: newPassword }
-    )
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    })
 
     if (updateError) {
-      console.error('Password update error:', updateError)
-      throw new Error(`Failed to update password: ${updateError.message}`)
+      console.error('Password update failed:', updateError.message)
+      return json({ error: 'Could not update password for the specified user' }, 400)
     }
 
-    console.log(`Password updated successfully for user ${userId} by master admin ${user.email}`)
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'Password updated successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
-
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Admin reset password error:', errorMessage)
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
+    console.info('Password reset completed by an authorized admin')
+    return json({ success: true, message: 'Password updated successfully' }, 200)
+  } catch (error) {
+    console.error('Admin reset password error:', error instanceof Error ? error.message : 'Unknown error')
+    return json({ error: 'Internal server error' }, 500)
   }
 })
