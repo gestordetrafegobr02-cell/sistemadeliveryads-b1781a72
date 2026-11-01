@@ -117,22 +117,49 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
 }
 // ---------- end web push ----------
 
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+  if (Number(req.headers.get('content-length') || 0) > 4096) return new Response(JSON.stringify({ error: 'Request too large' }), {
+    status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
   try {
-    const body = await req.json();
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const suppliedSecret = req.headers.get('x-internal-secret') || '';
+    const { data: secretRow, error: secretError } = await admin
+      .from('internal_function_secrets')
+      .select('secret')
+      .eq('key', 'send-order-push')
+      .maybeSingle();
+    if (secretError || !secretRow?.secret || !constantTimeEqual(suppliedSecret, secretRow.secret)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const bodyText = await req.text();
+    if (bodyText.length > 4096) return new Response(JSON.stringify({ error: 'Request too large' }), {
+      status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+    const body = JSON.parse(bodyText);
     const { order_id, store_id, customer_name, total } = body;
     if (!order_id || !store_id) {
       return new Response(JSON.stringify({ error: 'missing fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     // Verify order exists (prevents abuse)
     const { data: order } = await admin.from('orders').select('id, store_id, customer_name, total').eq('id', order_id).maybeSingle();
