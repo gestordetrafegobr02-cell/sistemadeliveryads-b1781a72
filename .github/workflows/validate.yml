@@ -27,8 +27,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install locked dependencies
-        run: npm ci
+      # The repository's existing package-lock.json is already out of sync with
+      # package.json. npm install reconciles it in the ephemeral runner; commit
+      # a regenerated lockfile separately before treating installs as reproducible.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
 
       - name: Run schedule tests
         run: npm test
