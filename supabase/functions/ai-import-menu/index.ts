@@ -23,7 +23,7 @@ Regras estritas:
 - Ignore endereços, telefones, horários, condições de entrega.
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
-const MODEL = 'openai/gpt-5.5';
+const MODEL = 'gemini-2.5-flash';
 
 async function logUsage(payload: {
   store_id?: string | null;
@@ -68,12 +68,12 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       throw new Error('Configuração de autenticação indisponível');
     }
     if (!apiKey) {
-      await logUsage({ success: false, error_message: 'LOVABLE_API_KEY não configurada' });
+      await logUsage({ success: false, error_message: 'GEMINI_API_KEY não configurada' });
       return new Response(JSON.stringify({ error: 'Serviço de IA indisponível' }), {
         status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -175,39 +175,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [];
-    if (menuText) {
-      userContent.push({ type: 'text', text: `Extraia os produtos deste cardápio:\n\n${menuText}` });
-    }
+    const parts: Array<Record<string, unknown>> = [
+      { text: menuText
+        ? `Extraia os produtos deste cardápio:\n\n${menuText}`
+        : 'Extraia todos os produtos visíveis nesta foto de cardápio.' },
+    ];
     if (image) {
-      if (!menuText) userContent.push({ type: 'text', text: 'Extraia todos os produtos visíveis nesta foto de cardápio.' });
-      userContent.push({ type: 'image_url', image_url: { url: image } });
+      const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match) throw new Error('Imagem inválida');
+      parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
     }
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+    const aiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
+        }),
       },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userContent },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+    );
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      const status = aiRes.status === 429 || aiRes.status === 402 ? aiRes.status : 500;
+      const status = aiRes.status === 429 ? 429 : 500;
       const msg = aiRes.status === 429
-        ? 'Limite de requisições de IA atingido. Tente novamente em instantes.'
-        : aiRes.status === 402
-        ? 'Créditos de IA indisponíveis.'
-        : `Erro na IA: ${errText.slice(0, 200)}`;
+        ? 'Limite gratuito de IA atingido. Aguarde e tente novamente.'
+        : aiRes.status === 400 || aiRes.status === 403
+        ? 'A chave Gemini ou a configuração do modelo não foi aceita.'
+        : 'O serviço de IA está temporariamente indisponível.';
+      console.error('Gemini API error:', aiRes.status, errText.slice(0, 300));
       await logUsage({ store_id: storeId, success: false, error_message: msg });
       return new Response(JSON.stringify({ error: msg }), {
         status,
@@ -216,11 +222,17 @@ Deno.serve(async (req) => {
     }
 
     const responseData = await aiRes.json() as {
-      usage?: Record<string, unknown>;
-      choices?: Array<{ message?: { content?: unknown } }>;
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
-    const usage = responseData.usage ?? {};
-    const content = responseData.choices?.[0]?.message?.content ?? '{}';
+    const usage = responseData.usageMetadata ?? {};
+    const content = responseData.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? '')
+      .join('') ?? '{}';
     let parsed: { items?: unknown[] } = { items: [] };
     try {
       const candidate: unknown = typeof content === 'string' ? JSON.parse(content) : content;
@@ -248,9 +260,9 @@ Deno.serve(async (req) => {
 
     await logUsage({
       store_id: storeId,
-      prompt_tokens: Number(usage.prompt_tokens ?? 0),
-      completion_tokens: Number(usage.completion_tokens ?? 0),
-      total_tokens: Number(usage.total_tokens ?? 0),
+      prompt_tokens: Number(usage.promptTokenCount ?? 0),
+      completion_tokens: Number(usage.candidatesTokenCount ?? 0),
+      total_tokens: Number(usage.totalTokenCount ?? 0),
       success: true,
     });
 
