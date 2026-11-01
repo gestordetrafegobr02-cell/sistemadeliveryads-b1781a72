@@ -96,8 +96,8 @@ Deno.serve(async (req: Request) => {
       console.error('[notify-lead] Error fetching owner WhatsApp:', settingsError);
     }
 
-    const targetWhatsApp = String(ownerWhatsApp || '').replace(/\\D/g, '');
-    if (!/^\\d{10,15}$/.test(targetWhatsApp)) {
+    const targetWhatsApp = String(ownerWhatsApp || '').replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(targetWhatsApp)) {
       return new Response(JSON.stringify({ error: 'Owner WhatsApp is not configured correctly' }), {
         status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
