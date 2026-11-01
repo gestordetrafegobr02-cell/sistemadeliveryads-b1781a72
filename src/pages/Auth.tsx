@@ -60,18 +60,9 @@ export default function Auth() {
     
     setCheckingStore(true);
     
-    // Check if user is master admin - redirect directly to super-admin
-    // Master admin bypasses all other checks
-    const isMasterAdmin = user.email === 'igormoises.ads@gmail.com';
-    if (isMasterAdmin) {
-      navigate('/super-admin', { replace: true });
-      setCheckingStore(false);
-      return;
-    }
-    
-    // Check if user has admin role - redirect to super-admin
-    const { data: roleData } = await supabase.rpc('is_admin');
-    if (roleData === true) {
+    // Master access is determined exclusively by the server-managed role.
+    const { data: roleData, error: roleError } = await supabase.rpc('is_master_admin');
+    if (!roleError && roleData === true) {
       navigate('/super-admin', { replace: true });
       setCheckingStore(false);
       return;
