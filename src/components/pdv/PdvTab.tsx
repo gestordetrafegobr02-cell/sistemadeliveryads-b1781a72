@@ -255,6 +255,20 @@ function SessionView({ sessionId, storeId, products, storeName, onBack, onChecko
 
   if (!session) return <div className="flex justify-center py-16"><Loader2 className="animate-spin w-6 h-6" /></div>;
 
+  if (session.status !== 'open') {
+    return (
+      <Card>
+        <CardContent className="p-6 space-y-3">
+          <p className="font-semibold">Esta comanda não está mais aberta.</p>
+          <p className="text-sm text-muted-foreground">
+            Ela foi encerrada ou cancelada. Para preservar o histórico, esta tela não permite novas alterações.
+          </p>
+          <Button variant="outline" onClick={onBack}>Voltar ao PDV</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const subtotal = items.reduce((a, i) => a + i.unit_price * i.quantity, 0);
 
   return (
