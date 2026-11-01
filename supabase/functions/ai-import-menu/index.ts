@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userContent: any[] = [];
+    const userContent: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [];
     if (menuText) {
       userContent.push({ type: 'text', text: `Extraia os produtos deste cardápio:\n\n${menuText}` });
     }
@@ -215,25 +215,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    const data = await aiRes.json();
-    const usage = data?.usage ?? {};
-    const content = data?.choices?.[0]?.message?.content ?? '{}';
-    let parsed: any;
+    const responseData = await aiRes.json() as {
+      usage?: Record<string, unknown>;
+      choices?: Array<{ message?: { content?: unknown } }>;
+    };
+    const usage = responseData.usage ?? {};
+    const content = responseData.choices?.[0]?.message?.content ?? '{}';
+    let parsed: { items?: unknown[] } = { items: [] };
     try {
-      parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      const candidate: unknown = typeof content === 'string' ? JSON.parse(content) : content;
+      if (candidate && typeof candidate === 'object' && 'items' in candidate) {
+        const candidateItems = (candidate as { items?: unknown }).items;
+        if (Array.isArray(candidateItems)) parsed = { items: candidateItems };
+      }
     } catch {
       parsed = { items: [] };
     }
 
-    const items = Array.isArray(parsed?.items) ? parsed.items.slice(0, 100) : [];
+    const items = Array.isArray(parsed.items) ? parsed.items.slice(0, 100) : [];
     const normalized = items
-      .map((it: any) => ({
-        category: String(it?.category ?? 'Cardápio').trim().slice(0, 100) || 'Cardápio',
-        name: String(it?.name ?? '').trim().slice(0, 200),
-        description: String(it?.description ?? '').trim().slice(0, 500),
-        price: Number.isFinite(Number(it?.price)) ? Math.max(0, Math.min(Number(it.price), 1000000)) : 0,
-      }))
-      .filter((it: any) => it.name.length > 0);
+      .map((item: unknown) => {
+        const it = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+        const price = Number(it.price);
+        return {
+          category: String(it.category ?? 'Cardápio').trim().slice(0, 100) || 'Cardápio',
+          name: String(it.name ?? '').trim().slice(0, 200),
+          description: String(it.description ?? '').trim().slice(0, 500),
+          price: Number.isFinite(price) ? Math.max(0, Math.min(price, 1000000)) : 0,
+        };
+      })
+      .filter((item) => item.name.length > 0);
 
     await logUsage({
       store_id: storeId,
@@ -246,9 +257,10 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ items: normalized }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (e: any) {
-    await logUsage({ store_id: storeId, success: false, error_message: e?.message ?? 'Erro desconhecido' });
-    return new Response(JSON.stringify({ error: e?.message ?? 'Erro desconhecido' }), {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Erro desconhecido';
+    await logUsage({ store_id: storeId, success: false, error_message: message });
+    return new Response(JSON.stringify({ error: message }),
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
