@@ -79,7 +79,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Sanitize control characters
-    const sanitize = (str: string) => str.replace(/[\x00-\x1F\x7F]/g, '');
+    const sanitize = (str: string) =>
+      Array.from(str).filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 31 && code !== 127;
+      }).join('');
     const cleanStoreName = sanitize(storeName);
     const cleanEmail = sanitize(email);
     const cleanPhone = phone ? sanitize(phone) : undefined;
