@@ -68,7 +68,7 @@ export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boo
 }
 
 function parseHoursToMinutes(value: string): number | null {
-  if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(value)) return null;
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
   const [hour, minute] = value.split(':').map(Number);
   return hour * 60 + minute;
 }
