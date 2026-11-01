@@ -1,51 +1,62 @@
 # Ações necessárias para finalizar o ambiente novo
 
 ## Estado confirmado em 2026-11-01
-- Projeto Supabase sistema-delivery-ads-novo está ativo.
-- O preview Vercel abre e mostra a tela de login.
-- O workflow GitHub Actions do commit ead342fb2deac83625961818994d95babc350980 concluiu com sucesso.
-- auth.users, profiles e user_roles estão vazias (0 registros).
-- O enum app_role oferece admin, moderator e user.
-- O trigger de criação de perfil existe e insere o perfil quando um usuário é criado no Auth.
-- Não há migração de dados de lojas/clientes para o projeto novo.
-- Não houve deploy em produção nem merge em main.
+- Projeto Supabase `sistema-delivery-ads-novo` (ref `ribszysudwmzbzgnymrz`) está ativo.
+- O preview Vercel já foi aberto e mostrou a tela de login.
+- A conta titular `igormoises.ads@gmail.com` foi criada e confirmada.
+- A role `admin` foi associada à conta titular; o usuário confirmou que conseguiu entrar no painel Admin Master.
+- O primeiro acesso master está concluído e validado.
+- A função Edge `ai-import-menu` está implantada no projeto novo, com JWT obrigatório, usando Gemini 2.5 Flash. A chamada real ainda não foi testada porque `GEMINI_API_KEY` não está cadastrada.
+- O trigger de Web Push aponta para o projeto novo e valida um segredo interno guardado no banco.
+- As demais correções de checkout, horários overnight, PWA/push, convites, PDV e validação de destinos foram aplicadas na branch de correção.
+- GitHub Actions `Validate application` concluiu com sucesso no commit atual `88d79b69edafbc33af63b73d8d14ad8faedd850c`.
+- PR #1 permanece aberto como draft, base `main`, sem merge. Nenhuma publicação em produção foi feita.
 
-## Ações que dependem do titular
+## Ações externas ainda necessárias
 
-### 1. Configurar secrets no Supabase Dashboard
-A integração atual permite consultar e implantar Edge Functions, mas não disponibiliza gestão de secrets. Abra o projeto sistema-delivery-ads-novo no Supabase Dashboard e acesse Edge Functions → Secrets.
+### 1. Configurar Gemini
+No Supabase Dashboard, acesse Edge Functions → Secrets e cadastre:
+- `GEMINI_API_KEY`: chave criada no Google AI Studio para Gemini 2.5 Flash.
 
-Cadastrar:
-- GEMINI_API_KEY: chave do Google Gemini API usada pela função `ai-import-menu` (a função foi migrada para `gemini-2.5-flash` na branch de correção; requer a secret para funcionar).
-- VAPID_PUBLIC_KEY, VAPID_PRIVATE_JWK e VAPID_SUBJECT: configuração Web Push. Gerar um par novo e correspondente antes de ativar. O par compartilhado anteriormente deve ser descartado por ter sido exposto; não reutilizar.
+A chave não deve ser enviada pelo chat, colocada no GitHub ou incluída em arquivos do projeto. A integração atual permite consultar e implantar Edge Functions, mas não disponibiliza gestão de secrets. A chamada real à função só poderá ser validada depois que a secret estiver cadastrada.
 
-A chave pública VAPID do frontend também precisa ser atualizada para corresponder ao novo par. Nunca cole chaves privadas, API keys, service-role ou outros segredos no chat. Insira diretamente no painel seguro.
+A cota gratuita depende do modelo, projeto e limites vigentes. Antes de enviar dados reais de lojas, o titular deve verificar e aceitar as condições de privacidade e uso de dados do plano escolhido.
 
-A cota gratuita do Gemini depende do modelo, projeto e limites vigentes; o Google informa que conteúdo enviado no nível gratuito pode ser usado para melhorar seus produtos. Confirmar se essa condição é aceitável antes de enviar dados reais de lojas.
+### 2. Configurar Web Push (VAPID)
+É necessário gerar um novo par VAPID correspondente. O par privado compartilhado anteriormente deve ser considerado comprometido e não pode ser reutilizado.
 
-### 2. Criar o primeiro usuário administrativo
-O banco novo não tem nenhum usuário. No Supabase Dashboard, acesse Authentication → Users → Add user e crie a conta do administrador titular com senha definida pelo próprio titular. Confirme o e-mail somente se controlar aquele endereço.
+Cadastrar no Supabase Edge Function Secrets:
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_JWK`
+- `VAPID_SUBJECT` (valor no formato `mailto:...`, usando um contato controlado pelo titular).
 
-O trigger criará o perfil automaticamente. O papel admin existe em public.user_roles e deve ser associado ao UUID do usuário recém-criado por procedimento administrativo seguro no SQL Editor. Não atribua papel admin a usuários de clientes.
+A chave pública também precisa substituir o valor atualmente embutido em `src/hooks/usePushNotifications.ts` na branch `correcao-completa-sistema`. O valor do frontend e o secret público do Supabase precisam ser exatamente a mesma chave do novo par. A chave privada deve permanecer somente no Supabase Secrets e nunca ser enviada pelo chat ou commitada no repositório.
 
-O endereço de e-mail fixo presente em is_master_admin() e em admin-reset-password deve ser confirmado pelo titular. A função de redefinição de senha não deve ser implantada antes de refatorar e auditar sua autorização.
+### 3. Testes finais dependentes das secrets
+Após cadastrar os secrets:
+- Testar importação de cardápio com Gemini usando imagem e texto de teste, sem dados reais sensíveis.
+- Testar inscrição e envio de notificação push em navegador compatível.
+- Validar checkout, criação/consulta de pedido, PDV, convites e permissões com uma loja de teste.
+- Verificar logs de Edge Functions e confirmar ausência de erros de configuração.
 
-## O que não precisa ser conectado novamente
-- GitHub: já conectado e com branch/PR acessíveis.
-- Vercel: já autorizado; preview configurado com variáveis do projeto novo.
-- Supabase: projeto novo já acessível pela integração. Não é necessário conectar outra conta para os passos de leitura e auditoria.
+## Revisão de segurança pendente
+O Supabase Advisor apresenta alertas sobre funções `SECURITY DEFINER` executáveis por `anon` e `authenticated`, além de políticas permissivas sobrepostas. Algumas RPCs fazem parte deliberada do checkout público e de funcionalidades autenticadas. Não revogar permissões em lote: cada função/política precisa ser revisada individualmente, com testes de regressão para evitar quebrar checkout, consulta de pedidos ou operações de loja.
 
-## Pendências técnicas do código
-- Corrigir admin-reset-password para usar papel privilegiado verificado no servidor, com validações de método, payload e política de senha.
-- Revisar invite-store-member e a entrega/troca de senha temporária antes de ativar convites reais.
-- Testar autenticação, permissões e operações com a primeira conta administrativa e uma loja de teste.
-- Revisar os avisos do Supabase Advisor. Auditoria reporta 12 funções SECURITY DEFINER executáveis por anon e 47 por authenticated, além de políticas permissivas sobrepostas. Não revogar em lote: parte das RPCs é necessária para checkout e consulta pública.
-- Confirmar secrets exigidas pelas funções e testar Web Push/importação de IA após configuração.
+O alerta de RLS habilitado sem políticas na tabela `internal_function_secrets` é esperado para uma tabela interna que não deve ser acessível pelos clientes; manter sem políticas públicas e validar que apenas o caminho privilegiado interno consegue usá-la.
 
-## Sequência
-1. Titular cadastra as secrets no painel seguro.
-2. Titular cria a primeira conta administrativa e associa o papel admin pelo procedimento seguro.
-3. Equipe técnica corrige e revisa as duas Edge Functions pendentes e faz deploy no projeto de validação.
-4. Executar testes autenticados e de checkout/PDV/convites/notificações.
-5. Reavaliar advisors, atualizar documentação e apresentar aprovação final.
-6. Só então discutir merge do PR e publicação em produção, em aprovação separada.
+## Projeto antigo
+O projeto antigo está INACTIVE na organização. Não foi apagado; a integração atual não disponibiliza exclusão definitiva. Não afirmar exclusão.
+
+## Segurança e publicação
+- Não colocar segredos no GitHub, no código frontend, em prints ou no chat.
+- Não reutilizar o par VAPID anteriormente exposto.
+- Não fazer merge em `main`, não promover preview a produção e não alterar produção sem autorização específica do titular.
+- O PR #1 deve permanecer como draft até concluir os testes e a revisão final.
+
+## Ordem recomendada
+1. Cadastrar `GEMINI_API_KEY` e o novo par VAPID no Supabase Secrets.
+2. Atualizar a chave pública VAPID no frontend da branch de correção.
+3. Confirmar CI verde após a atualização do código.
+4. Executar os testes funcionais com credenciais válidas e dados de teste.
+5. Revisar os alertas de segurança individualmente e atualizar este documento.
+6. Apresentar o checklist final para validação do titular. Merge e publicação ficam para uma aprovação separada.
