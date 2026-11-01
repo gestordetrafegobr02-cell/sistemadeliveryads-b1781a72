@@ -112,7 +112,7 @@ export function isWithinScheduledHoursAt(
     const previousOpen = parseHoursToMinutes(previousHours.open);
     const previousClose = parseHoursToMinutes(previousHours.close);
     if (previousOpen !== null && previousClose !== null &&
-        previousClose <= previousOpen && current < previousClose) {
+        previousClose <= previousOpen && current <= previousClose) {
       return true;
     }
   }
