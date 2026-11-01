@@ -274,8 +274,15 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       let savedOrderId = orderId;
       let sessionToken: string | null = null;
 
-      // ===== Persist order — failures DO NOT block the redirect =====
-      if (storeId) {
+      // A WhatsApp redirect is only allowed after the order is durably persisted.
+      if (!storeId) {
+        setErrors({ submit: 'Não foi possível identificar a loja. Atualize a página e tente novamente.' });
+        setSubmitting(false);
+        return;
+      }
+
+      // ===== Persist order — persistence is mandatory before WhatsApp =====
+      {
         try {
           const cartId = await saveImmediately();
           const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
@@ -292,8 +299,11 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             p_client_total: grandTotal,
             p_cart_id: cartId || undefined,
           });
-          if (orderError || !createdOrder?.[0]) {
-            console.error('[Order] save failed, continuing to WhatsApp anyway:', orderError?.message);
+          if (orderError || !createdOrder?.[0]?.order_id) {
+            console.error('[Order] persistence failed:', orderError?.message || 'No order returned');
+            setErrors({ submit: 'Não foi possível registrar seu pedido. Seus itens continuam no carrinho; tente novamente.' });
+            setSubmitting(false);
+            return;
           } else {
             savedOrderId = createdOrder[0].order_id;
             sessionToken = createdOrder[0].customer_session_token;
@@ -312,7 +322,10 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
             }
           }
         } catch (err) {
-          console.error('[Order] save exception, continuing to WhatsApp anyway:', err);
+          console.error('[Order] persistence exception:', err);
+          setErrors({ submit: 'Não foi possível registrar seu pedido. Seus itens continuam no carrinho; tente novamente.' });
+          setSubmitting(false);
+          return;
         }
       }
 
