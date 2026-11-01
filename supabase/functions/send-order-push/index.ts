@@ -79,8 +79,24 @@ async function encryptPayload(payload: string, p256dhB64: string, authB64: strin
   return concat(header, ciphertext);
 }
 
+function isAllowedPushEndpoint(endpoint: string): URL {
+  if (endpoint.length > 2048) throw new Error('Push endpoint is too long');
+  const url = new URL(endpoint);
+  const host = url.hostname.toLowerCase();
+  const allowedHost =
+    host === 'fcm.googleapis.com' ||
+    host === 'updates.push.services.mozilla.com' ||
+    host === 'web.push.apple.com' ||
+    host === 'notify.windows.com' ||
+    host.endsWith('.notify.windows.com');
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || !allowedHost) {
+    throw new Error('Unsupported push endpoint');
+  }
+  return url;
+}
+
 async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string, vapidPubB64: string, privJwk: JsonWebKey, subject: string) {
-  const url = new URL(sub.endpoint);
+  const url = isAllowedPushEndpoint(sub.endpoint);
   const audience = `${url.protocol}//${url.host}`;
   const jwt = await makeVapidJWT(audience, subject, privJwk, vapidPubB64);
   const body = await encryptPayload(payload, sub.p256dh, sub.auth);
@@ -95,6 +111,7 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
       'Urgency': 'high',
     },
     body,
+    redirect: 'error',
   });
   return res;
 }
@@ -112,12 +129,44 @@ Deno.serve(async (req) => {
       });
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
+      supabaseUrl,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const callerClient = createClient(
+      supabaseUrl,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error: authError } = await callerClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Verify order exists (prevents abuse)
+    // Confirm the authenticated caller belongs to this store before using service-role access.
+    const { data: storeAccess, error: storeAccessError } = await admin
+      .from('stores').select('owner_id').eq('id', store_id).maybeSingle();
+    const { data: membership, error: membershipError } = await admin
+      .from('store_members').select('role').eq('store_id', store_id).eq('user_id', user.id).maybeSingle();
+    const allowedRoles = ['manager', 'attendant', 'kitchen'];
+    const isOwner = storeAccess?.owner_id === user.id;
+    const isMember = !!membership && allowedRoles.includes(membership.role);
+    if (storeAccessError || membershipError || !storeAccess || (!isOwner && !isMember)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify order exists and belongs to the authorized store.
     const { data: order } = await admin.from('orders').select('id, store_id, customer_name, total').eq('id', order_id).maybeSingle();
     if (!order || order.store_id !== store_id) {
       return new Response(JSON.stringify({ error: 'order not found' }), {
