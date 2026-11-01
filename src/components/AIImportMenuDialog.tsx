@@ -79,7 +79,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         payload.text = text.trim();
       }
 
-      const { data, error } = await supabase.functions.invoke('ai-import-menu', { body: payload });
+      const { data, error } = await supabase.functions.invoke('ai-import-menu', { body: { ...payload, store_id: storeId } });
       if (error) throw error;
       const extracted = (data?.items ?? []) as ExtractedItem[];
       if (!extracted.length) {
