@@ -16,10 +16,12 @@
 A integração atual permite consultar e implantar Edge Functions, mas não disponibiliza gestão de secrets. Abra o projeto sistema-delivery-ads-novo no Supabase Dashboard e acesse Edge Functions → Secrets.
 
 Cadastrar:
-- LOVABLE_API_KEY: chave do Lovable AI Gateway usada pela importação de cardápio com IA. Sem ela, esse recurso não funciona.
-- VAPID_PUBLIC_KEY, VAPID_PRIVATE_JWK e VAPID_SUBJECT: configuração Web Push. As chaves devem formar um par VAPID válido; subject deve ser um contato aceito pelo padrão, normalmente mailto:... .
+- GEMINI_API_KEY: chave do Google Gemini API usada pela função `ai-import-menu` (a função foi migrada para `gemini-2.5-flash` na branch de correção; requer a secret para funcionar).
+- VAPID_PUBLIC_KEY, VAPID_PRIVATE_JWK e VAPID_SUBJECT: configuração Web Push. Gerar um par novo e correspondente antes de ativar. O par compartilhado anteriormente deve ser descartado por ter sido exposto; não reutilizar.
 
-Nunca cole chaves privadas, service-role ou outros segredos no chat. Insira diretamente no painel seguro.
+A chave pública VAPID do frontend também precisa ser atualizada para corresponder ao novo par. Nunca cole chaves privadas, API keys, service-role ou outros segredos no chat. Insira diretamente no painel seguro.
+
+A cota gratuita do Gemini depende do modelo, projeto e limites vigentes; o Google informa que conteúdo enviado no nível gratuito pode ser usado para melhorar seus produtos. Confirmar se essa condição é aceitável antes de enviar dados reais de lojas.
 
 ### 2. Criar o primeiro usuário administrativo
 O banco novo não tem nenhum usuário. No Supabase Dashboard, acesse Authentication → Users → Add user e crie a conta do administrador titular com senha definida pelo próprio titular. Confirme o e-mail somente se controlar aquele endereço.
