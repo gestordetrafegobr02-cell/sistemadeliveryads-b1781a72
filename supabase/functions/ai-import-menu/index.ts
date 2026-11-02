@@ -23,7 +23,7 @@ Regras estritas:
 - Ignore endereços, telefones, horários, condições de entrega.
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.8-flash';
 
 async function logUsage(payload: {
   store_id?: string | null;
