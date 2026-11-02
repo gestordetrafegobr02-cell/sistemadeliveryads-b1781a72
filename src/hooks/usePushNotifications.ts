@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Public VAPID key (safe to embed).
 const VAPID_PUBLIC_KEY =
-  'BFfT-zUSAVGoqXtxlR_6amDm5ReGhYQaZTZQDRizuRndaED7OetisXnoU3vIeKlC2SOXZxYUEUnbibyT8JU1DHE';
+  'BIeME_CeB0iCmw21R-kPYAEITCS782YTL3WvcuSYtcSeh17I6_HfgKJbF0v2zPZaqI9j_j10wKwo3StSDgm6zgk';
 
 const SW_URL = '/push-sw.js';
 
