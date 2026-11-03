@@ -60,6 +60,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const checkoutInProgressRef = useRef(false);
   const checkoutStartingRef = useRef(false);
   const checkoutWindowRef = useRef<Window | null>(null);
+  const pendingOrderIdRef = useRef<string | null>(null);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [upsellConfig, setUpsellConfig] = useState<StoreUpsellConfig | null>(null);
 
@@ -274,6 +275,10 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       if (!storePhoneDigits) {
         console.error('[Checkout] No WhatsApp number available. Aborting.');
         setErrors({ submit: 'A loja ainda não configurou o WhatsApp para receber pedidos.' });
+        checkoutWindowRef.current?.close();
+        checkoutWindowRef.current = null;
+        checkoutInProgressRef.current = false;
+        checkoutStartingRef.current = false;
         setSubmitting(false);
         return;
       }
@@ -287,7 +292,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         if (referencePoint) addressStr += ` | Ref: ${referencePoint}`;
       }
 
-      const orderId = generateOrderId();
+      const orderId = pendingOrderIdRef.current || generateOrderId();
+      pendingOrderIdRef.current = orderId;
       const phoneDigits = phone.replace(/\D/g, '');
       const orderItems: CheckoutOrderItem[] = items.map((item) => {
         const modifiers = (item.modifiers || []).map((m) => ({ id: m.id, name: m.name, price: m.price }));
@@ -408,6 +414,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
       onPurchase?.();
       clearCart();
+      pendingOrderIdRef.current = null;
       checkoutInProgressRef.current = false;
       checkoutStartingRef.current = false;
       setSubmitting(false);
