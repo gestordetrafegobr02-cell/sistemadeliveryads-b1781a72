@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
-import { Clock, ChefHat, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CheckCircle2, ChefHat, Truck, CheckCircle, XCircle } from 'lucide-react';
 
-type OrderStatus = 'pending' | 'preparing' | 'out_for_delivery' | 'completed' | 'cancelled';
+type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'out_for_delivery' | 'completed' | 'cancelled';
 
 interface OrderStatusBadgeProps {
   status: string | null;
@@ -12,6 +12,11 @@ const statusConfig: Record<OrderStatus, { label: string; className: string; icon
     label: 'Pendente',
     className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30',
     icon: Clock,
+  },
+  accepted: {
+    label: 'Aceito pela loja',
+    className: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30',
+    icon: CheckCircle2,
   },
   preparing: {
     label: 'Preparando',
@@ -40,6 +45,7 @@ function normalize(status: string | null): OrderStatus {
   if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'cancelled';
   if (s === 'a_caminho' || s === 'shipped' || s === 'out_for_delivery') return 'out_for_delivery';
   if (s === 'concluido' || s === 'entregue' || s === 'completed') return 'completed';
+  if (s === 'accepted' || s === 'aceito' || s === 'aceito pela loja') return 'accepted';
   if (s === 'preparing' || s === 'preparando') return 'preparing';
   return 'pending';
 }
@@ -65,7 +71,7 @@ export function isPaidStatus(orderStatus: string | null, paymentMethod: string |
 }
 
 export function getNextStatus(currentStatus: string | null): OrderStatus {
-  const flow: OrderStatus[] = ['pending', 'preparing', 'out_for_delivery', 'completed'];
+  const flow: OrderStatus[] = ['pending', 'accepted', 'preparing', 'out_for_delivery', 'completed'];
   const current = normalize(currentStatus);
   if (current === 'cancelled') return 'cancelled';
   const idx = flow.indexOf(current);
@@ -75,7 +81,8 @@ export function getNextStatus(currentStatus: string | null): OrderStatus {
 export function getAllStatuses(): { value: OrderStatus; label: string }[] {
   return [
     { value: 'pending', label: 'Pendente' },
-    { value: 'preparing', label: 'Preparando' },
+    { value: 'accepted', label: 'Aceito pela loja' },
+    { value: 'preparing', label: 'Em preparação' },
     { value: 'out_for_delivery', label: 'A caminho' },
     { value: 'completed', label: 'Concluído' },
     { value: 'cancelled', label: 'Cancelado' },
