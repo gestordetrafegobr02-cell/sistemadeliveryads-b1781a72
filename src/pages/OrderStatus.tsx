@@ -37,7 +37,7 @@ export default function OrderStatus() {
   const { id } = useParams<{ id: string }>();
   const [search] = useSearchParams();
   const token = search.get('token') || '';
-  const whatsapp = (search.get('whatsapp') || '').replace(/\\D/g, '');
+  const whatsapp = (search.get('whatsapp') || '').replace(/\D/g, '');
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
