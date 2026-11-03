@@ -378,6 +378,12 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         message += `• Cashback usado: -R$ ${cashbackApplied.toFixed(2).replace('.', ',')}\n`;
       }
       message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
+      const trackingUrl = sessionToken
+        ? `${window.location.origin}/pedido/${savedOrderId}?token=${encodeURIComponent(sessionToken)}`
+        : null;
+      if (trackingUrl) {
+        message += `🔎 *Acompanhe seu pedido em tempo real:*\n${trackingUrl}\n\n`;
+      }
       message += `${divider}\n\n`;
       message += `👉 _Pedido gerado por DeliveryPro_`;
 
@@ -397,9 +403,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         return;
       }
 
-      if (sessionToken) {
-        const internalTrackingUrl = `/pedido/${savedOrderId}?token=${encodeURIComponent(sessionToken)}`;
-        window.setTimeout(() => { window.location.assign(internalTrackingUrl); }, 200);
+      if (trackingUrl) {
+        // Keep the tracking page available in the checkout tab while WhatsApp opens separately.
+        window.setTimeout(() => { window.location.assign(trackingUrl); }, 200);
       }
     } catch (err) {
       console.error('[Checkout] fatal exception:', err);
