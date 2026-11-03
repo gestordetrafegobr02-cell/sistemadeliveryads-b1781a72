@@ -14,6 +14,10 @@ interface OrderInfo {
   payment_method: string | null;
   created_at: string;
   store_name: string;
+  delivery_person_name: string | null;
+  delivery_person_phone: string | null;
+  estimated_delivery_at: string | null;
+  status_history: { status: string; changed_at: string }[];
 }
 
 const STEPS = [
@@ -23,6 +27,15 @@ const STEPS = [
   { key: 'out_for_delivery', label: 'Saiu para entrega', icon: Truck },
   { key: 'completed', label: 'Concluído', icon: CheckCircle2 },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pedido recebido', accepted: 'Pedido aceito', preparing: 'Em preparação',
+  out_for_delivery: 'Saiu para entrega', completed: 'Concluído', cancelled: 'Cancelado',
+};
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
 
 export default function OrderStatus() {
   const { id } = useParams<{ id: string }>();
@@ -136,6 +149,27 @@ export default function OrderStatus() {
         </div>
         )}
 
+        {(order.delivery_person_name || order.estimated_delivery_at) && (
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+            <h2 className="font-semibold text-foreground">Informações da entrega</h2>
+            {order.delivery_person_name && <p className="text-sm text-muted-foreground">Entregador: <span className="text-foreground">{order.delivery_person_name}</span></p>}
+            {order.delivery_person_phone && (
+              <a className="text-sm text-primary underline" href={`https://wa.me/${order.delivery_person_phone.replace(/\\D/g, '')}`}>Falar com o entregador pelo WhatsApp</a>
+            )}
+            {order.estimated_delivery_at && <p className="text-sm text-muted-foreground">Previsão: <span className="text-foreground">{formatDateTime(order.estimated_delivery_at)}</span></p>}
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+          <h2 className="font-semibold text-foreground">Atualizações do pedido</h2>
+          {order.status_history?.length ? order.status_history.map((entry, index) => (
+            <div key={`${entry.status}-${entry.changed_at}-${index}`} className="flex items-start justify-between gap-3 border-b border-border/60 last:border-0 py-2">
+              <span className="text-sm text-foreground">{STATUS_LABELS[entry.status] || entry.status}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(entry.changed_at)}</span>
+            </div>
+          )) : <p className="text-sm text-muted-foreground">As atualizações aparecerão aqui.</p>}
+        </div>
+
         <div className="rounded-2xl border border-border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Total</p>
           <p className="text-2xl font-bold text-foreground">R$ {Number(order.total).toFixed(2).replace('.', ',')}</p>
@@ -144,7 +178,7 @@ export default function OrderStatus() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">Esta página atualiza automaticamente.</p>
+        <p className="text-center text-xs text-muted-foreground">Esta página atualiza automaticamente a cada 5 segundos.</p>
       </div>
     </div>
   );
