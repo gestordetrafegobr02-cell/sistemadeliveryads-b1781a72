@@ -93,12 +93,63 @@ interface Order {
   payment_method: string | null;
   payment_status: string | null;
   created_at: string;
+  delivery_person_name?: string | null;
+  delivery_person_phone?: string | null;
+  estimated_delivery_at?: string | null;
 }
 
 interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+}
+
+function toDateTimeLocal(value: string | null | undefined) {
+  if (!value) return '';
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
+}
+
+function DeliveryDetailsEditor({ order }: { order: Order }) {
+  const [name, setName] = useState(order.delivery_person_name || '');
+  const [phone, setPhone] = useState(order.delivery_person_phone || '');
+  const [eta, setEta] = useState(toDateTimeLocal(order.estimated_delivery_at));
+  const [savingDetails, setSavingDetails] = useState(false);
+
+  async function saveDetails() {
+    if (phone && phone.replace(/\\D/g, '').length < 10) {
+      toast.error('Informe um WhatsApp válido para o entregador.');
+      return;
+    }
+    setSavingDetails(true);
+    const { error } = await supabase.from('orders').update({
+      delivery_person_name: name.trim() || null,
+      delivery_person_phone: phone.trim() ? phone.replace(/\\D/g, '') : null,
+      estimated_delivery_at: eta ? new Date(eta).toISOString() : null,
+    }).eq('id', order.id);
+    setSavingDetails(false);
+    if (error) toast.error('Não foi possível salvar os dados da entrega.');
+    else toast.success('Dados da entrega atualizados.');
+  }
+
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-2">
+      <p className="text-sm font-medium text-foreground">Dados para o acompanhamento do cliente</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do entregador" maxLength={100} />
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="WhatsApp do entregador" maxLength={20} />
+        <div className="sm:col-span-2 space-y-1">
+          <Label className="text-xs text-muted-foreground">Previsão de entrega</Label>
+          <Input type="datetime-local" value={eta} onChange={(e) => setEta(e.target.value)} />
+        </div>
+      </div>
+      <Button size="sm" variant="outline" onClick={saveDetails} disabled={savingDetails}>
+        {savingDetails ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+        Salvar dados da entrega
+      </Button>
+    </div>
+  );
 }
 
 export default function Admin() {
@@ -1251,6 +1302,7 @@ export default function Admin() {
                         {order.address && (
                           <p className="text-xs text-muted-foreground">📍 {order.address}</p>
                         )}
+                        {canManage && <DeliveryDetailsEditor order={order} />}
 
                         {/* Order Footer */}
                         <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-border">
