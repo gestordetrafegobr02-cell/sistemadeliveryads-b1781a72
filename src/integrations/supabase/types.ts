@@ -316,6 +316,9 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          estimated_delivery_at: string | null
           customer_name: string
           customer_phone: string | null
           customer_session_token: string | null
@@ -330,6 +333,9 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          estimated_delivery_at?: string | null
           customer_name: string
           customer_phone?: string | null
           customer_session_token?: string | null
@@ -344,6 +350,9 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          estimated_delivery_at?: string | null
           customer_name?: string
           customer_phone?: string | null
           customer_session_token?: string | null
