@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -316,6 +316,9 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          estimated_delivery_at: string | null
           customer_name: string
           customer_phone: string | null
           customer_session_token: string | null
@@ -330,6 +333,9 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          estimated_delivery_at?: string | null
           customer_name: string
           customer_phone?: string | null
           customer_session_token?: string | null
@@ -344,6 +350,9 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          estimated_delivery_at?: string | null
           customer_name?: string
           customer_phone?: string | null
           customer_session_token?: string | null
@@ -1150,16 +1159,6 @@ export type Database = {
         }
         Returns: string
       }
-      create_store_manual: {
-        Args: {
-          p_owner_email: string
-          p_store_name: string
-          p_store_slug: string
-          p_template_slug?: string
-          p_trial_days?: number
-        }
-        Returns: string
-      }
       create_user_store_with_template: {
         Args: {
           p_store_name: string
@@ -1225,27 +1224,18 @@ export type Database = {
           store_id: string
         }[]
       }
-      get_order_by_id: {
-        Args: { p_order_id: string }
-        Returns: {
-          created_at: string
-          id: string
-          items: Json
-          payment_method: string
-          status: string
-          store_logo_url: string
-          store_name: string
-          total: number
-        }[]
-      }
       get_order_details: {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
           created_at: string
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          estimated_delivery_at: string | null
           id: string
           items: Json
           payment_method: string
           status: string
+          status_history: Json
           store_name: string
           total: number
         }[]
@@ -1467,12 +1457,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1496,11 +1486,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1521,11 +1511,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1546,11 +1536,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1563,11 +1553,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

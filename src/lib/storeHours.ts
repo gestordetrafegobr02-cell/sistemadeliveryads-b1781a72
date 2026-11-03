@@ -67,38 +67,63 @@ export function isStoreOpen(openingHours: OpeningHours | null, isOpenManual: boo
   return isWithinScheduledHours(openingHours);
 }
 
+function parseHoursToMinutes(value: string): number | null {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+/**
+ * Pure schedule evaluator, exported so overnight boundaries can be tested
+ * independently of the machine clock.
+ */
+export function isWithinScheduledHoursAt(
+  openingHours: OpeningHours | null,
+  day: number,
+  hour: number,
+  minute: number,
+): boolean {
+  if (!openingHours) return true;
+  if (!Number.isInteger(day) || day < 0 || day > 6 ||
+      !Number.isInteger(hour) || hour < 0 || hour > 23 ||
+      !Number.isInteger(minute) || minute < 0 || minute > 59) return false;
+
+  const current = hour * 60 + minute;
+  const todayHours = openingHours[dayMap[day]];
+  if (todayHours?.open && todayHours?.close) {
+    const openAt = parseHoursToMinutes(todayHours.open);
+    const closeAt = parseHoursToMinutes(todayHours.close);
+    if (openAt !== null && closeAt !== null) {
+      // Overnight interval on the current weekday (e.g. 22:00–02:00).
+      if (closeAt <= openAt) {
+        if (current >= openAt || current <= closeAt) return true;
+      } else if (current >= openAt && current <= closeAt) {
+        return true;
+      }
+    }
+  }
+
+  // An overnight interval belongs to the weekday on which it started.
+  // Check yesterday as well so a Monday 22:00–02:00 schedule remains open
+  // on Tuesday at 01:00, even if Tuesday has no opening-hours entry.
+  const previousDay = (day + 6) % 7;
+  const previousHours = openingHours[dayMap[previousDay]];
+  if (previousHours?.open && previousHours?.close) {
+    const previousOpen = parseHoursToMinutes(previousHours.open);
+    const previousClose = parseHoursToMinutes(previousHours.close);
+    if (previousOpen !== null && previousClose !== null &&
+        previousClose <= previousOpen && current <= previousClose) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function isWithinScheduledHours(openingHours: OpeningHours | null): boolean {
   if (!openingHours) return true;
-
   const now = getNowInSaoPaulo();
-  const dayKey = dayMap[now.day];
-  const todayHours = openingHours[dayKey];
-
-  if (!todayHours || !todayHours.open || !todayHours.close) {
-    return false;
-  }
-
-  const [openHour, openMin] = todayHours.open.split(':').map(Number);
-  const [closeHour, closeMin] = todayHours.close.split(':').map(Number);
-
-  if (
-    Number.isNaN(openHour) || Number.isNaN(openMin) ||
-    Number.isNaN(closeHour) || Number.isNaN(closeMin)
-  ) {
-    return false;
-  }
-
-  const current = now.hour * 60 + now.minute;
-  const openAt = openHour * 60 + openMin;
-  const closeAt = closeHour * 60 + closeMin;
-
-  // Overnight (e.g. 22:00 - 02:00)
-  if (closeAt <= openAt) {
-    return current >= openAt || current < closeAt;
-  }
-
-  // Strict boundary: inclusive open, inclusive close
-  return current >= openAt && current <= closeAt;
+  return isWithinScheduledHoursAt(openingHours, now.day, now.hour, now.minute);
 }
 
 export function getTodayHours(openingHours: OpeningHours | null): string | null {

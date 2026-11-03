@@ -55,8 +55,6 @@ import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
 import { AIUsageTab } from '@/components/AIUsageTab';
 import { Sparkles } from 'lucide-react';
 
-const MASTER_EMAIL = 'igormoises.ads@gmail.com';
-
 interface AdminStore {
   id: string;
   name: string;
@@ -124,8 +122,8 @@ export default function SuperAdmin() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedUserForEmail, setSelectedUserForEmail] = useState<{ id: string; email: string | null } | null>(null);
 
-  // Check if current user is master admin
-  const isMasterAdmin = user?.email === MASTER_EMAIL;
+  // Master authorization is verified by the server-managed admin role.
+  const isMasterAdmin = isAdmin;
 
   useEffect(() => {
     if (!authLoading && !user) {

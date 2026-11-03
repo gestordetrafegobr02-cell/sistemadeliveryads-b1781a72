@@ -79,8 +79,24 @@ async function encryptPayload(payload: string, p256dhB64: string, authB64: strin
   return concat(header, ciphertext);
 }
 
+function isAllowedPushEndpoint(endpoint: string): URL {
+  if (endpoint.length > 2048) throw new Error('Push endpoint is too long');
+  const url = new URL(endpoint);
+  const host = url.hostname.toLowerCase();
+  const allowedHost =
+    host === 'fcm.googleapis.com' ||
+    host === 'updates.push.services.mozilla.com' ||
+    host === 'web.push.apple.com' ||
+    host === 'notify.windows.com' ||
+    host.endsWith('.notify.windows.com');
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || !allowedHost) {
+    throw new Error('Unsupported push endpoint');
+  }
+  return url;
+}
+
 async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string, vapidPubB64: string, privJwk: JsonWebKey, subject: string) {
-  const url = new URL(sub.endpoint);
+  const url = isAllowedPushEndpoint(sub.endpoint);
   const audience = `${url.protocol}//${url.host}`;
   const jwt = await makeVapidJWT(audience, subject, privJwk, vapidPubB64);
   const body = await encryptPayload(payload, sub.p256dh, sub.auth);
@@ -95,27 +111,55 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
       'Urgency': 'high',
     },
     body,
+    redirect: 'error',
   });
   return res;
 }
 // ---------- end web push ----------
 
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+  if (Number(req.headers.get('content-length') || 0) > 4096) return new Response(JSON.stringify({ error: 'Request too large' }), {
+    status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
   try {
-    const body = await req.json();
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const suppliedSecret = req.headers.get('x-internal-secret') || '';
+    const { data: secretRow, error: secretError } = await admin
+      .from('internal_function_secrets')
+      .select('secret')
+      .eq('key', 'send-order-push')
+      .maybeSingle();
+    if (secretError || !secretRow?.secret || !constantTimeEqual(suppliedSecret, secretRow.secret)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const bodyText = await req.text();
+    if (bodyText.length > 4096) return new Response(JSON.stringify({ error: 'Request too large' }), {
+      status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+    const body = JSON.parse(bodyText);
     const { order_id, store_id, customer_name, total } = body;
     if (!order_id || !store_id) {
       return new Response(JSON.stringify({ error: 'missing fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     // Verify order exists (prevents abuse)
     const { data: order } = await admin.from('orders').select('id, store_id, customer_name, total').eq('id', order_id).maybeSingle();
@@ -128,8 +172,21 @@ Deno.serve(async (req) => {
     const { data: store } = await admin.from('stores').select('name').eq('id', store_id).maybeSingle();
     const { data: subs } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('store_id', store_id);
 
-    const vapidPub = Deno.env.get('VAPID_PUBLIC_KEY')!;
-    const vapidJwk = JSON.parse(Deno.env.get('VAPID_PRIVATE_JWK')!) as JsonWebKey;
+    if (!subs?.length) {
+      return new Response(JSON.stringify({ ok: true, sent: 0, results: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const vapidPub = Deno.env.get('VAPID_PUBLIC_KEY');
+    const vapidJwkRaw = Deno.env.get('VAPID_PRIVATE_JWK');
+    if (!vapidPub || !vapidJwkRaw) {
+      console.error('Web Push secrets are not configured');
+      return new Response(JSON.stringify({ error: 'Web Push is not configured' }), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const vapidJwk = JSON.parse(vapidJwkRaw) as JsonWebKey;
     const subject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@deliverypro.site';
 
     const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.total || total || 0));

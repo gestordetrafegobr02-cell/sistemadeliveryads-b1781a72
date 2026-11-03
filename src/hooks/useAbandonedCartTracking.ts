@@ -42,6 +42,7 @@ export function useAbandonedCartTracking(
 
     try {
       const formattedItems = data.items.map(item => ({
+        id: item.id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,

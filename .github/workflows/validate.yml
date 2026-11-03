@@ -1,0 +1,52 @@
+name: Validate application
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, correcao-completa-sistema]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The repository's existing package-lock.json is already out of sync with
+      # package.json. npm install reconciles it in the ephemeral runner; commit
+      # a regenerated lockfile separately before treating installs as reproducible.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run schedule tests
+        run: npm test
+
+      - name: Lint changed TypeScript files
+        shell: bash
+        run: |
+          changed_files="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx')"
+          if [ -n "$changed_files" ]; then
+            printf '%s\n' "$changed_files" | xargs -r npx eslint
+          else
+            echo "No changed TypeScript files to lint."
+          fi
+
+      - name: Build production bundle
+        run: npm run build

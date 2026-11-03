@@ -18,13 +18,39 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    });
+  }
+
+  const contentLength = Number(req.headers.get('content-length') || 0);
+  if (contentLength > 8192) {
+    return new Response(JSON.stringify({ error: 'Request body too large' }), {
+      status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.length > 8192) {
+      return new Response(JSON.stringify({ error: 'Invalid request body size' }), {
+        status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const body: LeadNotification = await req.json();
+    let body: LeadNotification;
+    try {
+      body = JSON.parse(rawBody) as LeadNotification;
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const { storeName, email, phone, segment } = body;
 
     // Validate required fields
@@ -53,7 +79,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Sanitize control characters
-    const sanitize = (str: string) => str.replace(/[\x00-\x1F\x7F]/g, '');
+    const sanitize = (str: string) =>
+      Array.from(str).filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 31 && code !== 127;
+      }).join('');
     const cleanStoreName = sanitize(storeName);
     const cleanEmail = sanitize(email);
     const cleanPhone = phone ? sanitize(phone) : undefined;
@@ -70,8 +100,13 @@ Deno.serve(async (req: Request) => {
       console.error('[notify-lead] Error fetching owner WhatsApp:', settingsError);
     }
 
-    const targetWhatsApp = ownerWhatsApp || '5511999999999';
-    console.log('[notify-lead] Target WhatsApp:', targetWhatsApp);
+    const targetWhatsApp = String(ownerWhatsApp || '').replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(targetWhatsApp)) {
+      return new Response(JSON.stringify({ error: 'Owner WhatsApp is not configured correctly' }), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    console.log('[notify-lead] Target WhatsApp configured.');
 
     // Format the notification message
     const message = `🔔 *NOVO LEAD CADASTRADO!*
@@ -89,7 +124,6 @@ _Notificação automática do DeliveryPro_`;
     const whatsappUrl = `https://wa.me/${targetWhatsApp}?text=${encodedMessage}`;
 
     console.log('[notify-lead] Lead notification prepared:', {
-      targetWhatsApp,
       storeName: cleanStoreName,
       email: cleanEmail,
       whatsappUrl: whatsappUrl.substring(0, 100) + '...'

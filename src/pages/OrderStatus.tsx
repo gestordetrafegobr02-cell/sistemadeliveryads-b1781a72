@@ -14,14 +14,28 @@ interface OrderInfo {
   payment_method: string | null;
   created_at: string;
   store_name: string;
+  delivery_person_name: string | null;
+  delivery_person_phone: string | null;
+  estimated_delivery_at: string | null;
+  status_history: { status: string; changed_at: string }[];
 }
 
 const STEPS = [
-  { key: 'pending', label: 'Recebido', icon: Clock },
-  { key: 'preparing', label: 'Preparando', icon: ChefHat },
+  { key: 'pending', label: 'Pedido recebido', icon: Clock },
+  { key: 'accepted', label: 'Pedido aceito', icon: CheckCircle2 },
+  { key: 'preparing', label: 'Em preparação', icon: ChefHat },
   { key: 'out_for_delivery', label: 'Saiu para entrega', icon: Truck },
   { key: 'completed', label: 'Concluído', icon: CheckCircle2 },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pedido recebido', accepted: 'Pedido aceito', preparing: 'Em preparação',
+  out_for_delivery: 'Saiu para entrega', completed: 'Concluído', cancelled: 'Cancelado',
+};
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
 
 export default function OrderStatus() {
   const { id } = useParams<{ id: string }>();
@@ -36,35 +50,26 @@ export default function OrderStatus() {
     let cancelled = false;
 
     const fetchOrder = async () => {
-      // Prefer secure RPC with session token if present
-      if (token) {
-        const { data, error: e } = await supabase.rpc('get_order_details', {
-          order_id_param: id,
-          session_token_param: token,
-        });
+      // Tracking is private to the customer: both order ID and session token are required.
+      if (!token) {
         if (!cancelled) {
-          if (e || !data || data.length === 0) {
-            // fallback to public by id
-            const { data: d2 } = await supabase.rpc('get_order_by_id', { p_order_id: id });
-            if (d2 && d2.length > 0) {
-              setOrder(d2[0] as unknown as OrderInfo);
-              setError(null);
-            } else {
-              setError('Pedido não encontrado.');
-            }
-          } else {
-            setOrder(data[0] as unknown as OrderInfo);
-            setError(null);
-          }
+          setError('Este link de acompanhamento está incompleto. Utilize o link enviado junto ao pedido.');
           setLoading(false);
         }
         return;
       }
 
-      const { data, error: e } = await supabase.rpc('get_order_by_id', { p_order_id: id });
+      const { data, error: fetchError } = await supabase.rpc('get_order_details', {
+        order_id_param: id,
+        session_token_param: token,
+      });
       if (!cancelled) {
-        if (e || !data || data.length === 0) setError('Pedido não encontrado.');
-        else setOrder(data[0] as unknown as OrderInfo);
+        if (fetchError || !data || data.length === 0) {
+          setError('Pedido não encontrado ou link de acompanhamento inválido.');
+        } else {
+          setOrder(data[0] as unknown as OrderInfo);
+          setError(null);
+        }
         setLoading(false);
       }
     };
@@ -101,6 +106,7 @@ export default function OrderStatus() {
     );
   }
 
+  const isCancelled = order.status === 'cancelled';
   const currentIdx = Math.max(0, STEPS.findIndex((s) => s.key === (order.status || 'pending')));
 
   return (
@@ -118,6 +124,12 @@ export default function OrderStatus() {
           </div>
         </header>
 
+        {isCancelled ? (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 text-center">
+            <p className="font-semibold text-destructive">Este pedido foi cancelado.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Entre em contato com a loja se precisar de ajuda.</p>
+          </div>
+        ) : (
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           {STEPS.map((step, idx) => {
             const Icon = step.icon;
@@ -135,6 +147,28 @@ export default function OrderStatus() {
             );
           })}
         </div>
+        )}
+
+        {(order.delivery_person_name || order.estimated_delivery_at) && (
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+            <h2 className="font-semibold text-foreground">Informações da entrega</h2>
+            {order.delivery_person_name && <p className="text-sm text-muted-foreground">Entregador: <span className="text-foreground">{order.delivery_person_name}</span></p>}
+            {order.delivery_person_phone && (
+              <a className="text-sm text-primary underline" href={`https://wa.me/${order.delivery_person_phone.replace(/\\D/g, '')}`}>Falar com o entregador pelo WhatsApp</a>
+            )}
+            {order.estimated_delivery_at && <p className="text-sm text-muted-foreground">Previsão: <span className="text-foreground">{formatDateTime(order.estimated_delivery_at)}</span></p>}
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
+          <h2 className="font-semibold text-foreground">Atualizações do pedido</h2>
+          {order.status_history?.length ? order.status_history.map((entry, index) => (
+            <div key={`${entry.status}-${entry.changed_at}-${index}`} className="flex items-start justify-between gap-3 border-b border-border/60 last:border-0 py-2">
+              <span className="text-sm text-foreground">{STATUS_LABELS[entry.status] || entry.status}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(entry.changed_at)}</span>
+            </div>
+          )) : <p className="text-sm text-muted-foreground">As atualizações aparecerão aqui.</p>}
+        </div>
 
         <div className="rounded-2xl border border-border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Total</p>
@@ -144,7 +178,7 @@ export default function OrderStatus() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">Esta página atualiza automaticamente.</p>
+        <p className="text-center text-xs text-muted-foreground">Esta página atualiza automaticamente a cada 5 segundos.</p>
       </div>
     </div>
   );

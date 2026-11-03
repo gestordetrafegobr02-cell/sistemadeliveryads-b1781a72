@@ -14,9 +14,9 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     .getRegistrations()
     .then((regs) => {
       regs.forEach((reg) => {
-        // Skip Firebase Messaging / push workers
-        const scriptURL = reg.active?.scriptURL || "";
-        if (scriptURL.includes("firebase-messaging-sw")) return;
+        // Preserve Firebase Messaging and the app's own Web Push worker.
+        const scriptURL = reg.active?.scriptURL || reg.waiting?.scriptURL || reg.installing?.scriptURL || "";
+        if (scriptURL.includes("firebase-messaging-sw") || scriptURL.includes("/push-sw.js")) return;
         reg.unregister().catch(() => {});
       });
     })

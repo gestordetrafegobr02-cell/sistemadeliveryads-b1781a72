@@ -1,4 +1,4 @@
-project_id = "rxmjjuhibcvqzidgidxp"
+project_id = "ribszysudwmzbzgnymrz"
 
 [functions.notify-lead]
 verify_jwt = false
@@ -10,4 +10,16 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.admin-change-email]
+verify_jwt = true
+
+[functions.ai-import-menu]
+verify_jwt = true
+
+[functions.push-subscribe]
+verify_jwt = true
+
+[functions.send-order-push]
+verify_jwt = true
+
+[functions.invite-store-member]
 verify_jwt = true

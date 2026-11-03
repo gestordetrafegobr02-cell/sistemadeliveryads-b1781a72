@@ -79,7 +79,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         payload.text = text.trim();
       }
 
-      const { data, error } = await supabase.functions.invoke('ai-import-menu', { body: payload });
+      const { data, error } = await supabase.functions.invoke('ai-import-menu', { body: { ...payload, store_id: storeId } });
       if (error) throw error;
       const extracted = (data?.items ?? []) as ExtractedItem[];
       if (!extracted.length) {
@@ -88,8 +88,8 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         setItems(extracted);
         toast.success(`${extracted.length} produtos extraídos. Revise antes de publicar.`);
       }
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Falha ao processar cardápio');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Falha ao processar cardápio');
     } finally {
       setLoading(false);
     }
@@ -138,8 +138,8 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
       reset();
       onOpenChange(false);
       onImported();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao publicar');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao publicar');
     } finally {
       setSaving(false);
     }
