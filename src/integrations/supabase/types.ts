@@ -1228,10 +1228,14 @@ export type Database = {
         Args: { order_id_param: string; session_token_param: string }
         Returns: {
           created_at: string
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          estimated_delivery_at: string | null
           id: string
           items: Json
           payment_method: string
           status: string
+          status_history: Json
           store_name: string
           total: number
         }[]
