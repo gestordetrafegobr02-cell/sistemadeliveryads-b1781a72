@@ -58,6 +58,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const checkoutInProgressRef = useRef(false);
+  const checkoutStartingRef = useRef(false);
   const checkoutWindowRef = useRef<Window | null>(null);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [upsellConfig, setUpsellConfig] = useState<StoreUpsellConfig | null>(null);
@@ -135,7 +136,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   }
 
   async function handleProceedToCheckout() {
-    if (checkoutInProgressRef.current || submitting) return;
+    if (checkoutStartingRef.current || checkoutInProgressRef.current || submitting) return;
     if (!validateCheckoutForm()) return;
     if (!storeId) {
       setErrors({ submit: 'Não foi possível identificar a loja. Atualize a página e tente novamente.' });
@@ -144,6 +145,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
     // Open synchronously from the click gesture so popup blockers do not
     // prevent the WhatsApp handoff after the asynchronous order save.
+    checkoutStartingRef.current = true;
     checkoutWindowRef.current = window.open('about:blank', '_blank');
     try {
       const showUpsell = await shouldShowUpsell();
@@ -233,15 +235,18 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
   const handleCheckout = async () => {
     if (checkoutInProgressRef.current) return;
+    checkoutStartingRef.current = true;
     if (!validateCheckoutForm()) {
       checkoutWindowRef.current?.close();
       checkoutWindowRef.current = null;
+      checkoutStartingRef.current = false;
       return;
     }
     if (!storeId) {
       setErrors({ submit: 'Não foi possível identificar a loja. Atualize a página e tente novamente.' });
       checkoutWindowRef.current?.close();
       checkoutWindowRef.current = null;
+      checkoutStartingRef.current = false;
       return;
     }
     checkoutInProgressRef.current = true;
@@ -404,6 +409,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       onPurchase?.();
       clearCart();
       checkoutInProgressRef.current = false;
+      checkoutStartingRef.current = false;
       setSubmitting(false);
       setOpen(false);
       checkoutWindowRef.current = null;
@@ -414,6 +420,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       checkoutWindowRef.current?.close();
       checkoutWindowRef.current = null;
       checkoutInProgressRef.current = false;
+      checkoutStartingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -658,6 +665,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
               if (!nextOpen && !checkoutInProgressRef.current) {
                 checkoutWindowRef.current?.close();
                 checkoutWindowRef.current = null;
+                checkoutStartingRef.current = false;
               }
             }}
             storeId={storeId}
