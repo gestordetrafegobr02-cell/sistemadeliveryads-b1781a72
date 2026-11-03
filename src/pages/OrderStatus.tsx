@@ -17,8 +17,9 @@ interface OrderInfo {
 }
 
 const STEPS = [
-  { key: 'pending', label: 'Recebido', icon: Clock },
-  { key: 'preparing', label: 'Preparando', icon: ChefHat },
+  { key: 'pending', label: 'Pedido recebido', icon: Clock },
+  { key: 'accepted', label: 'Pedido aceito', icon: CheckCircle2 },
+  { key: 'preparing', label: 'Em preparação', icon: ChefHat },
   { key: 'out_for_delivery', label: 'Saiu para entrega', icon: Truck },
   { key: 'completed', label: 'Concluído', icon: CheckCircle2 },
 ];
@@ -36,35 +37,26 @@ export default function OrderStatus() {
     let cancelled = false;
 
     const fetchOrder = async () => {
-      // Prefer secure RPC with session token if present
-      if (token) {
-        const { data, error: e } = await supabase.rpc('get_order_details', {
-          order_id_param: id,
-          session_token_param: token,
-        });
+      // Tracking is private to the customer: both order ID and session token are required.
+      if (!token) {
         if (!cancelled) {
-          if (e || !data || data.length === 0) {
-            // fallback to public by id
-            const { data: d2 } = await supabase.rpc('get_order_by_id', { p_order_id: id });
-            if (d2 && d2.length > 0) {
-              setOrder(d2[0] as unknown as OrderInfo);
-              setError(null);
-            } else {
-              setError('Pedido não encontrado.');
-            }
-          } else {
-            setOrder(data[0] as unknown as OrderInfo);
-            setError(null);
-          }
+          setError('Este link de acompanhamento está incompleto. Utilize o link enviado junto ao pedido.');
           setLoading(false);
         }
         return;
       }
 
-      const { data, error: e } = await supabase.rpc('get_order_by_id', { p_order_id: id });
+      const { data, error: fetchError } = await supabase.rpc('get_order_details', {
+        order_id_param: id,
+        session_token_param: token,
+      });
       if (!cancelled) {
-        if (e || !data || data.length === 0) setError('Pedido não encontrado.');
-        else setOrder(data[0] as unknown as OrderInfo);
+        if (fetchError || !data || data.length === 0) {
+          setError('Pedido não encontrado ou link de acompanhamento inválido.');
+        } else {
+          setOrder(data[0] as unknown as OrderInfo);
+          setError(null);
+        }
         setLoading(false);
       }
     };
@@ -101,6 +93,7 @@ export default function OrderStatus() {
     );
   }
 
+  const isCancelled = order.status === 'cancelled';
   const currentIdx = Math.max(0, STEPS.findIndex((s) => s.key === (order.status || 'pending')));
 
   return (
@@ -118,6 +111,12 @@ export default function OrderStatus() {
           </div>
         </header>
 
+        {isCancelled ? (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 text-center">
+            <p className="font-semibold text-destructive">Este pedido foi cancelado.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Entre em contato com a loja se precisar de ajuda.</p>
+          </div>
+        ) : (
         <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
           {STEPS.map((step, idx) => {
             const Icon = step.icon;
@@ -135,6 +134,7 @@ export default function OrderStatus() {
             );
           })}
         </div>
+        )}
 
         <div className="rounded-2xl border border-border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Total</p>
