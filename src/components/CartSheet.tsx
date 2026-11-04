@@ -337,11 +337,9 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       // transport exception as proof that the ledger operation succeeded.
       if (cashbackConfig.enabled && (phoneDigits || phone)) {
         const { error: cashbackError } = await supabase.rpc('process_order_cashback', {
-          p_store_id: storeId,
           p_order_id: savedOrderId,
-          p_customer_phone: phoneDigits || phone,
+          p_session_token: sessionToken,
           p_redeem_amount: cashbackApplied,
-          p_earn_base: grandTotal,
         });
         if (cashbackError) console.error('[Cashback] server processing failed:', cashbackError.message);
       }
