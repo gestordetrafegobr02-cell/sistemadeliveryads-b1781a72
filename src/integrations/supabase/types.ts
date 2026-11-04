@@ -1412,11 +1412,9 @@ export type Database = {
       }
       process_order_cashback: {
         Args: {
-          p_customer_phone: string
-          p_earn_base: number
           p_order_id: string
+          p_session_token: string
           p_redeem_amount: number
-          p_store_id: string
         }
         Returns: number
       }

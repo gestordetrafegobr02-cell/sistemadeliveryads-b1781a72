@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Minus, Plus, Trash2, MapPin, Truck, Store, Loader2, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,10 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const { items, updateQuantity, removeItem, total, itemCount, clearCart } = useCart();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const checkoutInProgressRef = useRef(false);
+  const checkoutStartingRef = useRef(false);
+  const checkoutWindowRef = useRef<Window | null>(null);
+  const pendingOrderIdRef = useRef<string | null>(null);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [upsellConfig, setUpsellConfig] = useState<StoreUpsellConfig | null>(null);
 
@@ -133,7 +137,17 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   }
 
   async function handleProceedToCheckout() {
+    if (checkoutStartingRef.current || checkoutInProgressRef.current || submitting) return;
     if (!validateCheckoutForm()) return;
+    if (!storeId) {
+      setErrors({ submit: 'Não foi possível identificar a loja. Atualize a página e tente novamente.' });
+      return;
+    }
+
+    // Open synchronously from the click gesture so popup blockers do not
+    // prevent the WhatsApp handoff after the asynchronous order save.
+    checkoutStartingRef.current = true;
+    checkoutWindowRef.current = window.open('about:blank', '_blank');
     try {
       const showUpsell = await shouldShowUpsell();
       if (showUpsell) {
@@ -221,7 +235,22 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   };
 
   const handleCheckout = async () => {
-    if (!validateCheckoutForm()) return;
+    if (checkoutInProgressRef.current) return;
+    checkoutStartingRef.current = true;
+    if (!validateCheckoutForm()) {
+      checkoutWindowRef.current?.close();
+      checkoutWindowRef.current = null;
+      checkoutStartingRef.current = false;
+      return;
+    }
+    if (!storeId) {
+      setErrors({ submit: 'Não foi possível identificar a loja. Atualize a página e tente novamente.' });
+      checkoutWindowRef.current?.close();
+      checkoutWindowRef.current = null;
+      checkoutStartingRef.current = false;
+      return;
+    }
+    checkoutInProgressRef.current = true;
     setSubmitting(true);
 
     try {
@@ -246,6 +275,10 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       if (!storePhoneDigits) {
         console.error('[Checkout] No WhatsApp number available. Aborting.');
         setErrors({ submit: 'A loja ainda não configurou o WhatsApp para receber pedidos.' });
+        checkoutWindowRef.current?.close();
+        checkoutWindowRef.current = null;
+        checkoutInProgressRef.current = false;
+        checkoutStartingRef.current = false;
         setSubmitting(false);
         return;
       }
@@ -259,7 +292,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         if (referencePoint) addressStr += ` | Ref: ${referencePoint}`;
       }
 
-      const orderId = generateOrderId();
+      const orderId = pendingOrderIdRef.current || generateOrderId();
+      pendingOrderIdRef.current = orderId;
       const phoneDigits = phone.replace(/\D/g, '');
       const orderItems: CheckoutOrderItem[] = items.map((item) => {
         const modifiers = (item.modifiers || []).map((m) => ({ id: m.id, name: m.name, price: m.price }));
@@ -271,49 +305,43 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         };
       });
 
-      let savedOrderId = orderId;
-      let sessionToken: string | null = null;
+      const cartId = await saveImmediately();
+      const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
+        p_order_id: orderId,
+        p_store_id: storeId,
+        p_customer_name: name,
+        p_customer_phone: phoneDigits || phone,
+        p_items: orderItems.map((item) => ({
+          id: item.id, name: item.name, quantity: item.quantity,
+          price: item.unitPrice, modifiers: item.modifiers, observation: item.observation,
+        })) as unknown as import('@/integrations/supabase/types').Json,
+        p_address: addressStr || null,
+        p_payment_method: `whatsapp_${paymentMethod}`,
+        p_client_total: grandTotal,
+        p_cart_id: cartId || undefined,
+      });
 
-      // ===== Persist order — failures DO NOT block the redirect =====
-      if (storeId) {
-        try {
-          const cartId = await saveImmediately();
-          const { data: createdOrder, error: orderError } = await supabase.rpc('create_public_order', {
-            p_order_id: orderId,
-            p_store_id: storeId,
-            p_customer_name: name,
-            p_customer_phone: phoneDigits || phone,
-            p_items: orderItems.map((item) => ({
-              id: item.id, name: item.name, quantity: item.quantity,
-              price: item.unitPrice, modifiers: item.modifiers, observation: item.observation,
-            })) as unknown as import('@/integrations/supabase/types').Json,
-            p_address: addressStr || null,
-            p_payment_method: `whatsapp_${paymentMethod}`,
-            p_client_total: grandTotal,
-            p_cart_id: cartId || undefined,
-          });
-          if (orderError || !createdOrder?.[0]) {
-            console.error('[Order] save failed, continuing to WhatsApp anyway:', orderError?.message);
-          } else {
-            savedOrderId = createdOrder[0].order_id;
-            sessionToken = createdOrder[0].customer_session_token;
-            try { await markAsConverted(savedOrderId); } catch (e) { console.warn('[Cart] markAsConverted failed:', e); }
-            // Process cashback: redeem applied + earn new
-            if (cashbackConfig.enabled && (phoneDigits || phone)) {
-              try {
-                await supabase.rpc('process_order_cashback', {
-                  p_store_id: storeId,
-                  p_order_id: savedOrderId,
-                  p_customer_phone: phoneDigits || phone,
-                  p_redeem_amount: cashbackApplied,
-                  p_earn_base: grandTotal,
-                });
-              } catch (e) { console.warn('[Cashback] failed:', e); }
-            }
-          }
-        } catch (err) {
-          console.error('[Order] save exception, continuing to WhatsApp anyway:', err);
-        }
+      // Never hand off to WhatsApp or clear the cart unless the database
+      // confirms the order and returns its private tracking credential.
+      if (orderError || !createdOrder?.[0]?.order_id) {
+        throw new Error(orderError?.message || 'O banco não confirmou a criação do pedido.');
+      }
+      const savedOrderId = String(createdOrder[0].order_id);
+      const sessionToken = createdOrder[0].customer_session_token;
+      if (typeof sessionToken !== 'string' || sessionToken.length < 32) {
+        throw new Error('O pedido foi registrado, mas não foi possível gerar o acesso seguro ao acompanhamento. Entre em contato com a loja antes de tentar novamente.');
+      }
+
+      try { await markAsConverted(savedOrderId); } catch (e) { console.warn('[Cart] markAsConverted failed:', e); }
+      // Cashback remains processed by the existing server RPC; never treat a
+      // transport exception as proof that the ledger operation succeeded.
+      if (cashbackConfig.enabled && (phoneDigits || phone)) {
+        const { error: cashbackError } = await supabase.rpc('process_order_cashback', {
+          p_order_id: savedOrderId,
+          p_session_token: sessionToken,
+          p_redeem_amount: cashbackApplied,
+        });
+        if (cashbackError) console.error('[Cashback] server processing failed:', cashbackError.message);
       }
 
       // ===== Build message =====
@@ -371,26 +399,33 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       const encodedText = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/${storePhoneDigits}?text=${encodedText}`;
 
-      // ===== Reset UI then fire redirect =====
+      // Keep a customer-accessible tracking page in this tab. The store's
+      // public WhatsApp number is the only extra query value; customer data
+      // stays inside the WhatsApp message and the token protects order reads.
+      const internalTrackingUrl = `/pedido/${savedOrderId}?token=${encodeURIComponent(sessionToken)}&whatsapp=${encodeURIComponent(storePhoneDigits)}`;
+      const handoffWindow = checkoutWindowRef.current;
+      if (handoffWindow && !handoffWindow.closed) {
+        handoffWindow.location.href = whatsappUrl;
+      } else {
+        console.warn('[Checkout] Popup unavailable; keeping the customer on tracking.');
+      }
+
       onPurchase?.();
       clearCart();
+      pendingOrderIdRef.current = null;
+      checkoutInProgressRef.current = false;
+      checkoutStartingRef.current = false;
       setSubmitting(false);
       setOpen(false);
-
-      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) {
-        console.warn('[Checkout] window.open blocked — navigating current tab.');
-        window.location.href = whatsappUrl;
-        return;
-      }
-
-      if (sessionToken) {
-        const internalTrackingUrl = `/pedido/${savedOrderId}?token=${encodeURIComponent(sessionToken)}`;
-        window.setTimeout(() => { window.location.assign(internalTrackingUrl); }, 200);
-      }
+      checkoutWindowRef.current = null;
+      window.location.assign(internalTrackingUrl);
     } catch (err) {
       console.error('[Checkout] fatal exception:', err);
-      setErrors({ submit: 'Erro inesperado. Tente novamente.' });
+      setErrors({ submit: err instanceof Error ? err.message : 'Não foi possível registrar o pedido. Seus itens continuam no carrinho; tente novamente.' });
+      checkoutWindowRef.current?.close();
+      checkoutWindowRef.current = null;
+      checkoutInProgressRef.current = false;
+      checkoutStartingRef.current = false;
       setSubmitting(false);
     }
   };
