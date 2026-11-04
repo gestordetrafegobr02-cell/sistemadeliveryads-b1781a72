@@ -166,8 +166,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const subtotal = total;
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
   const preCashbackTotal = subtotal + deliveryAmount;
-  const cashbackApplied = applyCashback ? Math.min(cashbackBalance, preCashbackTotal) : 0;
-  const grandTotal = Math.max(0, preCashbackTotal - cashbackApplied);
+  const cashbackApplied = 0; // Redemption is disabled until phone ownership is verified.
+  const grandTotal = preCashbackTotal;
 
   // Fetch cashback config for store
   useEffect(() => {
@@ -183,19 +183,12 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     })();
   }, [storeId]);
 
-  // Fetch balance when phone changes (debounced)
+  // Guest checkout cannot safely reveal or redeem a balance using a phone number alone.
+  // Keep redemption disabled until the customer phone has a verified ownership flow.
   useEffect(() => {
-    if (!storeId || !cashbackConfig.enabled) { setCashbackBalance(0); return; }
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 10) { setCashbackBalance(0); setApplyCashback(false); return; }
-    const t = setTimeout(async () => {
-      const { data } = await supabase.rpc('get_cashback_balance', {
-        p_store_id: storeId, p_customer_phone: digits,
-      });
-      setCashbackBalance(Number(data) || 0);
-    }, 500);
-    return () => clearTimeout(t);
-  }, [phone, storeId, cashbackConfig.enabled]);
+    setCashbackBalance(0);
+    setApplyCashback(false);
+  }, [phone, storeId]);
 
 
   const generateOrderId = () => {
