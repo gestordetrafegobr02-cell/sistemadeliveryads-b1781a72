@@ -82,8 +82,6 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
   const [cashbackConfig, setCashbackConfig] = useState<{ enabled: boolean; percentage: number; validity_days: number }>({
     enabled: false, percentage: 0, validity_days: 0,
   });
-  const [cashbackBalance, setCashbackBalance] = useState(0);
-  const [applyCashback, setApplyCashback] = useState(false);
 
   // Abandoned cart tracking
   const cartItemsForTracking = items.map((item) => ({
@@ -165,9 +163,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
 
   const subtotal = total;
   const deliveryAmount = orderType === 'delivery' ? deliveryFee : 0;
-  const preCashbackTotal = subtotal + deliveryAmount;
-  const cashbackApplied = 0; // Redemption is disabled until phone ownership is verified.
-  const grandTotal = preCashbackTotal;
+  const cashbackApplied = 0; // Guest redemption stays disabled until phone ownership is verified.
+  const grandTotal = subtotal + deliveryAmount;
 
   // Fetch cashback config for store
   useEffect(() => {
@@ -183,12 +180,6 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
     })();
   }, [storeId]);
 
-  // Guest checkout cannot safely reveal or redeem a balance using a phone number alone.
-  // Keep redemption disabled until the customer phone has a verified ownership flow.
-  useEffect(() => {
-    setCashbackBalance(0);
-    setApplyCashback(false);
-  }, [phone, storeId]);
 
 
   const generateOrderId = () => {
@@ -382,9 +373,6 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       message += `• Taxa de Entrega: R$ ${deliveryFeeText}\n\n`;
       message += `*💰 PAGAMENTO:*\n`;
       message += `• Forma: ${paymentLine}\n`;
-      if (cashbackApplied > 0) {
-        message += `• Cashback usado: -R$ ${cashbackApplied.toFixed(2).replace('.', ',')}\n`;
-      }
       message += `• *Total Geral: R$ ${grandTotal.toFixed(2).replace('.', ',')}*\n\n`;
       message += `${divider}\n\n`;
       message += `👉 _Pedido gerado por DeliveryPro_`;
@@ -601,22 +589,6 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
                     <span>Taxa de Entrega</span>
                     <span>R$ {deliveryAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
-                )}
-                {cashbackConfig.enabled && cashbackBalance > 0 && (
-                  <label className="flex items-center justify-between gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20 cursor-pointer">
-                    <span className="flex items-center gap-2 text-sm text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={applyCashback}
-                        onChange={(e) => setApplyCashback(e.target.checked)}
-                        className="accent-primary"
-                      />
-                      Usar meu cashback (R$ {cashbackBalance.toFixed(2).replace('.', ',')})
-                    </span>
-                    {applyCashback && (
-                      <span className="text-sm text-primary font-medium">-R$ {cashbackApplied.toFixed(2).replace('.', ',')}</span>
-                    )}
-                  </label>
                 )}
                 {cashbackConfig.enabled && cashbackConfig.percentage > 0 && (
                   <p className="text-xs text-muted-foreground text-center">
