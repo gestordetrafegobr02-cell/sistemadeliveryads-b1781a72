@@ -9,9 +9,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS orders_customer_session_token_uidx
   ON public.orders (customer_session_token)
   WHERE customer_session_token IS NOT NULL;
 
--- Keep the old ID-only lookup unavailable to public clients.
-REVOKE ALL ON FUNCTION public.get_order_by_id(uuid) FROM PUBLIC, anon, authenticated;
-ALTER FUNCTION public.get_order_by_id(uuid) SET search_path = '';
+-- The ID-only lookup is not present in every deployed schema. Drop it if it exists.
+DROP FUNCTION IF EXISTS public.get_order_by_id(uuid);
 
 -- SECURITY DEFINER routines use an empty search_path; referenced objects are schema-qualified.
 ALTER FUNCTION public.create_public_order(uuid, uuid, text, text, jsonb, text, text, numeric, uuid)
@@ -53,8 +52,6 @@ DECLARE
   v_days integer;
   v_earn numeric := 0;
   v_redeem_total numeric := 0;
-  v_balance numeric := 0;
-  v_redeem numeric := 0;
   v_earn_base numeric := 0;
   v_awarded numeric := 0;
 BEGIN
@@ -99,25 +96,6 @@ BEGIN
 
   IF NOT COALESCE(v_enabled, false) THEN
     RETURN 0;
-  END IF;
-
-  SELECT
-    COALESCE(SUM(ct.amount) FILTER (
-      WHERE ct.type = 'earn' AND (ct.expires_at IS NULL OR ct.expires_at > now())
-    ), 0),
-    COALESCE(SUM(ct.amount) FILTER (WHERE ct.type = 'redeem'), 0)
-    INTO v_earn, v_redeem_total
-    FROM public.cashback_transactions AS ct
-   WHERE ct.store_id = v_order.store_id
-     AND ct.customer_phone = v_phone;
-
-  v_balance := GREATEST(v_earn - v_redeem_total, 0);
-  v_redeem := LEAST(GREATEST(COALESCE(p_redeem_amount, 0), 0), v_balance);
-
-  IF v_redeem > 0 THEN
-    INSERT INTO public.cashback_transactions (store_id, customer_phone, order_id, type, amount)
-    VALUES (v_order.store_id, v_phone, v_order.id, 'redeem', v_redeem)
-    ON CONFLICT (order_id, type) WHERE order_id IS NOT NULL DO NOTHING;
   END IF;
 
   -- The earning base is the persisted order total, never a client argument.
