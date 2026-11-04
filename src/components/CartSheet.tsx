@@ -665,14 +665,7 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
         {storeId && (
           <UpsellModal
             open={upsellOpen}
-            onOpenChange={(nextOpen) => {
-              setUpsellOpen(nextOpen);
-              if (!nextOpen && !checkoutInProgressRef.current) {
-                checkoutWindowRef.current?.close();
-                checkoutWindowRef.current = null;
-                checkoutStartingRef.current = false;
-              }
-            }}
+            onOpenChange={setUpsellOpen}
             storeId={storeId}
             onContinue={handleCheckout}
           />
