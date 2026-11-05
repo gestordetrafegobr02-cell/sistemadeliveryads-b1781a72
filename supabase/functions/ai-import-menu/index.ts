@@ -23,7 +23,7 @@ Regras estritas:
 - Ignore endereços, telefones, horários, condições de entrega.
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
-const MODEL = 'openai/gpt-5.5';
+const MODEL = 'gemini-3.8-flash';
 
 async function logUsage(payload: {
   store_id?: string | null;
@@ -55,63 +55,165 @@ async function logUsage(payload: {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    });
+  }
 
   let storeId: string | null = null;
 
   try {
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      throw new Error('Configuração de autenticação indisponível');
+    }
     if (!apiKey) {
-      await logUsage({ success: false, error_message: 'LOVABLE_API_KEY não configurada' });
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY não configurada' }), {
-        status: 500,
+      await logUsage({ success: false, error_message: 'GEMINI_API_KEY não configurada' });
+      return new Response(JSON.stringify({ error: 'Serviço de IA indisponível' }), {
+        status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const { image, text, store_id } = body as { image?: string; text?: string; store_id?: string };
-    storeId = store_id ?? null;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!image && !text) {
-      return new Response(JSON.stringify({ error: 'Envie image (base64 data URL) ou text' }), {
+    const caller = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await caller.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Sessão inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    const maxBodyBytes = 11 * 1024 * 1024;
+    if (contentLength > maxBodyBytes) {
+      return new Response(JSON.stringify({ error: 'Requisição muito grande (limite de 11MB)' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const rawBody = await req.text();
+    if (!rawBody || new TextEncoder().encode(rawBody).byteLength > maxBodyBytes) {
+      return new Response(JSON.stringify({ error: 'Requisição vazia ou acima do limite de 11MB' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let body: { image?: unknown; text?: unknown; store_id?: unknown };
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return new Response(JSON.stringify({ error: 'JSON inválido' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const userContent: any[] = [];
-    if (text && text.trim()) {
-      userContent.push({ type: 'text', text: `Extraia os produtos deste cardápio:\n\n${text.trim()}` });
+    if (typeof body.store_id !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.store_id)) {
+      return new Response(JSON.stringify({ error: 'Loja inválida' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-    if (image) {
-      if (!text) userContent.push({ type: 'text', text: 'Extraia todos os produtos visíveis nesta foto de cardápio.' });
-      userContent.push({ type: 'image_url', image_url: { url: image } });
+    storeId = body.store_id;
+
+    // Service-role access is used only after the caller's JWT is verified.
+    // The store_id in the request is untrusted until ownership/membership is checked.
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const [{ data: store, error: storeError }, { data: membership, error: memberError }] = await Promise.all([
+      admin.from('stores').select('owner_id').eq('id', storeId).maybeSingle(),
+      admin.from('store_members').select('role').eq('store_id', storeId).eq('user_id', user.id).maybeSingle(),
+    ]);
+    if (storeError || memberError) {
+      throw new Error('Não foi possível validar o acesso à loja');
+    }
+    const isOwner = store?.owner_id === user.id;
+    const canManage = membership?.role === 'owner' || membership?.role === 'manager';
+    if (!store || (!isOwner && !canManage)) {
+      return new Response(JSON.stringify({ error: 'Você não tem permissão para importar cardápio nesta loja' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+    const image = typeof body.image === 'string' ? body.image : '';
+    const menuText = typeof body.text === 'string' ? body.text.trim() : '';
+    if (!image && !menuText) {
+      return new Response(JSON.stringify({ error: 'Envie uma imagem ou o texto do cardápio' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (menuText.length > 20000) {
+      return new Response(JSON.stringify({ error: 'O texto do cardápio deve ter no máximo 20.000 caracteres' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (image && (image.length > 10_800_000 ||
+        !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image))) {
+      return new Response(JSON.stringify({ error: 'Imagem inválida ou acima do limite permitido' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const parts: Array<Record<string, unknown>> = [
+      { text: menuText
+        ? `Extraia os produtos deste cardápio:\n\n${menuText}`
+        : 'Extraia todos os produtos visíveis nesta foto de cardápio.' },
+    ];
+    if (image) {
+      const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match) throw new Error('Imagem inválida');
+      parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+    }
+
+    const aiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
+        }),
       },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userContent },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+    );
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      const status = aiRes.status === 429 || aiRes.status === 402 ? aiRes.status : 500;
+      const status = aiRes.status === 429 ? 429 : 500;
       const msg = aiRes.status === 429
-        ? 'Limite de requisições atingido. Tente novamente em instantes.'
-        : aiRes.status === 402
-        ? 'Créditos de IA esgotados. Adicione créditos no workspace.'
-        : `Erro na IA: ${errText.slice(0, 200)}`;
+        ? 'Limite gratuito de IA atingido. Aguarde e tente novamente.'
+        : aiRes.status === 400 || aiRes.status === 403
+        ? 'A chave Gemini ou a configuração do modelo não foi aceita.'
+        : 'O serviço de IA está temporariamente indisponível.';
+      console.error('Gemini API error:', aiRes.status, errText.slice(0, 300));
       await logUsage({ store_id: storeId, success: false, error_message: msg });
       return new Response(JSON.stringify({ error: msg }), {
         status,
@@ -119,40 +221,58 @@ Deno.serve(async (req) => {
       });
     }
 
-    const data = await aiRes.json();
-    const usage = data?.usage ?? {};
-    const content = data?.choices?.[0]?.message?.content ?? '{}';
-    let parsed: any;
+    const responseData = await aiRes.json() as {
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const usage = responseData.usageMetadata ?? {};
+    const content = responseData.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? '')
+      .join('') ?? '{}';
+    let parsed: { items?: unknown[] } = { items: [] };
     try {
-      parsed = typeof content === 'string' ? JSON.parse(content) : content;
+      const candidate: unknown = typeof content === 'string' ? JSON.parse(content) : content;
+      if (candidate && typeof candidate === 'object' && 'items' in candidate) {
+        const candidateItems = (candidate as { items?: unknown }).items;
+        if (Array.isArray(candidateItems)) parsed = { items: candidateItems };
+      }
     } catch {
       parsed = { items: [] };
     }
 
-    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    const items = Array.isArray(parsed.items) ? parsed.items.slice(0, 100) : [];
     const normalized = items
-      .map((it: any) => ({
-        category: String(it?.category ?? 'Cardápio').trim().slice(0, 100) || 'Cardápio',
-        name: String(it?.name ?? '').trim().slice(0, 200),
-        description: String(it?.description ?? '').trim().slice(0, 500),
-        price: Number.isFinite(Number(it?.price)) ? Math.max(0, Number(it.price)) : 0,
-      }))
-      .filter((it: any) => it.name.length > 0);
+      .map((item: unknown) => {
+        const it = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+        const price = Number(it.price);
+        return {
+          category: String(it.category ?? 'Cardápio').trim().slice(0, 100) || 'Cardápio',
+          name: String(it.name ?? '').trim().slice(0, 200),
+          description: String(it.description ?? '').trim().slice(0, 500),
+          price: Number.isFinite(price) ? Math.max(0, Math.min(price, 1000000)) : 0,
+        };
+      })
+      .filter((item) => item.name.length > 0);
 
     await logUsage({
       store_id: storeId,
-      prompt_tokens: Number(usage.prompt_tokens ?? 0),
-      completion_tokens: Number(usage.completion_tokens ?? 0),
-      total_tokens: Number(usage.total_tokens ?? 0),
+      prompt_tokens: Number(usage.promptTokenCount ?? 0),
+      completion_tokens: Number(usage.candidatesTokenCount ?? 0),
+      total_tokens: Number(usage.totalTokenCount ?? 0),
       success: true,
     });
 
     return new Response(JSON.stringify({ items: normalized }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (e: any) {
-    await logUsage({ store_id: storeId, success: false, error_message: e?.message ?? 'Erro desconhecido' });
-    return new Response(JSON.stringify({ error: e?.message ?? 'Erro desconhecido' }), {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Erro desconhecido';
+    await logUsage({ store_id: storeId, success: false, error_message: message });
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
