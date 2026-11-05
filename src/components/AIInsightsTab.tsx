@@ -30,7 +30,17 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       if (data?.error) throw new Error(data.error);
       setPayload(data);
     } catch (error: any) {
-      toast.error(error?.message ?? 'Não foi possível executar a análise');
+      let message = error?.message ?? 'Não foi possível executar a análise';
+      try {
+        const response = error?.context;
+        if (response && typeof response.json === 'function') {
+          const details = await response.json();
+          if (typeof details?.error === 'string' && details.error.trim()) message = details.error;
+        }
+      } catch {
+        // Keep the original client error if the response body is unavailable.
+      }
+      toast.error(message);
     } finally { setLoading(false); }
   };
 
