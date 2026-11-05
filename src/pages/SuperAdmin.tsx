@@ -53,7 +53,8 @@ import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
 import { AIUsageTab } from '@/components/AIUsageTab';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Contact, ChartNoAxesCombined } from 'lucide-react';
+import { LeadsManagementTab } from '@/components/LeadsManagementTab';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -314,6 +315,18 @@ export default function SuperAdmin() {
                 <Users className="w-4 h-4" />
                 Usuários
               </TabsTrigger>
+              {isMasterAdmin && (
+                <TabsTrigger value="leads" className="gap-2">
+                  <Contact className="w-4 h-4" />
+                  Leads
+                </TabsTrigger>
+              )}
+              {isMasterAdmin && (
+                <TabsTrigger value="marketing" className="gap-2">
+                  <ChartNoAxesCombined className="w-4 h-4" />
+                  Marketing
+                </TabsTrigger>
+              )}
               {isMasterAdmin && (
                 <TabsTrigger value="ai" className="gap-2">
                   <Sparkles className="w-4 h-4" />
@@ -621,6 +634,9 @@ export default function SuperAdmin() {
               <AIUsageTab />
             </TabsContent>
           )}
+
+          {isMasterAdmin && <TabsContent value="leads"><LeadsManagementTab /></TabsContent>}
+          {isMasterAdmin && <TabsContent value="marketing"><div className="rounded-xl border p-6"><h2 className="text-lg font-semibold">Marketing e rastreamento</h2><p className="mt-2 text-sm text-muted-foreground">O painel de eventos será habilitado após concluir a instrumentação do site e validar os primeiros registros.</p></div></TabsContent>}
 
           {/* Settings Tab - Master Admin Only */}
           {isMasterAdmin && (
