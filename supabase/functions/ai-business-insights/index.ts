@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     const orders = ordersRes.data ?? [];
     const orderItems = orders.map((o: any) => ({
         items: Array.isArray(o.items) ? o.items.map((item: any) => ({
-          product_id: item.product_id ?? item.id ?? null,
+          product_id: item.product_id ?? item.id ?? products.find((p: any) => typeof item.name === 'string' && p.name?.trim().toLowerCase() === item.name.trim().toLowerCase())?.id ?? null,
           name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Item',
           quantity: Math.max(0, Math.min(99, Number(item.quantity ?? 1) || 1)),
         })) : [],
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     };
 
     if (action === 'forecast' && orders.length < 14) {
-      return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, usage });
+      return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, model: MODEL, usage, analysis: { products: products.map((p: any) => ({ id: p.id, name: p.name, category_id: p.category_id, price: p.price })), categories: categories.map((category: any) => category.name), order_count: orders.length, date_from: orders.at(-1)?.created_at ?? null, date_to: orders[0]?.created_at ?? null, co_occurrences: coOccurrences.slice(0, 10) } });
     }
 
     const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences } : { ...context, orders: orderItems.slice(0, 150) };
