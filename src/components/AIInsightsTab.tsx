@@ -103,6 +103,15 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
         {payload && result && <div className="space-y-4 rounded-xl border border-border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="secondary">Gemini • {payload.model}</Badge><span className="text-xs text-muted-foreground">{number(payload.sample?.orders)} pedidos • {number(payload.sample?.products)} produtos analisados</span></div>
           <p className="font-medium">{result.summary ?? 'Análise concluída.'}</p>
+          {payload.analysis && <details className="rounded-lg border border-border p-3" open>
+            <summary className="cursor-pointer font-semibold">O que a IA analisou</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              <p><strong>Base:</strong> {number(payload.sample?.products)} produtos, {number(payload.sample?.categories)} categorias e {number(payload.sample?.orders)} pedidos válidos.</p>
+              {payload.analysis.date_from && <p><strong>Período dos pedidos:</strong> {new Date(payload.analysis.date_from).toLocaleDateString('pt-BR')} até {new Date(payload.analysis.date_to).toLocaleDateString('pt-BR')}.</p>}
+              {Array.isArray(payload.analysis.products) && <div><p className="mb-1 font-medium">Produtos considerados</p><div className="flex flex-wrap gap-1">{payload.analysis.products.map((p: any) => <Badge key={p.id} variant="outline">{p.name}</Badge>)}</div></div>}
+              {Array.isArray(payload.analysis.co_occurrences) && payload.analysis.co_occurrences.length > 0 && <div><p className="mb-1 font-medium">Produtos que apareceram juntos nos pedidos</p>{payload.analysis.co_occurrences.map((pair: any, i: number) => <p key={i} className="text-muted-foreground">{pair.product_names.join(' + ')} — {pair.orders} {pair.orders === 1 ? 'pedido' : 'pedidos'}</p>)}</div>}
+            </div>
+          </details>
           {action === 'menu' && <div className="space-y-3">
             {menuSuggestions.length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">A IA não encontrou descrições que precisem de melhoria com os dados disponíveis. Nenhuma alteração foi feita.</p>}
             {menuSuggestions.map((s: any, i: number) => <div key={s.product_id ?? i} className="rounded-lg border border-border p-3">
@@ -116,8 +125,9 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
             {menuSuggestions.length > 0 && <div className="space-y-2"><p className="text-xs text-muted-foreground">Nada será alterado até você aprovar. A aprovação abaixo aplica somente as descrições exibidas.</p><Button onClick={applyDescriptions} disabled={applying} className="gap-2">{applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Aprovar e aplicar {menuSuggestions.length} {menuSuggestions.length === 1 ? 'alteração' : 'alterações'}</Button></div>}
           </div>}
           {action === 'combos' && <div className="space-y-3">
-            {(result.suggestions ?? []).length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">Ainda não há evidências suficientes para sugerir combinações confiáveis.</p>}
+            {(result.suggestions ?? []).length === 0 && (payload.analysis?.co_occurrences ?? []).length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">Ainda não há evidências suficientes de produtos comprados juntos. A IA não vai inventar combinações.</p>}
             {(result.suggestions ?? []).map((s: any, i: number) => <div key={i} className="rounded-lg border border-border p-3"><p className="font-semibold">{s.name || `Sugestão de combo ${i + 1}`}</p><p className="mt-2 text-sm">{(s.product_names ?? []).join(' + ')}</p><p className="mt-2 text-sm text-muted-foreground">{s.reason}</p>{s.evidence && <p className="mt-1 text-xs text-muted-foreground">Evidência: {s.evidence}</p>}</div>)}
+            {(result.suggestions ?? []).length === 0 && (payload.analysis?.co_occurrences ?? []).length > 0 && <div className="space-y-2"><p className="font-medium">Combinações encontradas nos pedidos</p>{payload.analysis.co_occurrences.map((pair: any, i: number) => <div key={i} className="rounded-lg border border-border p-3"><p className="font-medium">{pair.product_names.join(' + ')}</p><p className="text-xs text-muted-foreground">Apareceram juntos em {pair.orders} pedidos. Evidência observada, não previsão de vendas.</p></div>)}</div>}
             <p className="text-xs text-muted-foreground">Estas são ideias para avaliação. A IA não cria combos nem altera preços automaticamente.</p>
           </div>}
           {action === 'sales' && <div className="grid gap-3 md:grid-cols-2">
