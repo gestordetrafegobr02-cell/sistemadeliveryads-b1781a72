@@ -26,8 +26,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!supabaseUrl || !anonKey || !serviceKey || !geminiKey) return response({ error: 'Serviço de IA indisponível por configuração' }, 503);
+    const providerKey = Deno.env.get('GEMINI_API_KEY');
+    if (!supabaseUrl || !anonKey || !serviceKey || !providerKey) return response({ error: 'Serviço de IA indisponível por configuração' }, 503);
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return response({ error: 'Não autenticado' }, 401);
@@ -106,9 +106,9 @@ Deno.serve(async (req) => {
     const context = {
       store: { name: store.name },
       sample: { products: products.length, categories: categories.length, orders: orders.length },
-      products,
+      products: products.slice(0, 150),
       categories,
-      orders: orderItems,
+      orders: orderItems.slice(0, 80),
       co_occurrences: coOccurrences,
     };
 
@@ -116,10 +116,10 @@ Deno.serve(async (req) => {
       return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, model: MODEL, usage, analysis: { products: products.map((p: any) => ({ id: p.id, name: p.name, category_id: p.category_id, price: p.price })), categories: categories.map((category: any) => category.name), order_count: orders.length, date_from: orders.at(-1)?.created_at ?? null, date_to: orders[0]?.created_at ?? null, co_occurrences: coOccurrences.slice(0, 10) } });
     }
 
-    const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences } : { ...context, orders: orderItems.slice(0, 150) };
-    const geminiRequest = {
+    const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.slice(0, 150).map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences.slice(0, 20) } : { ...context, orders: orderItems.slice(0, 80) };
+    const providerRequest = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': providerKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: prompts[action] + String.fromCharCode(10) + 'Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(compactContext) }] }],
@@ -127,28 +127,35 @@ Deno.serve(async (req) => {
       }),
     };
 
-    // Gemini can temporarily return 503 during demand spikes. Retry twice with
-    // short backoff, then preserve the upstream status for a useful UI message.
-    let aiRes: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
-      try {
-        aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, { ...geminiRequest, signal: controller.signal });
-      } catch (error) {
-        if (attempt === 2) return response({ error: 'A análise demorou mais que o esperado. Seus dados continuam seguros; tente novamente em instantes.' }, 504);
-      } finally { clearTimeout(timeout); }
-      if (aiRes?.ok || (aiRes && ![503, 504].includes(aiRes.status)) || attempt === 2) break;
-      await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+    // Keep each analysis bounded so a provider quota or latency issue cannot
+    // consume the Edge Function worker for minutes. A 429 is not retried.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let aiRes: Response;
+    try {
+      aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, { ...providerRequest, signal: controller.signal });
+    } catch (error) {
+      const timedOut = error instanceof Error && error.name === 'AbortError';
+      const message = timedOut
+        ? 'A análise excedeu o tempo limite do serviço. Tente novamente em instantes.'
+        : 'Não foi possível conectar ao serviço de IA. Tente novamente.';
+      await admin.from('ai_usage_logs').insert({ function_name: 'ai-business-insights', model: MODEL, store_id: storeId, success: false, error_message: message });
+      return response({ error: message, code: timedOut ? 'AI_TIMEOUT' : 'AI_CONNECTION_ERROR' }, timedOut ? 504 : 503);
+    } finally {
+      clearTimeout(timeout);
     }
 
-    if (!aiRes || !aiRes.ok) {
-      const status = aiRes?.status ?? 503;
-      const details = aiRes ? await aiRes.text() : '';
-      console.error('Gemini insights error', status, details.slice(0, 300));
-      if (status === 429) return response({ error: 'Limite de requisições do Gemini atingido. Aguarde um pouco e tente novamente.' }, 429);
-      if ([503, 504].includes(status)) return response({ error: 'O Gemini está com alta demanda no momento. A conexão e os dados da loja estão funcionando; tente novamente em alguns instantes.' }, 503);
-      return response({ error: 'Não foi possível concluir a análise com o Gemini. Tente novamente.' }, 502);
+    if (!aiRes.ok) {
+      const status = aiRes.status;
+      const details = await aiRes.text();
+      const message = status === 429
+        ? 'O serviço de IA atingiu temporariamente o limite de uso da chave configurada. Esse bloqueio vem do provedor, não do limite da sua loja. Aguarde a renovação da cota ou revise o limite da chave.'
+        : [503, 504].includes(status)
+        ? 'O serviço de IA está com alta demanda agora. Seus dados continuam seguros; tente novamente em alguns instantes.'
+        : 'Não foi possível concluir a análise neste momento. Tente novamente.';
+      console.error('AI provider request failed', status, details.slice(0, 300));
+      await admin.from('ai_usage_logs').insert({ function_name: 'ai-business-insights', model: MODEL, store_id: storeId, success: false, error_message: `HTTP ${status}: ${message}` });
+      return response({ error: message, code: status === 429 ? 'AI_PROVIDER_QUOTA' : 'AI_PROVIDER_ERROR' }, status === 429 ? 429 : [503, 504].includes(status) ? 503 : 502);
     }
     const data = await aiRes.json();
     const raw = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}';
