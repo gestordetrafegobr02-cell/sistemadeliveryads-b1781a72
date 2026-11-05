@@ -111,7 +111,7 @@ export default function Index() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href="#cadastro"><Button size="lg" className="h-13 rounded-xl px-7 text-base">Quero criar minha loja <ArrowRight className="ml-2 h-5 w-5" /></Button></a>
-              <a href="#demonstracao"><Button size="lg" variant="outline" className="h-13 rounded-xl px-7 text-base">Conhecer o sistema</Button></a>
+              <Link to="/demo-painel"><Button size="lg" variant="outline" className="h-13 rounded-xl px-7 text-base">Experimentar demonstração</Button></Link>
             </div>
             <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Criação inicial grátis</span>
@@ -133,7 +133,7 @@ export default function Index() {
                   <div className="col-span-2 rounded-xl bg-card p-4"><div className="flex items-center gap-3"><Store className="h-8 w-8 rounded-lg bg-primary/10 p-1.5 text-primary" /><div><p className="font-semibold">Sua loja online</p><p className="text-sm text-muted-foreground">Cardápio, carrinho e finalização do pedido</p></div><CheckCircle2 className="ml-auto h-5 w-5 text-primary" /></div></div>
                 </div>
               </div>
-              <p className="py-4 text-center text-xs text-muted-foreground">Prévia ilustrativa dos recursos do DeliveryPro</p>
+              <p className="py-4 text-center text-xs text-muted-foreground">Prévia ilustrativa dos recursos do DeliveryPro</p><Link to="/demo-painel" className="mt-2 block"><Button className="w-full rounded-xl" variant="outline">Abrir demonstração interativa <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
             </div>
           </div>
         </div>
