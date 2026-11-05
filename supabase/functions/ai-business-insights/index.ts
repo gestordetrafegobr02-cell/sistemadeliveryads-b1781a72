@@ -82,12 +82,7 @@ Deno.serve(async (req) => {
     const products = productsRes.data ?? [];
     const categories = categoriesRes.data ?? [];
     const orders = ordersRes.data ?? [];
-    const context = {
-      store: { name: store.name },
-      sample: { products: products.length, categories: categories.length, orders: orders.length },
-      products,
-      categories,
-      orders: orders.map((o: any) => ({
+    const orderItems = orders.map((o: any) => ({
         items: Array.isArray(o.items) ? o.items.map((item: any) => ({
           product_id: item.product_id ?? item.id ?? null,
           name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Item',
@@ -95,19 +90,39 @@ Deno.serve(async (req) => {
         })) : [],
         total: Number(o.total ?? 0),
         created_at: o.created_at,
-      })),
+      }));
+    const pairCounts = new Map<string, { product_ids: string[]; product_names: string[]; orders: number }>();
+    for (const order of orderItems) {
+      const unique = [...new Map(order.items.filter((item: any) => item.product_id).map((item: any) => [item.product_id, item])).values()];
+      for (let i = 0; i < unique.length; i++) for (let j = i + 1; j < unique.length; j++) {
+        const pair = [unique[i], unique[j]].sort((a: any, b: any) => String(a.product_id).localeCompare(String(b.product_id)));
+        const key = pair.map((item: any) => item.product_id).join(':');
+        const existing = pairCounts.get(key) ?? { product_ids: pair.map((item: any) => item.product_id), product_names: pair.map((item: any) => item.name), orders: 0 };
+        existing.orders += 1;
+        pairCounts.set(key, existing);
+      }
+    }
+    const coOccurrences = [...pairCounts.values()].sort((a, b) => b.orders - a.orders).slice(0, 30);
+    const context = {
+      store: { name: store.name },
+      sample: { products: products.length, categories: categories.length, orders: orders.length },
+      products,
+      categories,
+      orders: orderItems,
+      co_occurrences: coOccurrences,
     };
 
     if (action === 'forecast' && orders.length < 14) {
       return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, usage });
     }
 
+    const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences } : { ...context, orders: orderItems.slice(0, 150) };
     const geminiRequest = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: prompts[action] + String.fromCharCode(10) + 'Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
-        contents: [{ role: 'user', parts: [{ text: JSON.stringify(context) }] }],
+        contents: [{ role: 'user', parts: [{ text: JSON.stringify(compactContext) }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       }),
     };
@@ -116,8 +131,14 @@ Deno.serve(async (req) => {
     // short backoff, then preserve the upstream status for a useful UI message.
     let aiRes: Response | null = null;
     for (let attempt = 0; attempt < 3; attempt++) {
-      aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, geminiRequest);
-      if (aiRes.ok || ![503, 504].includes(aiRes.status) || attempt === 2) break;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      try {
+        aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, { ...geminiRequest, signal: controller.signal });
+      } catch (error) {
+        if (attempt === 2) return response({ error: 'A análise demorou mais que o esperado. Seus dados continuam seguros; tente novamente em instantes.' }, 504);
+      } finally { clearTimeout(timeout); }
+      if (aiRes?.ok || (aiRes && ![503, 504].includes(aiRes.status)) || attempt === 2) break;
       await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
     }
 
@@ -133,6 +154,19 @@ Deno.serve(async (req) => {
     const raw = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}';
     let result: any;
     try { result = JSON.parse(raw); } catch { return response({ error: 'A IA retornou uma resposta inválida. Tente novamente.' }, 502); }
+    if (action === 'menu' && Array.isArray(result.suggestions)) {
+      result.suggestions = result.suggestions.map((s: any) => {
+        const product = products.find((p: any) => p.id === s.product_id);
+        return product ? { ...s, name: product.name, current_description: product.description ?? '', suggested_description: String(s.suggested_description ?? '').slice(0, 500) } : null;
+      }).filter((s: any) => s && s.suggested_description);
+    }
+    if (action === 'combos' && Array.isArray(result.suggestions)) {
+      result.suggestions = result.suggestions.map((s: any) => {
+        const ids = Array.isArray(s.product_ids) ? s.product_ids : [];
+        const validProducts = ids.map((id: string) => products.find((p: any) => p.id === id)).filter(Boolean);
+        return { ...s, product_ids: validProducts.map((p: any) => p.id), product_names: validProducts.map((p: any) => p.name) };
+      }).filter((s: any) => s.product_ids.length >= 2);
+    }
 
     await admin.from('ai_usage_logs').insert({
       function_name: 'ai-business-insights',
@@ -145,7 +179,7 @@ Deno.serve(async (req) => {
     });
 
     const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usageMetadata?.promptTokenCount ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usageMetadata?.candidatesTokenCount ?? 0), total_tokens: usage.total_tokens + Number(data?.usageMetadata?.totalTokenCount ?? 0) };
-    return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage });
+    return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage, analysis: { products: products.map((p: any) => ({ id: p.id, name: p.name, category_id: p.category_id, price: p.price })), categories: categories.map((category: any) => category.name), order_count: orders.length, date_from: orders.at(-1)?.created_at ?? null, date_to: orders[0]?.created_at ?? null, co_occurrences: coOccurrences.slice(0, 10) } });
   } catch (error) {
     console.error('ai-business-insights:', error);
     return response({ error: error instanceof Error ? error.message : 'Erro inesperado ao analisar a loja' }, 500);
