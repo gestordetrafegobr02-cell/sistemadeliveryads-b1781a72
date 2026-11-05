@@ -45,7 +45,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       setPayload(data);
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível concluir a análise.';
-      setErrorMessage(message.includes('alta demanda') || message.includes('sobrecarregado') || message.includes('temporariamente')
+      setErrorMessage(message.includes('alta demanda') || message.includes('sobrecarregado')
         ? 'A IA está um pouco sobrecarregada neste momento. Seus dados continuam seguros e a análise ainda não foi concluída. Aguarde um pouquinho e tente novamente.'
         : message);
     } finally { setLoading(false); }
