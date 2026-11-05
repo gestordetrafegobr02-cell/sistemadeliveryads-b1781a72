@@ -42,6 +42,7 @@ export function useAbandonedCartTracking(
 
     try {
       const formattedItems = data.items.map(item => ({
+        id: item.id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
@@ -140,34 +141,13 @@ export function useAbandonedCartTracking(
     lastSavedRef.current = null;
   }, []);
 
-  // Delete cart if order was placed successfully
+  // Conversion is performed atomically by create_public_order after it validates
+  // the cart id, store and customer phone. Do not expose the ID-only mutation RPC.
   const deleteAbandonedCart = useCallback(async () => {
-    if (!currentCartIdRef.current) return;
-
-    try {
-      await supabase.rpc('mark_abandoned_cart_converted', {
-        p_cart_id: currentCartIdRef.current,
-      });
-    } catch (err) {
-      console.error('Error updating abandoned cart:', err);
-    }
-
     clearCartSession();
   }, [clearCartSession]);
 
-  // Mark cart as converted when checkout completes
-  const markAsConverted = useCallback(async (orderId: string) => {
-    if (!currentCartIdRef.current) return;
-
-    try {
-      await supabase.rpc('mark_abandoned_cart_converted', {
-        p_cart_id: currentCartIdRef.current,
-        p_order_id: orderId,
-      });
-    } catch (err) {
-      console.error('Error marking cart as converted:', err);
-    }
-
+  const markAsConverted = useCallback(async (_orderId: string) => {
     clearCartSession();
   }, [clearCartSession]);
 

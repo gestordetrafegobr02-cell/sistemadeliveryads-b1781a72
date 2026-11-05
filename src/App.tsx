@@ -8,6 +8,7 @@ import InstallPWA from "@/components/InstallPWA";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import Demo from "./pages/Demo";
+import DemoDashboard from "./pages/DemoDashboard";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import SuperAdmin from "./pages/SuperAdmin";
@@ -25,12 +26,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/super-admin" element={<SuperAdmin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/demo/:slug" element={<Demo />} />
+            <Route path="/demo-painel" element={<DemoDashboard />} />
             <Route path="/order-status/:id" element={<OrderStatus />} />
             <Route path="/pedido/:id" element={<OrderStatus />} />
             <Route path="/loja/:storeSlug" element={<Shop />} />

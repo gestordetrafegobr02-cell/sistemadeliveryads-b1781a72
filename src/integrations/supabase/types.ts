@@ -14,6 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      sales_leads: {
+        Row: {
+          id: string;
+          name: string;
+          whatsapp: string;
+          business_name: string;
+          segment: string;
+          source: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          whatsapp: string;
+          business_name: string;
+          segment: string;
+          source?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          whatsapp?: string;
+          business_name?: string;
+          segment?: string;
+          source?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
       abandoned_carts: {
         Row: {
           converted_to_order_id: string | null
@@ -1412,11 +1446,9 @@ export type Database = {
       }
       process_order_cashback: {
         Args: {
-          p_customer_phone: string
-          p_earn_base: number
           p_order_id: string
+          p_session_token: string
           p_redeem_amount: number
-          p_store_id: string
         }
         Returns: number
       }

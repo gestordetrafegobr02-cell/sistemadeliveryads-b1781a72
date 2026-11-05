@@ -17,7 +17,7 @@ interface GlobalSettings {
 export function GlobalSettingsTab() {
   const [settings, setSettings] = useState<GlobalSettings>({
     owner_whatsapp: '',
-    subscription_price: '97',
+    subscription_price: '49.90',
     default_trial_days: '7',
     landing_pixel_id: '',
   });
@@ -73,8 +73,7 @@ export function GlobalSettingsTab() {
       for (const entry of entries) {
         const { error } = await supabase
           .from('global_settings')
-          .update({ value: entry.value, updated_at: new Date().toISOString() })
-          .eq('key', entry.key);
+          .upsert({ key: entry.key, value: entry.value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
 
         if (error) {
           console.error(`Error saving ${entry.key}:`, error);
@@ -169,7 +168,7 @@ Enviado pelo painel Master Admin`;
             type="number"
             min="0"
             step="0.01"
-            placeholder="97.00"
+            placeholder="49.90"
             value={settings.subscription_price}
             onChange={(e) =>
               setSettings({ ...settings, subscription_price: e.target.value })

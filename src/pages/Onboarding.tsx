@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Store, ArrowRight, ArrowLeft, Check, Sparkles, PartyPopper, Info, ShoppingCart, Tags, Palette, MapPin, CreditCard, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { useGlobalSettings } from '@/hooks/useGlobalSettings';
+import { loadLandingPixel, trackLandingEvent } from '@/lib/landingPixel';
 
 
 const storeSchema = z.object({
@@ -36,6 +38,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const { settings } = useGlobalSettings();
   const [step, setStep] = useState(1);
   const [storeName, setStoreName] = useState('');
   const [storeSlug, setStoreSlug] = useState('');
@@ -239,6 +242,27 @@ export default function Onboarding() {
         }
 
         console.info('[Onboarding] Store created. id:', data);
+        if (settings.landing_pixel_id) loadLandingPixel(settings.landing_pixel_id);
+        trackLandingEvent('CompleteRegistration', { content_name: 'store_created' });
+        try {
+          const sessionId = sessionStorage.getItem('dp_funnel_session');
+          const attribution = JSON.parse(sessionStorage.getItem('dp_funnel_attribution') || '{}');
+          if (sessionId) {
+            await supabase.rpc('record_sales_funnel_event' as any, {
+              p_event_name: 'CompleteRegistration',
+              p_session_id: sessionId,
+              p_path: attribution.landing_path || window.location.pathname,
+              p_utm_source: attribution.utm_source || null,
+              p_utm_medium: attribution.utm_medium || null,
+              p_utm_campaign: attribution.utm_campaign || null,
+              p_utm_content: attribution.utm_content || null,
+              p_utm_term: attribution.utm_term || null,
+              p_fbclid: attribution.fbclid || null,
+            } as any);
+          }
+        } catch (trackingError) {
+          console.warn('[Onboarding] registration tracking failed:', trackingError);
+        }
         setCreatedNiche(TEMPLATES.find(t => t.slug === selectedTemplate)?.name || 'seu negócio');
         setStep(3);
         toast.success('Loja criada com sucesso! Acesse seu painel abaixo.');
