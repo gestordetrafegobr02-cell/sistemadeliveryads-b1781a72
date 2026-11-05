@@ -10,6 +10,32 @@ import { supabase } from '@/integrations/supabase/client';
 import { loadLandingPixel, trackLandingEvent } from '@/lib/landingPixel';
 import { useEffect } from 'react';
 
+function getFunnelContext() {
+  const params = new URLSearchParams(window.location.search);
+  let sessionId = sessionStorage.getItem('dp_funnel_session');
+  if (!sessionId) { sessionId = crypto.randomUUID(); sessionStorage.setItem('dp_funnel_session', sessionId); }
+  return {
+    sessionId,
+    utm_source: params.get('utm_source'),
+    utm_medium: params.get('utm_medium'),
+    utm_campaign: params.get('utm_campaign'),
+    utm_content: params.get('utm_content'),
+    utm_term: params.get('utm_term'),
+    fbclid: params.get('fbclid'),
+    landing_path: window.location.pathname + window.location.search,
+  };
+}
+
+async function recordFunnelEvent(eventName: string) {
+  const context = getFunnelContext();
+  await supabase.rpc('record_sales_funnel_event' as any, {
+    p_event_name: eventName, p_session_id: context.sessionId, p_path: context.landing_path,
+    p_utm_source: context.utm_source, p_utm_medium: context.utm_medium,
+    p_utm_campaign: context.utm_campaign, p_utm_content: context.utm_content,
+    p_utm_term: context.utm_term, p_fbclid: context.fbclid,
+  } as any);
+}
+
 const segments = ['Hamburgueria', 'Pizzaria', 'Açaiteria', 'Restaurante', 'Lanchonete', 'Outro'];
 
 const benefits = [
@@ -34,7 +60,7 @@ export default function Index() {
   const [businessName, setBusinessName] = useState('');
   const [segment, setSegment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);\n  const [draftConsent, setDraftConsent] = useState(false);\n  const [draftSaving, setDraftSaving] = useState(false);
 
   useEffect(() => {
     if (settings.landing_pixel_id) loadLandingPixel(settings.landing_pixel_id);
@@ -59,7 +85,7 @@ export default function Index() {
         status: 'new',
       });
       if (error) throw error;
-      trackLandingEvent('Lead', { content_name: 'assisted_onboarding_lead', segment });
+      trackLandingEvent('Lead', { content_name: 'assisted_onboarding_lead', segment });\n      void recordFunnelEvent('Lead');\n      const draftToken = sessionStorage.getItem('dp_lead_capture_token');\n      if (draftToken) { /* Drafts remain available for audit; the admin can distinguish submitted leads. */ }
       setSubmitted(true);
       toast({ title: 'Cadastro recebido!', description: 'Seus dados foram enviados para nossa equipe.' });
     } catch (error) {
@@ -228,10 +254,12 @@ export default function Index() {
               <button onClick={() => { setSubmitted(false); setName(''); setWhatsapp(''); setBusinessName(''); setSegment(''); }} className="mt-4 block w-full text-sm text-muted-foreground underline">Enviar outro cadastro</button>
             </div> : <form onSubmit={handleSubmit} className="space-y-5">
               <div><h3 className="text-2xl font-bold">Quero conhecer o DeliveryPro</h3><p className="mt-1 text-sm text-muted-foreground">Leva menos de um minuto.</p></div>
-              <div className="space-y-2"><Label htmlFor="lead-name">Seu nome</Label><Input id="lead-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="Como podemos chamar você?" maxLength={120} required /></div>
-              <div className="space-y-2"><Label htmlFor="lead-whatsapp">WhatsApp com DDD</Label><Input id="lead-whatsapp" autoComplete="tel" inputMode="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="(00) 00000-0000" maxLength={20} required /></div>
-              <div className="space-y-2"><Label htmlFor="lead-business">Nome do estabelecimento</Label><Input id="lead-business" value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Ex.: Hamburgueria do João" maxLength={160} required /></div>
-              <div className="space-y-2"><Label htmlFor="lead-segment">Tipo de negócio</Label><select id="lead-segment" value={segment} onChange={e => setSegment(e.target.value)} required className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione seu segmento</option>{segments.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
+              <div className="space-y-2"><Label htmlFor="lead-name">Seu nome</Label><Input id="lead-name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} onBlur={() => void saveIncompleteDraft()} placeholder="Como podemos chamar você?" maxLength={120} required /></div>
+              <div className="space-y-2"><Label htmlFor="lead-whatsapp">WhatsApp com DDD</Label><Input id="lead-whatsapp" autoComplete="tel" inputMode="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} onBlur={() => void saveIncompleteDraft()} placeholder="(00) 00000-0000" maxLength={20} required /></div>
+              <div className="space-y-2"><Label htmlFor="lead-business">Nome do estabelecimento</Label><Input id="lead-business" value={businessName} onChange={e => setBusinessName(e.target.value)} onBlur={() => void saveIncompleteDraft()} placeholder="Ex.: Hamburgueria do João" maxLength={160} required /></div>
+              <div className="space-y-2"><Label htmlFor="lead-segment">Tipo de negócio</Label><select id="lead-segment" value={segment} onChange={e => setSegment(e.target.value)} onBlur={() => void saveIncompleteDraft()} required className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione seu segmento</option>{segments.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
+              <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><input type="checkbox" checked={draftConsent} onChange={e => setDraftConsent(e.target.checked)} className="mt-0.5" /><span>Autorizo salvar os dados que eu preencher, mesmo se não concluir o formulário, para que a equipe possa retomar este atendimento pelo WhatsApp. Posso retirar essa autorização solicitando a exclusão dos dados.</span></label>
+              {draftSaving && <p className="text-xs text-muted-foreground">Salvando seu progresso autorizado...</p>}
               <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-base">{loading ? 'Enviando cadastro...' : 'Solicitar contato da equipe'} <ArrowRight className="ml-2 h-5 w-5" /></Button>
               <p className="text-center text-xs leading-relaxed text-muted-foreground">Ao enviar, você autoriza o contato da equipe do DeliveryPro pelo WhatsApp informado para tratar desta solicitação.</p>
             </form>}
