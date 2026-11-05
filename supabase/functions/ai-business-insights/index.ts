@@ -52,8 +52,9 @@ Deno.serve(async (req) => {
 
     // Limit each store to 20 AI analyses per hour. Failed requests are not counted here.
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count, error: usageError } = await admin.from('ai_usage_logs').select('id', { count: 'exact', head: true }).eq('store_id', storeId).gte('created_at', since);
-    if (!usageError && (count ?? 0) >= 20) return response({ error: 'Limite de 20 análises por hora atingido nesta loja. Tente novamente mais tarde.' }, 429);
+    const { count, error: usageError } = await admin.from('ai_usage_logs').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('function_name', 'ai-business-insights').gte('created_at', since);
+    if (usageError) throw new Error('Não foi possível verificar o limite de uso da IA');
+    if ((count ?? 0) >= 20) return response({ error: 'Limite de 20 análises por hora atingido nesta loja. Tente novamente mais tarde.' }, 429);
 
     const [productsRes, categoriesRes, ordersRes] = await Promise.all([
       admin.from('products').select('id,name,description,price,category_id,is_available').eq('store_id', storeId).limit(250),
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
       sample: { products: products.length, categories: categories.length, orders: orders.length },
       products,
       categories,
-      orders: orders.map((o: any) => ({ items: o.items, total: o.total, created_at: o.created_at })),
+      orders: orders.map((o: any) => ({\n        items: Array.isArray(o.items) ? o.items.map((item: any) => ({\n          product_id: item.product_id ?? item.id ?? null,\n          name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Item',\n          quantity: Math.max(0, Math.min(99, Number(item.quantity ?? 1) || 1)),\n        })) : [],\n        total: Number(o.total ?? 0),\n        created_at: o.created_at,\n      })),
     };
 
     if (action === 'forecast' && orders.length < 14) {
