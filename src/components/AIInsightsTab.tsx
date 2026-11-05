@@ -111,7 +111,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
               {Array.isArray(payload.analysis.products) && <div><p className="mb-1 font-medium">Produtos considerados</p><div className="flex flex-wrap gap-1">{payload.analysis.products.map((p: any) => <Badge key={p.id} variant="outline">{p.name}</Badge>)}</div></div>}
               {Array.isArray(payload.analysis.co_occurrences) && payload.analysis.co_occurrences.length > 0 && <div><p className="mb-1 font-medium">Produtos que apareceram juntos nos pedidos</p>{payload.analysis.co_occurrences.map((pair: any, i: number) => <p key={i} className="text-muted-foreground">{pair.product_names.join(' + ')} — {pair.orders} {pair.orders === 1 ? 'pedido' : 'pedidos'}</p>)}</div>}
             </div>
-          </details>
+          </details>}
           {action === 'menu' && <div className="space-y-3">
             {menuSuggestions.length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">A IA não encontrou descrições que precisem de melhoria com os dados disponíveis. Nenhuma alteração foi feita.</p>}
             {menuSuggestions.map((s: any, i: number) => <div key={s.product_id ?? i} className="rounded-lg border border-border p-3">
