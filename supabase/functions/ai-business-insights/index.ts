@@ -73,9 +73,9 @@ Deno.serve(async (req) => {
     if ((hourlyCount ?? 0) >= 20) return response({ error: 'Esta loja atingiu o limite temporário de 20 análises por hora. Aguarde um pouco e tente novamente.', usage }, 429);
 
     const [productsRes, categoriesRes, ordersRes] = await Promise.all([
-      admin.from('products').select('id,name,description,price,category_id,is_available').eq('store_id', storeId).limit(250),
+      admin.from('products').select('id,name,description,price,category_id,is_available').eq('store_id', storeId).limit(120),
       admin.from('categories').select('id,name,sort_order').eq('store_id', storeId).order('sort_order').limit(100),
-      admin.from('orders').select('id,items,total,status,created_at').eq('store_id', storeId).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(500),
+      admin.from('orders').select('id,items,total,status,created_at').eq('store_id', storeId).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(160),
     ]);
     if (productsRes.error || categoriesRes.error || ordersRes.error) throw new Error('Não foi possível carregar os dados da loja para análise');
 
@@ -106,9 +106,9 @@ Deno.serve(async (req) => {
     const context = {
       store: { name: store.name },
       sample: { products: products.length, categories: categories.length, orders: orders.length },
-      products: products.slice(0, 150),
+      products: products.slice(0, 100),
       categories,
-      orders: orderItems.slice(0, 80),
+      orders: orderItems.slice(0, 50),
       co_occurrences: coOccurrences,
     };
 
@@ -116,21 +116,21 @@ Deno.serve(async (req) => {
       return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, model: MODEL, usage, analysis: { products: products.map((p: any) => ({ id: p.id, name: p.name, category_id: p.category_id, price: p.price })), categories: categories.map((category: any) => category.name), order_count: orders.length, date_from: orders.at(-1)?.created_at ?? null, date_to: orders[0]?.created_at ?? null, co_occurrences: coOccurrences.slice(0, 10) } });
     }
 
-    const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.slice(0, 150).map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences.slice(0, 20) } : { ...context, orders: orderItems.slice(0, 80) };
+    const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.slice(0, 150).map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences.slice(0, 15) } : { ...context, orders: orderItems.slice(0, 80) };
     const providerRequest = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': providerKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: prompts[action] + String.fromCharCode(10) + 'Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(compactContext) }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 2048 },
       }),
     };
 
-    // Keep each analysis bounded so a provider quota or latency issue cannot
-    // consume the Edge Function worker for minutes. A 429 is not retried.
+    // Keep the provider call bounded while allowing normal latency spikes.
+    // A 429 is not retried; compact context reduces provider processing time.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 45000);
     let aiRes: Response;
     try {
       aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, { ...providerRequest, signal: controller.signal });
