@@ -36,7 +36,7 @@ export function MarketingAnalyticsTab() {
   return <div className="space-y-6">
     <div className="flex items-center justify-between"><div><h2 className="text-xl font-semibold">Marketing e rastreamento</h2><p className="text-sm text-muted-foreground">Eventos registrados nos últimos 30 dias.</p></div><Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4"/>Atualizar</Button></div>
     {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin"/></div> : <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card><CardHeader className="pb-2"><CardDescription className="flex gap-2"><Eye className="h-4 w-4"/>PageView</CardDescription><CardTitle className="text-3xl">{count('PageView')}</CardTitle></CardHeader></Card>
         <Card><CardHeader className="pb-2"><CardDescription className="flex gap-2"><TrendingUp className="h-4 w-4"/>Sessões únicas</CardDescription><CardTitle className="text-3xl">{sessions}</CardTitle></CardHeader></Card>
         <Card><CardHeader className="pb-2"><CardDescription className="flex gap-2"><Eye className="h-4 w-4"/>Visualizações da oferta</CardDescription><CardTitle className="text-3xl">{viewContents}</CardTitle></CardHeader></Card>
