@@ -14,6 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      sales_leads: {
+        Row: {
+          id: string;
+          name: string;
+          whatsapp: string;
+          business_name: string;
+          segment: string;
+          source: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          whatsapp: string;
+          business_name: string;
+          segment: string;
+          source?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          whatsapp?: string;
+          business_name?: string;
+          segment?: string;
+          source?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
       abandoned_carts: {
         Row: {
           converted_to_order_id: string | null
