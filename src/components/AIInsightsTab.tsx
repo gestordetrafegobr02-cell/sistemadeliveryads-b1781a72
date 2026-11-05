@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Utensils, TrendingUp, Lightbulb, CalendarDays, Loader2, Check, RefreshCw, Clock3, AlertCircle } from 'lucide-react';
 
@@ -24,10 +25,11 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [payload, setPayload] = useState<any>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
 
   const run = async () => {
-    setLoading(true); setPayload(null); setErrorMessage('');
+    setLoading(true); setPayload(null); setSelectedProductIds([]); setErrorMessage('');
     try {
       const { data, error } = await supabase.functions.invoke('ai-business-insights', { body: { store_id: storeId, action } });
       if (error) {
@@ -43,6 +45,8 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       }
       if (data?.error) throw new Error(data.error);
       setPayload(data);
+      const suggestions = Array.isArray(data?.result?.suggestions) ? data.result.suggestions : [];
+      setSelectedProductIds(suggestions.map((s: any) => s.product_id).filter((id: unknown): id is string => typeof id === 'string'));
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível concluir a análise.';
       setErrorMessage(message.includes('alta demanda') || message.includes('sobrecarregado')
@@ -53,7 +57,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
 
   const applyDescriptions = async () => {
     const suggestions = Array.isArray(payload?.result?.suggestions) ? payload.result.suggestions : [];
-    const valid = suggestions.filter((s: any) => products.some(p => p.id === s.product_id) && typeof s.suggested_description === 'string' && s.suggested_description.trim());
+    const valid = suggestions.filter((s: any) => selectedProductIds.includes(s.product_id) && products.some(p => p.id === s.product_id) && typeof s.suggested_description === 'string' && s.suggested_description.trim());
     if (!valid.length) return;
     setApplying(true);
     try {
@@ -62,6 +66,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
         if (error) throw error;
       }
       setPayload(null);
+      setSelectedProductIds([]);
       onApplied();
       setErrorMessage('');
     } catch (error: any) { setErrorMessage(error?.message ?? 'Não foi possível salvar as descrições.'); }
@@ -80,7 +85,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
         <CardDescription>Ferramentas inteligentes para analisar o cardápio, identificar oportunidades e apoiar decisões. Você confere as recomendações antes de aplicar mudanças.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Tabs value={action} onValueChange={v => { setAction(v as Action); setPayload(null); setErrorMessage(''); }}>
+        <Tabs value={action} onValueChange={v => { setAction(v as Action); setPayload(null); setSelectedProductIds([]); setErrorMessage(''); }}>
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-4">
             {tools.map(tool => <TabsTrigger key={tool.id} value={tool.id} className="gap-2"><tool.icon className="h-4 w-4" />{tool.label}</TabsTrigger>)}
           </TabsList>
@@ -115,14 +120,14 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
           {action === 'menu' && <div className="space-y-3">
             {menuSuggestions.length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">A IA não encontrou descrições que precisem de melhoria com os dados disponíveis. Nenhuma alteração foi feita.</p>}
             {menuSuggestions.map((s: any, i: number) => <div key={s.product_id ?? i} className="rounded-lg border border-border p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="font-semibold">{s.name || products.find(p => p.id === s.product_id)?.name || 'Produto'}</p><Badge variant="outline">Sugestão {i + 1}</Badge></div>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><Checkbox id={`select-description-${s.product_id}`} checked={selectedProductIds.includes(s.product_id)} onCheckedChange={(checked) => setSelectedProductIds(current => checked === true ? [...current, s.product_id] : current.filter(id => id !== s.product_id))} /><label htmlFor={`select-description-${s.product_id}`} className="cursor-pointer font-semibold">{s.name || products.find(p => p.id === s.product_id)?.name || 'Produto'}</label></div><Badge variant="outline">Sugestão {i + 1}</Badge></div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg bg-muted/50 p-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Como está hoje</p><p className="text-sm">{s.current_description?.trim() || 'Este produto ainda não possui descrição.'}</p></div>
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Como a IA sugere</p><p className="text-sm">{s.suggested_description}</p></div>
               </div>
               {s.reason && <p className="mt-3 text-xs text-muted-foreground"><strong>Por que sugeriu:</strong> {s.reason}</p>}
             </div>)}
-            {menuSuggestions.length > 0 && <div className="space-y-2"><p className="text-xs text-muted-foreground">Nada será alterado até você aprovar. A aprovação abaixo aplica somente as descrições exibidas.</p><Button onClick={applyDescriptions} disabled={applying} className="gap-2">{applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Aprovar e aplicar {menuSuggestions.length} {menuSuggestions.length === 1 ? 'alteração' : 'alterações'}</Button></div>}
+            {menuSuggestions.length > 0 && <div className="space-y-2"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Marque apenas as descrições que deseja aplicar. As demais permanecerão como estão.</p><Button type="button" variant="ghost" size="sm" onClick={() => setSelectedProductIds(menuSuggestions.map((s: any) => s.product_id))}>Selecionar todas</Button></div><Button onClick={applyDescriptions} disabled={applying || selectedProductIds.length === 0} className="gap-2">{applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Aplicar {selectedProductIds.length} {selectedProductIds.length === 1 ? 'descrição selecionada' : 'descrições selecionadas'}</Button></div>}
           </div>}
           {action === 'combos' && <div className="space-y-3">
             {(result.suggestions ?? []).length === 0 && (payload.analysis?.co_occurrences ?? []).length === 0 && <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">Ainda não há evidências suficientes de produtos comprados juntos. A IA não vai inventar combinações.</p>}
