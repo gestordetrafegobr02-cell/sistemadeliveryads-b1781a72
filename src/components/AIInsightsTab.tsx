@@ -101,7 +101,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
           <div className="flex items-start gap-2"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium">Não foi possível concluir agora</p><p className="mt-1 text-muted-foreground">{errorMessage}</p><Button variant="outline" size="sm" className="mt-3 gap-2" onClick={run} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /> Tentar novamente</Button></div></div>
         </div>}
         {payload && result && <div className="space-y-4 rounded-xl border border-border p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="secondary">Gemini • {payload.model}</Badge><span className="text-xs text-muted-foreground">{number(payload.sample?.orders)} pedidos • {number(payload.sample?.products)} produtos analisados</span></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="secondary">Análise por IA</Badge><span className="text-xs text-muted-foreground">{number(payload.sample?.orders)} pedidos • {number(payload.sample?.products)} produtos analisados</span></div>
           <p className="font-medium">{result.summary ?? 'Análise concluída.'}</p>
           {payload.analysis && <details className="rounded-lg border border-border p-3" open>
             <summary className="cursor-pointer font-semibold">O que a IA analisou</summary>
