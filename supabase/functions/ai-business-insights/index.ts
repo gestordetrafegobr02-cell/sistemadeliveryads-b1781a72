@@ -90,8 +90,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: prompts[action] + '
-Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
+        system_instruction: { parts: [{ text: prompts[action] + String.fromCharCode(10) + 'Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(context) }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       }),
