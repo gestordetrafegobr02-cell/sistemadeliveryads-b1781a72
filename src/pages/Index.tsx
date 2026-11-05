@@ -81,8 +81,8 @@ export default function Index() {
     }
   }, [settings.landing_pixel_id]);
 
-  const saveIncompleteDraft = async () => {
-    if (!draftConsent || submitted) return;
+  const saveIncompleteDraft = async (force = false) => {
+    if ((!draftConsent && !force) || submitted) return;
     setDraftSaving(true);
     try {
       const context = getFunnelContext();
@@ -318,7 +318,7 @@ export default function Index() {
               <div className="space-y-2"><Label htmlFor="lead-whatsapp">WhatsApp com DDD</Label><Input id="lead-whatsapp" autoComplete="tel" inputMode="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} onBlur={() => void saveIncompleteDraft()} placeholder="(00) 00000-0000" maxLength={20} required /></div>
               <div className="space-y-2"><Label htmlFor="lead-business">Nome do estabelecimento</Label><Input id="lead-business" value={businessName} onChange={e => setBusinessName(e.target.value)} onBlur={() => void saveIncompleteDraft()} placeholder="Ex.: Hamburgueria do João" maxLength={160} required /></div>
               <div className="space-y-2"><Label htmlFor="lead-segment">Tipo de negócio</Label><select id="lead-segment" value={segment} onChange={e => setSegment(e.target.value)} onBlur={() => void saveIncompleteDraft()} required className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="">Selecione seu segmento</option>{segments.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
-              <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><input type="checkbox" checked={draftConsent} onChange={e => setDraftConsent(e.target.checked)} className="mt-0.5" /><span>Autorizo salvar os dados que eu preencher, mesmo se não concluir o formulário, para que a equipe possa retomar este atendimento pelo WhatsApp. Posso retirar essa autorização solicitando a exclusão dos dados.</span></label>
+              <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><input type="checkbox" checked={draftConsent} onChange={e => { const checked = e.target.checked; setDraftConsent(checked); if (checked) void saveIncompleteDraft(true); }} className="mt-0.5" /><span>Autorizo salvar os dados que eu preencher, mesmo se não concluir o formulário, para que a equipe possa retomar este atendimento pelo WhatsApp. Posso retirar essa autorização solicitando a exclusão dos dados.</span></label>
               {draftSaving && <p className="text-xs text-muted-foreground">Salvando seu progresso autorizado...</p>}
               <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl text-base">{loading ? 'Enviando cadastro...' : 'Solicitar contato da equipe'} <ArrowRight className="ml-2 h-5 w-5" /></Button>
               <p className="text-center text-xs leading-relaxed text-muted-foreground">Ao enviar, você autoriza o contato da equipe do DeliveryPro pelo WhatsApp informado para tratar desta solicitação.</p>
