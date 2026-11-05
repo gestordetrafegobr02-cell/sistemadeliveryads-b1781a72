@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.admin-change-email]
 verify_jwt = true
+
+[functions.ai-import-menu]
+verify_jwt = true
+
+[functions.ai-business-insights]
+verify_jwt = true
