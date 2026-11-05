@@ -2,7 +2,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const MODEL = 'gemini-3.8-flash';
+const MODEL = 'gpt-6-luna';
 const ACTIONS = ['menu', 'combos', 'sales', 'forecast'] as const;
 type Action = typeof ACTIONS[number];
 
@@ -26,8 +26,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const providerKey = Deno.env.get('GEMINI_API_KEY');
-    if (!supabaseUrl || !anonKey || !serviceKey || !providerKey) return response({ error: 'Serviço de IA indisponível por configuração' }, 503);
+    const providerKey = Deno.env.get('OPENAI_API_KEY');
+    if (!supabaseUrl || !anonKey || !serviceKey || !providerKey) return response({ error: 'Serviço de IA indisponível por configuração. Verifique OPENAI_API_KEY nos Secrets.' }, 503);
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return response({ error: 'Não autenticado' }, 401);
@@ -119,26 +119,31 @@ Deno.serve(async (req) => {
     const compactContext = action === 'combos' ? { store: context.store, sample: context.sample, products: products.slice(0, 150).map((p: any) => ({ id: p.id, name: p.name, price: p.price, category_id: p.category_id })), co_occurrences: coOccurrences.slice(0, 15) } : { ...context, orders: orderItems.slice(0, 80) };
     const providerRequest = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': providerKey },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${providerKey}` },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: prompts[action] + String.fromCharCode(10) + 'Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
-        contents: [{ role: 'user', parts: [{ text: JSON.stringify(compactContext) }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 2048 },
+        model: MODEL,
+        reasoning: { effort: 'none' },
+        input: [
+          { role: 'system', content: [{ type: 'input_text', text: prompts[action] + String.fromCharCode(10) + 'Retorne somente um objeto JSON válido, sem markdown. Não inclua dados pessoais de clientes. Se faltarem dados, explique nas notas e não invente.' }] },
+          { role: 'user', content: [{ type: 'input_text', text: JSON.stringify(compactContext) }] },
+        ],
+        text: { format: { type: 'json_object' }, verbosity: 'low' },
+        max_output_tokens: 2048,
       }),
     };
 
-    // Keep the provider call bounded while allowing normal latency spikes.
-    // A 429 is not retried; compact context reduces provider processing time.
+    // Keep the provider call below the Edge Function execution window.
+    // No automatic retries: this avoids multiplying API cost on quota or overload errors.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     let aiRes: Response;
     try {
-      aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, { ...providerRequest, signal: controller.signal });
+      aiRes = await fetch('https://api.openai.com/v1/responses', { ...providerRequest, signal: controller.signal });
     } catch (error) {
       const timedOut = error instanceof Error && error.name === 'AbortError';
       const message = timedOut
-        ? 'A análise excedeu o tempo limite do serviço. Tente novamente em instantes.'
-        : 'Não foi possível conectar ao serviço de IA. Tente novamente.';
+        ? 'A análise excedeu o tempo limite da OpenAI. Tente novamente em instantes.'
+        : 'Não foi possível conectar à OpenAI. Tente novamente.';
       await admin.from('ai_usage_logs').insert({ function_name: 'ai-business-insights', model: MODEL, store_id: storeId, success: false, error_message: message });
       return response({ error: message, code: timedOut ? 'AI_TIMEOUT' : 'AI_CONNECTION_ERROR' }, timedOut ? 504 : 503);
     } finally {
@@ -148,17 +153,21 @@ Deno.serve(async (req) => {
     if (!aiRes.ok) {
       const status = aiRes.status;
       const details = await aiRes.text();
-      const message = status === 429
-        ? 'O serviço de IA atingiu temporariamente o limite de uso da chave configurada. Esse bloqueio vem do provedor, não do limite da sua loja. Aguarde a renovação da cota ou revise o limite da chave.'
-        : [503, 504].includes(status)
-        ? 'O serviço de IA está com alta demanda agora. Seus dados continuam seguros; tente novamente em alguns instantes.'
-        : 'Não foi possível concluir a análise neste momento. Tente novamente.';
-      console.error('AI provider request failed', status, details.slice(0, 300));
+      const message = status === 401 || status === 403
+        ? 'A chave da OpenAI não foi aceita. Confira OPENAI_API_KEY e as permissões do projeto.'
+        : status === 429
+        ? 'A OpenAI atingiu o limite de uso ou de requisições da conta. Verifique os limites e a cobrança da API.'
+        : [500, 502, 503, 504].includes(status)
+        ? 'A OpenAI está temporariamente indisponível. Seus dados continuam seguros; tente novamente em instantes.'
+        : 'Não foi possível concluir a análise na OpenAI. Tente novamente.';
+      console.error('OpenAI request failed', status, details.slice(0, 300));
       await admin.from('ai_usage_logs').insert({ function_name: 'ai-business-insights', model: MODEL, store_id: storeId, success: false, error_message: `HTTP ${status}: ${message}` });
-      return response({ error: message, code: status === 429 ? 'AI_PROVIDER_QUOTA' : 'AI_PROVIDER_ERROR' }, status === 429 ? 429 : [503, 504].includes(status) ? 503 : 502);
+      return response({ error: message, code: status === 429 ? 'AI_PROVIDER_QUOTA' : 'AI_PROVIDER_ERROR' }, status === 429 ? 429 : [500, 502, 503, 504].includes(status) ? 503 : status === 401 || status === 403 ? 502 : 502);
     }
     const data = await aiRes.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}';
+    const raw = typeof data?.output_text === 'string'
+      ? data.output_text
+      : (data?.output ?? []).flatMap((item: any) => item?.content ?? []).filter((part: any) => part?.type === 'output_text').map((part: any) => part.text ?? '').join('') || '{}';
     let result: any;
     try { result = JSON.parse(raw); } catch { return response({ error: 'A IA retornou uma resposta inválida. Tente novamente.' }, 502); }
     if (action === 'menu' && Array.isArray(result.suggestions)) {
@@ -179,9 +188,9 @@ Deno.serve(async (req) => {
       function_name: 'ai-business-insights',
       model: MODEL,
       store_id: storeId,
-      prompt_tokens: Number(data?.usageMetadata?.promptTokenCount ?? 0),
-      completion_tokens: Number(data?.usageMetadata?.candidatesTokenCount ?? 0),
-      total_tokens: Number(data?.usageMetadata?.totalTokenCount ?? 0),
+      prompt_tokens: Number(data?.usage?.input_tokens ?? 0),
+      completion_tokens: Number(data?.usage?.output_tokens ?? 0),
+      total_tokens: Number(data?.usage?.total_tokens ?? 0),
       success: true,
     });
 
