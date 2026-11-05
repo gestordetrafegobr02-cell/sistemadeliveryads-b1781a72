@@ -144,7 +144,8 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usageMetadata?.promptTokenCount ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usageMetadata?.candidatesTokenCount ?? 0), total_tokens: usage.total_tokens + Number(data?.usageMetadata?.totalTokenCount ?? 0) };\n    return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage });
+    const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usageMetadata?.promptTokenCount ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usageMetadata?.candidatesTokenCount ?? 0), total_tokens: usage.total_tokens + Number(data?.usageMetadata?.totalTokenCount ?? 0) };
+    return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage });
   } catch (error) {
     console.error('ai-business-insights:', error);
     return response({ error: error instanceof Error ? error.message : 'Erro inesperado ao analisar a loja' }, 500);
