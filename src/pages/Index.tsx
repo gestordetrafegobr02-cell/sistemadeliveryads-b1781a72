@@ -14,16 +14,20 @@ function getFunnelContext() {
   const params = new URLSearchParams(window.location.search);
   let sessionId = sessionStorage.getItem('dp_funnel_session');
   if (!sessionId) { sessionId = crypto.randomUUID(); sessionStorage.setItem('dp_funnel_session', sessionId); }
-  return {
+  let saved: Record<string, string | null> = {};
+  try { saved = JSON.parse(sessionStorage.getItem('dp_funnel_attribution') || '{}'); } catch { saved = {}; }
+  const context = {
     sessionId,
-    utm_source: params.get('utm_source'),
-    utm_medium: params.get('utm_medium'),
-    utm_campaign: params.get('utm_campaign'),
-    utm_content: params.get('utm_content'),
-    utm_term: params.get('utm_term'),
-    fbclid: params.get('fbclid'),
-    landing_path: window.location.pathname + window.location.search,
+    utm_source: params.get('utm_source') || saved.utm_source || null,
+    utm_medium: params.get('utm_medium') || saved.utm_medium || null,
+    utm_campaign: params.get('utm_campaign') || saved.utm_campaign || null,
+    utm_content: params.get('utm_content') || saved.utm_content || null,
+    utm_term: params.get('utm_term') || saved.utm_term || null,
+    fbclid: params.get('fbclid') || saved.fbclid || null,
+    landing_path: saved.landing_path || (window.location.pathname + window.location.search),
   };
+  sessionStorage.setItem('dp_funnel_attribution', JSON.stringify(context));
+  return context;
 }
 
 async function recordFunnelEvent(eventName: string) {
