@@ -101,21 +101,21 @@ export default function Index() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:py-24">
           <div>
             <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-              <span className="h-2 w-2 rounded-full bg-primary" /> Sua operação de delivery em um só lugar
+              <span className="h-2 w-2 rounded-full bg-primary" /> Criação gratuita • Todos os recursos • R$ 49,90/mês
             </span>
             <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              Seu delivery merece ter <span className="text-primary">uma loja própria.</span>
+              Sua loja de delivery própria, <span className="text-primary">criada gratuitamente.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Receba pedidos em uma loja online com a sua marca, organize sua operação e ofereça aos clientes uma experiência de compra simples.
+              Nossa equipe ajuda a criar sua loja online com a sua marca. Depois, use todos os recursos do DeliveryPro por apenas R$ 49,90 por mês, sem limitações e sem fidelidade.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href="#cadastro"><Button size="lg" className="h-13 rounded-xl px-7 text-base">Quero criar minha loja <ArrowRight className="ml-2 h-5 w-5" /></Button></a>
               <a href="#demonstracao"><Button size="lg" variant="outline" className="h-13 rounded-xl px-7 text-base">Conhecer o sistema</Button></a>
             </div>
             <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Implantação orientada</span>
-              <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Sua marca em destaque</span>
+              <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Criação inicial grátis</span>
+              <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Cancele quando quiser</span>
             </div>
           </div>
           <div id="demonstracao" className="relative">
@@ -152,6 +152,34 @@ export default function Index() {
               <h3 className="text-lg font-bold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
             </article>)}
           </div>
+        </div>
+      </section>
+
+      <section id="precos" className="px-5 py-16 md:py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="text-sm font-bold uppercase tracking-widest text-primary">Simples e transparente</p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Sua loja criada grátis. Todos os recursos por um preço acessível.</h2>
+            <p className="mt-4 text-muted-foreground">Sem taxa de criação e sem surpresas: você sabe quanto custa manter sua loja online.</p>
+          </div>
+          <div className="mx-auto max-w-xl rounded-3xl border border-primary/30 bg-card p-7 shadow-xl sm:p-10">
+            <p className="text-sm font-bold text-primary">PLANO COMPLETO</p>
+            <div className="mt-3 flex items-end gap-2">
+              <span className="text-5xl font-extrabold tracking-tight sm:text-6xl">R$ 49,90</span>
+              <span className="pb-2 text-muted-foreground">/ mês</span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">A criação e configuração inicial da sua loja são gratuitas.</p>
+            <div className="my-7 h-px bg-border" />
+            <ul className="space-y-4 text-sm">
+              <li className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span><strong>Acesso a todas as funcionalidades</strong>, sem limitação de recursos.</span></li>
+              <li className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span>Sua própria loja online com sua marca e cardápio.</span></li>
+              <li className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span>Gestão de pedidos e acompanhamento das compras.</span></li>
+              <li className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span><strong>Sem fidelidade e sem multa:</strong> solicite o cancelamento quando quiser.</span></li>
+            </ul>
+            <a href="#cadastro" className="mt-8 block"><Button size="lg" className="h-13 w-full rounded-xl text-base">Quero minha loja grátis <ArrowRight className="ml-2 h-5 w-5" /></Button></a>
+            <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">No cancelamento, o acesso à loja é encerrado ao final do período mensal já pago.</p>
+          </div>
+          <p className="mx-auto mt-8 max-w-2xl text-center text-lg font-semibold">Um pedido pode ajudar a pagar a mensalidade. E sua loja continua disponível para seus clientes durante todo o período contratado.</p>
         </div>
       </section>
 
