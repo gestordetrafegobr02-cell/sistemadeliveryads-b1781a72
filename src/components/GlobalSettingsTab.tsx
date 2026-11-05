@@ -73,8 +73,7 @@ export function GlobalSettingsTab() {
       for (const entry of entries) {
         const { error } = await supabase
           .from('global_settings')
-          .update({ value: entry.value, updated_at: new Date().toISOString() })
-          .eq('key', entry.key);
+          .upsert({ key: entry.key, value: entry.value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
 
         if (error) {
           console.error(`Error saving ${entry.key}:`, error);
