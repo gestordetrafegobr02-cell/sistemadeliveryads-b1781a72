@@ -77,7 +77,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
     <Card className="border-primary/20 bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Central de inteligência artificial</CardTitle>
-        <CardDescription>Ferramentas conectadas ao Gemini. Você confere as recomendações antes de aplicar mudanças no cardápio.</CardDescription>
+        <CardDescription>Ferramentas inteligentes para analisar o cardápio, identificar oportunidades e apoiar decisões. Você confere as recomendações antes de aplicar mudanças.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={action} onValueChange={v => { setAction(v as Action); setPayload(null); setErrorMessage(''); }}>
