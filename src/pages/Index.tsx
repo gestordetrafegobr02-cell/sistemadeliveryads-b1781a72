@@ -104,6 +104,7 @@ export default function Index() {
         p_utm_term: context.utm_term,
         p_fbclid: context.fbclid,
         p_landing_path: context.landing_path,
+        p_consent: true,
       } as any);
     } catch (error) {
       console.warn('[Landing] incomplete form save failed', error);
@@ -143,8 +144,9 @@ export default function Index() {
       void recordFunnelEvent('Lead');
       const draftToken = sessionStorage.getItem('dp_lead_capture_token');
       if (draftToken && createdLead?.id) {
-        await supabase.rpc('complete_sales_lead_draft' as any, { p_capture_token: draftToken, p_lead_id: createdLead.id } as any);
-        sessionStorage.removeItem('dp_lead_capture_token');
+        const { error: draftLinkError } = await supabase.rpc('complete_sales_lead_draft' as any, { p_capture_token: draftToken, p_lead_id: createdLead.id } as any);
+        if (draftLinkError) console.warn('[Landing] lead saved, but draft link could not be completed:', draftLinkError);
+        else sessionStorage.removeItem('dp_lead_capture_token');
       }
       setSubmitted(true);
       toast({ title: 'Cadastro recebido!', description: 'Seus dados foram enviados para nossa equipe.' });
@@ -165,6 +167,7 @@ export default function Index() {
   const whatsappLink = hasConfiguredOwnerWhatsapp
     ? `https://wa.me/${ownerWhatsappDigits}`
     : '';
+  const formattedSubscriptionPrice = settings.subscription_price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -187,13 +190,13 @@ export default function Index() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:py-24">
           <div>
             <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-              <span className="h-2 w-2 rounded-full bg-primary" /> Criação gratuita • Todos os recursos • R$ 49,90/mês
+              <span className="h-2 w-2 rounded-full bg-primary" /> Criação gratuita • Todos os recursos • R$ {formattedSubscriptionPrice}/mês
             </span>
             <h1 className="max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
               Sua loja de delivery própria, <span className="text-primary">criada gratuitamente.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Nossa equipe ajuda a criar sua loja online com a sua marca. Depois, use todos os recursos do DeliveryPro por apenas R$ 49,90 por mês, sem limitações e sem fidelidade.
+              Nossa equipe ajuda a criar sua loja online com a sua marca. Depois, use todos os recursos do DeliveryPro por apenas R$ {formattedSubscriptionPrice} por mês, sem limitações e sem fidelidade.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href="#cadastro"><Button size="lg" className="h-13 rounded-xl px-7 text-base">Quero criar minha loja <ArrowRight className="ml-2 h-5 w-5" /></Button></a>
@@ -310,7 +313,7 @@ export default function Index() {
               <CheckCircle2 className="mx-auto h-16 w-16 text-primary" />
               <h3 className="mt-5 text-2xl font-bold">Cadastro recebido!</h3>
               <p className="mx-auto mt-3 max-w-sm text-muted-foreground">Seus dados foram registrados. Nossa equipe poderá entrar em contato pelo WhatsApp informado.</p>
-              {whatsappLink && <a href={whatsappLink} target="_blank" rel="noreferrer"><Button className="mt-6 rounded-xl"><MessageCircle className="mr-2 h-4 w-4" /> Falar com a equipe agora</Button></a>}
+              {whatsappLink && <a href={whatsappLink} target="_blank" rel="noreferrer" onClick={() => { trackLandingEvent('Contact', { content_name: 'whatsapp_after_lead' }); void recordFunnelEvent('Contact'); }}><Button className="mt-6 rounded-xl"><MessageCircle className="mr-2 h-4 w-4" /> Falar com a equipe agora</Button></a>}
               <button onClick={() => { setSubmitted(false); setName(''); setWhatsapp(''); setBusinessName(''); setSegment(''); }} className="mt-4 block w-full text-sm text-muted-foreground underline">Enviar outro cadastro</button>
             </div> : <form onSubmit={handleSubmit} className="space-y-5">
               <div><h3 className="text-2xl font-bold">Quero conhecer o DeliveryPro</h3><p className="mt-1 text-sm text-muted-foreground">Leva menos de um minuto.</p></div>
