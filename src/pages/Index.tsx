@@ -81,6 +81,37 @@ export default function Index() {
     }
   }, [settings.landing_pixel_id]);
 
+  const saveIncompleteDraft = async () => {
+    if (!draftConsent || submitted) return;
+    setDraftSaving(true);
+    try {
+      const context = getFunnelContext();
+      let token = sessionStorage.getItem('dp_lead_capture_token');
+      if (!token) {
+        token = crypto.randomUUID();
+        sessionStorage.setItem('dp_lead_capture_token', token);
+      }
+      await supabase.rpc('save_sales_lead_draft' as any, {
+        p_capture_token: token,
+        p_name: name,
+        p_whatsapp: whatsapp,
+        p_business_name: businessName,
+        p_segment: segment,
+        p_utm_source: context.utm_source,
+        p_utm_medium: context.utm_medium,
+        p_utm_campaign: context.utm_campaign,
+        p_utm_content: context.utm_content,
+        p_utm_term: context.utm_term,
+        p_fbclid: context.fbclid,
+        p_landing_path: context.landing_path,
+      } as any);
+    } catch (error) {
+      console.warn('[Landing] incomplete form save failed', error);
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const digits = whatsapp.replace(/\D/g, '');
