@@ -78,7 +78,7 @@ export function AIUsageTab() {
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div><h2 className="text-xl font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Consumo de IA por loja</h2><p className="text-sm text-muted-foreground">Medição real das chamadas Gemini registradas no banco. Não representa créditos Lovable nem estima cobrança em dinheiro.</p></div>
+      <div><h2 className="text-xl font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Consumo de IA por loja</h2><p className="text-sm text-muted-foreground">Medição das análises de IA registradas no sistema. Tokens não representam valor financeiro.</p></div>
       <Button variant="outline" size="sm" onClick={fetchLogs} className="gap-2"><RefreshCw className="h-4 w-4" /> Atualizar</Button>
     </div>
     {error && <div className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</div>}
@@ -88,7 +88,7 @@ export function AIUsageTab() {
       <Card><CardHeader className="pb-2"><CardDescription>Concluídas</CardDescription><CardTitle className="text-3xl text-green-600">{stats.success}</CardTitle></CardHeader><CardContent><CheckCircle2 className="h-4 w-4 text-green-600" /></CardContent></Card>
       <Card><CardHeader className="pb-2"><CardDescription>Falhas registradas</CardDescription><CardTitle className="text-3xl text-destructive">{stats.errors}</CardTitle></CardHeader><CardContent><AlertCircle className="h-4 w-4 text-destructive" /></CardContent></Card>
     </div>
-    <Card><CardHeader><CardTitle>Tokens consumidos neste mês</CardTitle><CardDescription>Contagem informada pela API Gemini. Valores financeiros dependem do modelo, da tabela de preços vigente e do plano da chave.</CardDescription></CardHeader>
+    <Card><CardHeader><CardTitle>Tokens consumidos neste mês</CardTitle><CardDescription>Contagem de tokens informada pelo serviço de IA. Tokens não representam, por si só, uma cobrança em dinheiro.</CardDescription></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Entrada</p><p className="text-xl font-semibold">{stats.prompt.toLocaleString('pt-BR')}</p></div>
         <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Saída</p><p className="text-xl font-semibold">{stats.completion.toLocaleString('pt-BR')}</p></div>
@@ -101,8 +101,8 @@ export function AIUsageTab() {
       </TableBody></Table></div>}
     </CardContent></Card>
     <Card><CardHeader><CardTitle>Últimas 200 análises</CardTitle><CardDescription>Registro operacional das chamadas de IA.</CardDescription></CardHeader><CardContent>
-      {logs.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma chamada registrada.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Loja</TableHead><TableHead>Ferramenta</TableHead><TableHead>Modelo</TableHead><TableHead className="text-right">Tokens</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
-        {logs.slice(0, 200).map(log => <TableRow key={log.id}><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</TableCell><TableCell className="text-sm">{stores.find(s => s.id === log.store_id)?.name ?? '—'}</TableCell><TableCell className="font-mono text-xs">{log.function_name}</TableCell><TableCell className="font-mono text-xs">{log.model ?? '—'}</TableCell><TableCell className="text-right text-xs">{Number(log.total_tokens ?? 0).toLocaleString('pt-BR')}</TableCell><TableCell>{log.success ? <Badge variant="outline" className="text-green-600">OK</Badge> : <Badge variant="destructive" title={log.error_message ?? ''}>Erro</Badge>}</TableCell></TableRow>)}
+      {logs.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma chamada registrada.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Loja</TableHead><TableHead>Ferramenta</TableHead><TableHead>Serviço</TableHead><TableHead className="text-right">Tokens</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
+        {logs.slice(0, 200).map(log => <TableRow key={log.id}><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</TableCell><TableCell className="text-sm">{stores.find(s => s.id === log.store_id)?.name ?? '—'}</TableCell><TableCell className="font-mono text-xs">{log.function_name}</TableCell><TableCell className="text-xs">IA</TableCell><TableCell className="text-right text-xs">{Number(log.total_tokens ?? 0).toLocaleString('pt-BR')}</TableCell><TableCell>{log.success ? <Badge variant="outline" className="text-green-600">OK</Badge> : <Badge variant="destructive" title={log.error_message ?? ''}>Erro</Badge>}</TableCell></TableRow>)}
       </TableBody></Table></div>}
     </CardContent></Card>
   </div>;
