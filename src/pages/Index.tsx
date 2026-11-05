@@ -60,10 +60,25 @@ export default function Index() {
   const [businessName, setBusinessName] = useState('');
   const [segment, setSegment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);\n  const [draftConsent, setDraftConsent] = useState(false);\n  const [draftSaving, setDraftSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [draftConsent, setDraftConsent] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
 
   useEffect(() => {
     if (settings.landing_pixel_id) loadLandingPixel(settings.landing_pixel_id);
+    void recordFunnelEvent('PageView');
+    const pricing = document.getElementById('precos');
+    if (pricing && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          trackLandingEvent('ViewContent', { content_name: 'pricing_section' });
+          void recordFunnelEvent('ViewContent');
+          observer.disconnect();
+        }
+      }, { threshold: 0.25 });
+      observer.observe(pricing);
+      return () => observer.disconnect();
+    }
   }, [settings.landing_pixel_id]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -76,16 +91,30 @@ export default function Index() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('sales_leads').insert({
+      const context = getFunnelContext();
+      const { data: createdLead, error } = await supabase.from('sales_leads').insert({
         name: name.trim(),
         whatsapp: digits,
         business_name: businessName.trim(),
         segment,
         source: 'landing_page',
         status: 'new',
-      });
+        utm_source: context.utm_source,
+        utm_medium: context.utm_medium,
+        utm_campaign: context.utm_campaign,
+        utm_content: context.utm_content,
+        utm_term: context.utm_term,
+        fbclid: context.fbclid,
+        landing_path: context.landing_path,
+      }).select('id').single();
       if (error) throw error;
-      trackLandingEvent('Lead', { content_name: 'assisted_onboarding_lead', segment });\n      void recordFunnelEvent('Lead');\n      const draftToken = sessionStorage.getItem('dp_lead_capture_token');\n      if (draftToken) { /* Drafts remain available for audit; the admin can distinguish submitted leads. */ }
+      trackLandingEvent('Lead', { content_name: 'assisted_onboarding_lead', segment });
+      void recordFunnelEvent('Lead');
+      const draftToken = sessionStorage.getItem('dp_lead_capture_token');
+      if (draftToken && createdLead?.id) {
+        await supabase.rpc('complete_sales_lead_draft' as any, { p_capture_token: draftToken, p_lead_id: createdLead.id } as any);
+        sessionStorage.removeItem('dp_lead_capture_token');
+      }
       setSubmitted(true);
       toast({ title: 'Cadastro recebido!', description: 'Seus dados foram enviados para nossa equipe.' });
     } catch (error) {
