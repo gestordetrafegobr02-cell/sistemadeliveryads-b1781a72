@@ -206,8 +206,7 @@ Deno.serve(async (req) => {
             temperature: 0.1,
           },
         }),
-      },
-      signal: controller.signal,
+        signal: controller.signal,
       });
     } catch (error) {
       const message = error instanceof Error && error.name === 'AbortError'
