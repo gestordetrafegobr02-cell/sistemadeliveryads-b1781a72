@@ -186,7 +186,11 @@ Deno.serve(async (req) => {
       parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
     }
 
-    const aiRes = await fetch(
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let aiRes: Response;
+    try {
+      aiRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
         method: 'POST',
@@ -203,17 +207,25 @@ Deno.serve(async (req) => {
           },
         }),
       },
-    );
+      signal: controller.signal,
+      });
+    } catch (error) {
+      const message = error instanceof Error && error.name === 'AbortError'
+        ? 'A análise do cardápio excedeu o tempo limite. Tente novamente.'
+        : 'Não foi possível conectar ao serviço de IA. Tente novamente.';
+      await logUsage({ store_id: storeId, success: false, error_message: message });
+      return new Response(JSON.stringify({ error: message }), { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } finally { clearTimeout(timeout); }
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       const status = aiRes.status === 429 ? 429 : 500;
       const msg = aiRes.status === 429
-        ? 'Limite gratuito de IA atingido. Aguarde e tente novamente.'
+        ? 'O serviço de IA atingiu temporariamente o limite de uso da chave configurada. Aguarde a renovação da cota ou revise o limite da chave.'
         : aiRes.status === 400 || aiRes.status === 403
-        ? 'A chave Gemini ou a configuração do modelo não foi aceita.'
+        ? 'A configuração do serviço de IA não foi aceita.'
         : 'O serviço de IA está temporariamente indisponível.';
-      console.error('Gemini API error:', aiRes.status, errText.slice(0, 300));
+      console.error('AI provider error:', aiRes.status, errText.slice(0, 300));
       await logUsage({ store_id: storeId, success: false, error_message: msg });
       return new Response(JSON.stringify({ error: msg }), {
         status,
