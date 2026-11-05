@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample });
     }
 
-    const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+    const geminiRequest = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({
@@ -94,11 +94,24 @@ Deno.serve(async (req) => {
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(context) }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       }),
-    });
-    if (!aiRes.ok) {
-      const details = await aiRes.text();
-      console.error('Gemini insights error', aiRes.status, details.slice(0, 300));
-      return response({ error: aiRes.status === 429 ? 'Limite do Gemini atingido. Aguarde e tente novamente.' : 'O Gemini está temporariamente indisponível.' }, aiRes.status === 429 ? 429 : 502);
+    };
+
+    // Gemini can temporarily return 503 during demand spikes. Retry twice with
+    // short backoff, then preserve the upstream status for a useful UI message.
+    let aiRes: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, geminiRequest);
+      if (aiRes.ok || ![503, 504].includes(aiRes.status) || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+    }
+
+    if (!aiRes || !aiRes.ok) {
+      const status = aiRes?.status ?? 503;
+      const details = aiRes ? await aiRes.text() : '';
+      console.error('Gemini insights error', status, details.slice(0, 300));
+      if (status === 429) return response({ error: 'Limite de requisições do Gemini atingido. Aguarde um pouco e tente novamente.' }, 429);
+      if ([503, 504].includes(status)) return response({ error: 'O Gemini está com alta demanda no momento. A conexão e os dados da loja estão funcionando; tente novamente em alguns instantes.' }, 503);
+      return response({ error: 'Não foi possível concluir a análise com o Gemini. Tente novamente.' }, 502);
     }
     const data = await aiRes.json();
     const raw = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '{}';
