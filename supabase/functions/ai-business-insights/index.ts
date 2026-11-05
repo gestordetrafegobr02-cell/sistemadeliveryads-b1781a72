@@ -51,10 +51,26 @@ Deno.serve(async (req) => {
     if (!store || !canManage) return response({ error: 'Acesso não autorizado para esta loja' }, 403);
 
     // Limit each store to 20 AI analyses per hour. Failed requests are not counted here.
-    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count, error: usageError } = await admin.from('ai_usage_logs').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('function_name', 'ai-business-insights').gte('created_at', since);
-    if (usageError) throw new Error('Não foi possível verificar o limite de uso da IA');
-    if ((count ?? 0) >= 20) return response({ error: 'Limite de 20 análises por hora atingido nesta loja. Tente novamente mais tarde.' }, 429);
+    const now = new Date();
+    const since = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const [{ count: hourlyCount, error: hourlyError }, { count: monthlyCount, error: monthlyError }, { data: monthlyUsage, error: totalsError }] = await Promise.all([
+      admin.from('ai_usage_logs').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('function_name', 'ai-business-insights').eq('success', true).gte('created_at', since),
+      admin.from('ai_usage_logs').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('function_name', 'ai-business-insights').eq('success', true).gte('created_at', monthStart),
+      admin.from('ai_usage_logs').select('prompt_tokens,completion_tokens,total_tokens').eq('store_id', storeId).eq('function_name', 'ai-business-insights').eq('success', true).gte('created_at', monthStart),
+    ]);
+    if (hourlyError || monthlyError || totalsError) throw new Error('Não foi possível verificar o consumo da IA');
+    const usage = {
+      hourly_limit: 20,
+      used_last_hour: hourlyCount ?? 0,
+      remaining_last_hour: Math.max(0, 20 - (hourlyCount ?? 0)),
+      used_this_month: monthlyCount ?? 0,
+      prompt_tokens: (monthlyUsage ?? []).reduce((sum: number, row: any) => sum + Number(row.prompt_tokens ?? 0), 0),
+      completion_tokens: (monthlyUsage ?? []).reduce((sum: number, row: any) => sum + Number(row.completion_tokens ?? 0), 0),
+      total_tokens: (monthlyUsage ?? []).reduce((sum: number, row: any) => sum + Number(row.total_tokens ?? 0), 0),
+      period: monthStart.slice(0, 7),
+    };
+    if ((hourlyCount ?? 0) >= 20) return response({ error: 'Esta loja atingiu o limite temporário de 20 análises por hora. Aguarde um pouco e tente novamente.', usage }, 429);
 
     const [productsRes, categoriesRes, ordersRes] = await Promise.all([
       admin.from('products').select('id,name,description,price,category_id,is_available').eq('store_id', storeId).limit(250),
@@ -83,7 +99,7 @@ Deno.serve(async (req) => {
     };
 
     if (action === 'forecast' && orders.length < 14) {
-      return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample });
+      return response({ result: { summary: 'Ainda não há histórico suficiente para uma previsão minimamente útil.', forecast: [], notes: ['São necessários pelo menos 14 pedidos registrados; idealmente, várias semanas de histórico.'] }, sample: context.sample, usage });
     }
 
     const geminiRequest = {
@@ -128,7 +144,7 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    return response({ result, sample: context.sample, model: MODEL });
+    const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usageMetadata?.promptTokenCount ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usageMetadata?.candidatesTokenCount ?? 0), total_tokens: usage.total_tokens + Number(data?.usageMetadata?.totalTokenCount ?? 0) };\n    return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage });
   } catch (error) {
     console.error('ai-business-insights:', error);
     return response({ error: error instanceof Error ? error.message : 'Erro inesperado ao analisar a loja' }, 500);
