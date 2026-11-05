@@ -64,14 +64,20 @@ export default function Index() {
       toast({ title: 'Cadastro recebido!', description: 'Seus dados foram enviados para nossa equipe.' });
     } catch (error) {
       console.error('[Landing] lead submission failed', error);
-      toast({ title: 'Não foi possível enviar seu cadastro', description: 'Tente novamente em instantes ou fale com nossa equipe pelo WhatsApp.', variant: 'destructive' });
+      toast({ title: 'Não foi possível enviar seu cadastro', description: 'Tente novamente em instantes.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const whatsappLink = settings.owner_whatsapp
-    ? `https://wa.me/${settings.owner_whatsapp.replace(/\D/g, '')}`
+  // Never send visitors to the placeholder number shipped in the initial settings.
+  const ownerWhatsappDigits = (settings.owner_whatsapp || '').replace(/\D/g, '');
+  const hasConfiguredOwnerWhatsapp =
+    ownerWhatsappDigits.length >= 10 &&
+    ownerWhatsappDigits.length <= 15 &&
+    ownerWhatsappDigits !== '5511999999999';
+  const whatsappLink = hasConfiguredOwnerWhatsapp
+    ? `https://wa.me/${ownerWhatsappDigits}`
     : '';
 
   return (
