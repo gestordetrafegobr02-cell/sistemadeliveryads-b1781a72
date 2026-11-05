@@ -71,7 +71,15 @@ Deno.serve(async (req) => {
       sample: { products: products.length, categories: categories.length, orders: orders.length },
       products,
       categories,
-      orders: orders.map((o: any) => ({\n        items: Array.isArray(o.items) ? o.items.map((item: any) => ({\n          product_id: item.product_id ?? item.id ?? null,\n          name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Item',\n          quantity: Math.max(0, Math.min(99, Number(item.quantity ?? 1) || 1)),\n        })) : [],\n        total: Number(o.total ?? 0),\n        created_at: o.created_at,\n      })),
+      orders: orders.map((o: any) => ({
+        items: Array.isArray(o.items) ? o.items.map((item: any) => ({
+          product_id: item.product_id ?? item.id ?? null,
+          name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Item',
+          quantity: Math.max(0, Math.min(99, Number(item.quantity ?? 1) || 1)),
+        })) : [],
+        total: Number(o.total ?? 0),
+        created_at: o.created_at,
+      })),
     };
 
     if (action === 'forecast' && orders.length < 14) {
@@ -82,7 +90,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: prompts[action] + '\nRetorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
+        system_instruction: { parts: [{ text: prompts[action] + '
+Retorne somente JSON válido, sem markdown. Não inclua dados pessoais de clientes.' }] },
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(context) }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
       }),
