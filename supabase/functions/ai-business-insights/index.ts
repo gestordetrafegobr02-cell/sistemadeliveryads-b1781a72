@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usageMetadata?.promptTokenCount ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usageMetadata?.candidatesTokenCount ?? 0), total_tokens: usage.total_tokens + Number(data?.usageMetadata?.totalTokenCount ?? 0) };
+    const updatedUsage = { ...usage, used_last_hour: usage.used_last_hour + 1, remaining_last_hour: Math.max(0, usage.remaining_last_hour - 1), used_this_month: usage.used_this_month + 1, prompt_tokens: usage.prompt_tokens + Number(data?.usage?.input_tokens ?? 0), completion_tokens: usage.completion_tokens + Number(data?.usage?.output_tokens ?? 0), total_tokens: usage.total_tokens + Number(data?.usage?.total_tokens ?? 0) };
     return response({ result, sample: context.sample, model: MODEL, usage: updatedUsage, analysis: { products: products.map((p: any) => ({ id: p.id, name: p.name, category_id: p.category_id, price: p.price })), categories: categories.map((category: any) => category.name), order_count: orders.length, date_from: orders.at(-1)?.created_at ?? null, date_to: orders[0]?.created_at ?? null, co_occurrences: coOccurrences.slice(0, 10) } });
   } catch (error) {
     console.error('ai-business-insights:', error);
