@@ -90,6 +90,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "GET") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { ...corsHeaders, "Allow": "GET, OPTIONS" },
+    });
+  }
 
   const url = new URL(req.url);
   const ua = req.headers.get("user-agent") ?? "";
@@ -97,10 +103,35 @@ Deno.serve(async (req) => {
   const slugParam = url.searchParams.get("slug") ?? url.searchParams.get("path") ?? "";
   const pathSlug = url.pathname.replace(/^.*\/og-preview\/?/, "");
   const rawSlug = (slugParam || pathSlug || "").split("/").filter(Boolean)[0] ?? "";
-  const slug = decodeURIComponent(rawSlug).toLowerCase().trim();
+  let slug = "";
+  try {
+    slug = decodeURIComponent(rawSlug).toLowerCase().trim();
+  } catch {
+    slug = "";
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) slug = "";
 
-  const requestedOrigin = url.searchParams.get("origin") || "https://deliverypro.site";
-  const origin = requestedOrigin.replace(/\/$/, "");
+  // Only canonicalize/redirect to domains owned by this DeliveryPro project.
+  // Add any future verified custom domain here before using it in previews.
+  const allowedOrigins = new Set([
+    "https://deliverypro.site",
+    "https://www.deliverypro.site",
+    "https://cardapioprodigital.shop",
+    "https://www.cardapioprodigital.shop",
+    "https://deliverypro-flax.vercel.app",
+  ]);
+  const requestedOrigin = url.searchParams.get("origin") || "";
+  let origin = "https://www.deliverypro.site";
+  if (requestedOrigin) {
+    try {
+      const parsedOrigin = new URL(requestedOrigin);
+      if (parsedOrigin.protocol === "https:" && allowedOrigins.has(parsedOrigin.origin)) {
+        origin = parsedOrigin.origin;
+      }
+    } catch {
+      // Keep the safe default origin for malformed or untrusted values.
+    }
+  }
   const storeUrl = slug ? `${origin}/${slug}` : origin;
 
   const debug = url.searchParams.get("debug") === "1";
