@@ -40,6 +40,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { StoreThemeEditor } from '@/components/StoreThemeEditor';
 import { getStoreUrl } from '@/lib/siteConfig';
 import { AIImportMenuDialog } from '@/components/AIImportMenuDialog';
+import { AIInsightsTab } from '@/components/AIInsightsTab';
 import { StoreTemplateSelector } from '@/components/StoreTemplateSelector';
 import { usePendingOrderAlert } from '@/hooks/usePendingOrderAlert';
 import { PushNotificationToggle } from '@/components/PushNotificationToggle';
@@ -690,6 +691,12 @@ export default function Admin() {
                   Adicionais
                 </TabsTrigger>
               )}
+              {canManage && (
+                <TabsTrigger value="ai" className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Inteligência IA
+                </TabsTrigger>
+              )}
               {canSeeReports && (
                 <TabsTrigger value="reports" className="gap-2">
                   <BarChart3 className="w-4 h-4" />
@@ -983,6 +990,21 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* AI Insights Tab */}
+          <TabsContent value="ai">
+            {store && canManage ? (
+              <AIInsightsTab
+                storeId={store.id}
+                products={products.map((p) => ({ id: p.id, name: p.name, description: p.description }))}
+                onApplied={fetchData}
+              />
+            ) : (
+              <Card className="bg-card border-border"><CardContent className="py-8">
+                <p className="text-muted-foreground text-center">A inteligência artificial está disponível para proprietários e gerentes da loja.</p>
+              </CardContent></Card>
+            )}
           </TabsContent>
 
           {/* Categories Tab */}

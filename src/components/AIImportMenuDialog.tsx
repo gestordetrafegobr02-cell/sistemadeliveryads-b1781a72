@@ -67,7 +67,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
     setLoading(true);
     setItems([]);
     try {
-      const payload: { image?: string; text?: string } = {};
+      const payload: { image?: string; text?: string; store_id: string } = { store_id: storeId };
       if (mode === 'photo' && file) {
         if (file.size > 8 * 1024 * 1024) {
           toast.error('Imagem muito grande (máx 8MB)');
@@ -80,7 +80,17 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
       }
 
       const { data, error } = await supabase.functions.invoke('ai-import-menu', { body: payload });
-      if (error) throw error;
+      if (error) {
+        let message = error.message ?? 'Falha ao processar cardápio.';
+        try {
+          const response = error.context;
+          if (response && typeof response.json === 'function') {
+            const details = await response.json();
+            if (typeof details?.error === 'string' && details.error.trim()) message = details.error;
+          }
+        } catch { /* Keep the original request error. */ }
+        throw new Error(message);
+      }
       const extracted = (data?.items ?? []) as ExtractedItem[];
       if (!extracted.length) {
         toast.error('Nenhum produto identificado. Tente outra foto ou texto mais claro.');

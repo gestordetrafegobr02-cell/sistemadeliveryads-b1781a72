@@ -3,279 +3,107 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Sparkles, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Sparkles, TrendingUp, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface UsageLog {
-  id: string;
-  function_name: string;
-  model: string | null;
-  store_id: string | null;
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-  success: boolean;
-  error_message: string | null;
-  created_at: string;
+  id: string; function_name: string; model: string | null; store_id: string | null;
+  prompt_tokens: number; completion_tokens: number; total_tokens: number;
+  success: boolean; error_message: string | null; created_at: string;
 }
-
-// Estimativa de custo (créditos Lovable) para gpt-5.5:
-// ~$1.25 / 1M input tokens, ~$10 / 1M output tokens.
-// 1 crédito Lovable ≈ $0.005 (aprox). Ajuste conforme seu plano.
-const CREDIT_PER_1M_INPUT = 250; // ~$1.25
-const CREDIT_PER_1M_OUTPUT = 2000; // ~$10
-const FREE_MONTHLY_ALLOWANCE_CREDITS = 40; // allowance mensal grátis do AI Gateway
-
-function estimateCredits(promptTokens: number, completionTokens: number) {
-  return (
-    (promptTokens / 1_000_000) * CREDIT_PER_1M_INPUT +
-    (completionTokens / 1_000_000) * CREDIT_PER_1M_OUTPUT
-  );
-}
+interface StoreInfo { id: string; name: string }
 
 export function AIUsageTab() {
   const [logs, setLogs] = useState<UsageLog[]>([]);
+  const [stores, setStores] = useState<StoreInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const fetchLogs = async () => {
-    const { data } = await supabase
-      .from('ai_usage_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    setLogs((data as UsageLog[]) ?? []);
+    setLoading(true); setError('');
+    const [usageRes, storesRes] = await Promise.all([
+      supabase.from('ai_usage_logs').select('id,function_name,model,store_id,prompt_tokens,completion_tokens,total_tokens,success,error_message,created_at').order('created_at', { ascending: false }).limit(1000),
+      supabase.from('stores').select('id,name').limit(1000),
+    ]);
+    if (usageRes.error || storesRes.error) {
+      setError('Não foi possível carregar o consumo de IA. Verifique as permissões de leitura do Master Admin.');
+      setLoading(false); return;
+    }
+    setLogs((usageRes.data as UsageLog[]) ?? []);
+    setStores((storesRes.data as StoreInfo[]) ?? []);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchLogs();
-    const channel = supabase
-      .channel('ai_usage_logs_realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ai_usage_logs' },
-        (payload) => {
-          setLogs((prev) => [payload.new as UsageLog, ...prev].slice(0, 200));
-        },
-      )
+    const channel = supabase.channel('ai_usage_logs_master')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_usage_logs' }, () => { fetchLogs(); })
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const stats = useMemo(() => {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
-    const monthLogs = logs.filter((l) => l.created_at >= startOfMonth);
-    const dayLogs = logs.filter((l) => l.created_at >= startOfDay);
-
-    const monthTokens = monthLogs.reduce((s, l) => s + (l.total_tokens || 0), 0);
-    const monthCreditsEst = monthLogs.reduce(
-      (s, l) => s + estimateCredits(l.prompt_tokens || 0, l.completion_tokens || 0),
-      0,
-    );
-    const dayCreditsEst = dayLogs.reduce(
-      (s, l) => s + estimateCredits(l.prompt_tokens || 0, l.completion_tokens || 0),
-      0,
-    );
-
-    const successCount = monthLogs.filter((l) => l.success).length;
-    const errorCount = monthLogs.filter((l) => !l.success).length;
-
-    const remaining = Math.max(0, FREE_MONTHLY_ALLOWANCE_CREDITS - monthCreditsEst);
-    const pctUsed = Math.min(100, (monthCreditsEst / FREE_MONTHLY_ALLOWANCE_CREDITS) * 100);
-
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const month = logs.filter(l => l.created_at >= monthStart);
+    const day = logs.filter(l => l.created_at >= dayStart);
+    const sum = (items: UsageLog[], field: 'prompt_tokens' | 'completion_tokens' | 'total_tokens') => items.reduce((n, l) => n + Number(l[field] ?? 0), 0);
     return {
-      monthCalls: monthLogs.length,
-      dayCalls: dayLogs.length,
-      monthTokens,
-      monthCreditsEst,
-      dayCreditsEst,
-      successCount,
-      errorCount,
-      remaining,
-      pctUsed,
+      monthCalls: month.length, dayCalls: day.length,
+      success: month.filter(l => l.success).length, errors: month.filter(l => !l.success).length,
+      prompt: sum(month, 'prompt_tokens'), completion: sum(month, 'completion_tokens'), total: sum(month, 'total_tokens'),
     };
   }, [logs]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const byStore = useMemo(() => {
+    const names = new Map(stores.map(s => [s.id, s.name]));
+    const grouped = new Map<string, UsageLog[]>();
+    for (const log of logs) {
+      const key = log.store_id ?? 'sem-loja';
+      grouped.set(key, [...(grouped.get(key) ?? []), log]);
+    }
+    return [...grouped.entries()].map(([id, entries]) => ({
+      id, name: names.get(id) ?? (id === 'sem-loja' ? 'Sem loja vinculada' : 'Loja não encontrada'),
+      calls: entries.length, successful: entries.filter(l => l.success).length,
+      errors: entries.filter(l => !l.success).length,
+      tokens: entries.reduce((n, l) => n + Number(l.total_tokens ?? 0), 0),
+      last: entries[0]?.created_at,
+    })).sort((a, b) => b.calls - a.calls);
+  }, [logs, stores]);
 
-  return (
-    <div className="space-y-6">
-      {/* Allowance grátis */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <CardTitle className="font-display text-xl">Uso da IA — Mês atual</CardTitle>
-          </div>
-          <CardDescription>
-            Estimativa de consumo do AI Gateway (créditos Lovable). Allowance grátis mensal: {FREE_MONTHLY_ALLOWANCE_CREDITS} créditos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                {stats.monthCreditsEst.toFixed(3)} / {FREE_MONTHLY_ALLOWANCE_CREDITS} créditos
-              </span>
-              <span className="font-semibold">
-                {stats.remaining.toFixed(3)} créditos restantes
-              </span>
-            </div>
-            <div className="h-3 bg-secondary rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all ${
-                  stats.pctUsed > 90
-                    ? 'bg-destructive'
-                    : stats.pctUsed > 70
-                    ? 'bg-yellow-500'
-                    : 'bg-primary'
-                }`}
-                style={{ width: `${stats.pctUsed}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats.pctUsed.toFixed(1)}% do allowance grátis mensal utilizado. Após esgotado, o consumo é debitado dos créditos pagos do workspace.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+  if (loading) return <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardDescription>Chamadas hoje</CardDescription>
-            <CardTitle className="text-3xl font-display">{stats.dayCalls}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              ~{stats.dayCreditsEst.toFixed(3)} créditos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardDescription>Chamadas no mês</CardDescription>
-            <CardTitle className="text-3xl font-display">{stats.monthCalls}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              {stats.monthTokens.toLocaleString('pt-BR')} tokens
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardDescription>Sucesso</CardDescription>
-            <CardTitle className="text-3xl font-display text-green-600">
-              {stats.successCount}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              este mês
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardHeader className="pb-2">
-            <CardDescription>Erros</CardDescription>
-            <CardTitle className="text-3xl font-display text-destructive">
-              {stats.errorCount}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              este mês
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent calls */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="font-display text-lg">Últimas 200 chamadas (tempo real)</CardTitle>
-          <CardDescription>Atualiza automaticamente conforme a IA é usada nas lojas.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Nenhuma chamada de IA registrada ainda.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Quando</TableHead>
-                    <TableHead>Função</TableHead>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead className="text-right">Tokens</TableHead>
-                    <TableHead className="text-right">~Créditos</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => {
-                    const credits = estimateCredits(log.prompt_tokens, log.completion_tokens);
-                    return (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDistanceToNow(new Date(log.created_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{log.function_name}</TableCell>
-                        <TableCell className="font-mono text-xs">{log.model ?? '—'}</TableCell>
-                        <TableCell className="text-right text-xs">
-                          {log.total_tokens.toLocaleString('pt-BR')}
-                          <div className="text-muted-foreground">
-                            {log.prompt_tokens}↑ {log.completion_tokens}↓
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs font-mono">
-                          {credits.toFixed(4)}
-                        </TableCell>
-                        <TableCell>
-                          {log.success ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600/40">
-                              OK
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" title={log.error_message ?? ''}>
-                              Erro
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  return <div className="space-y-6">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div><h2 className="text-xl font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Consumo de IA por loja</h2><p className="text-sm text-muted-foreground">Medição das análises de IA registradas no sistema. Tokens não representam valor financeiro.</p></div>
+      <Button variant="outline" size="sm" onClick={fetchLogs} className="gap-2"><RefreshCw className="h-4 w-4" /> Atualizar</Button>
     </div>
-  );
+    {error && <div className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{error}</div>}
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <Card><CardHeader className="pb-2"><CardDescription>Chamadas hoje</CardDescription><CardTitle className="text-3xl">{stats.dayCalls}</CardTitle></CardHeader></Card>
+      <Card><CardHeader className="pb-2"><CardDescription>Chamadas no mês</CardDescription><CardTitle className="text-3xl">{stats.monthCalls}</CardTitle></CardHeader></Card>
+      <Card><CardHeader className="pb-2"><CardDescription>Concluídas</CardDescription><CardTitle className="text-3xl text-green-600">{stats.success}</CardTitle></CardHeader><CardContent><CheckCircle2 className="h-4 w-4 text-green-600" /></CardContent></Card>
+      <Card><CardHeader className="pb-2"><CardDescription>Falhas registradas</CardDescription><CardTitle className="text-3xl text-destructive">{stats.errors}</CardTitle></CardHeader><CardContent><AlertCircle className="h-4 w-4 text-destructive" /></CardContent></Card>
+    </div>
+    <Card><CardHeader><CardTitle>Tokens consumidos neste mês</CardTitle><CardDescription>Contagem de tokens informada pelo serviço de IA. Tokens não representam, por si só, uma cobrança em dinheiro.</CardDescription></CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Entrada</p><p className="text-xl font-semibold">{stats.prompt.toLocaleString('pt-BR')}</p></div>
+        <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Saída</p><p className="text-xl font-semibold">{stats.completion.toLocaleString('pt-BR')}</p></div>
+        <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Total</p><p className="text-xl font-semibold">{stats.total.toLocaleString('pt-BR')}</p></div>
+      </CardContent>
+    </Card>
+    <Card><CardHeader><CardTitle>Consumo separado por loja</CardTitle><CardDescription>Chamadas e tokens de cada estabelecimento, sem misturar os históricos.</CardDescription></CardHeader><CardContent>
+      {byStore.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma análise concluída registrada ainda.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Loja</TableHead><TableHead>Chamadas</TableHead><TableHead>Concluídas</TableHead><TableHead>Falhas</TableHead><TableHead className="text-right">Tokens</TableHead><TableHead>Última atividade</TableHead></TableRow></TableHeader><TableBody>
+        {byStore.map(store => <TableRow key={store.id}><TableCell className="font-medium">{store.name}</TableCell><TableCell>{store.calls}</TableCell><TableCell><Badge variant="outline" className="text-green-600">{store.successful}</Badge></TableCell><TableCell>{store.errors}</TableCell><TableCell className="text-right">{store.tokens.toLocaleString('pt-BR')}</TableCell><TableCell className="text-xs text-muted-foreground">{store.last ? formatDistanceToNow(new Date(store.last), { addSuffix: true, locale: ptBR }) : '—'}</TableCell></TableRow>)}
+      </TableBody></Table></div>}
+    </CardContent></Card>
+    <Card><CardHeader><CardTitle>Últimas 200 análises</CardTitle><CardDescription>Registro operacional das chamadas de IA.</CardDescription></CardHeader><CardContent>
+      {logs.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma chamada registrada.</p> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Loja</TableHead><TableHead>Ferramenta</TableHead><TableHead>Serviço</TableHead><TableHead className="text-right">Tokens</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
+        {logs.slice(0, 200).map(log => <TableRow key={log.id}><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</TableCell><TableCell className="text-sm">{stores.find(s => s.id === log.store_id)?.name ?? '—'}</TableCell><TableCell className="font-mono text-xs">{log.function_name}</TableCell><TableCell className="text-xs">IA</TableCell><TableCell className="text-right text-xs">{Number(log.total_tokens ?? 0).toLocaleString('pt-BR')}</TableCell><TableCell>{log.success ? <Badge variant="outline" className="text-green-600">OK</Badge> : <Badge variant="destructive" title={log.error_message ?? ''}>Erro</Badge>}</TableCell></TableRow>)}
+      </TableBody></Table></div>}
+    </CardContent></Card>
+  </div>;
 }
