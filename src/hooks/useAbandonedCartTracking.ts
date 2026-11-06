@@ -28,7 +28,7 @@ export function useAbandonedCartTracking(
   const currentCartIdRef = useRef<string | null>(null);
   const lastPhoneRef = useRef<string | null>(null);
 
-  const normalizedPhone = (value: string) => value.replace(/\\D/g, '').slice(0, 15);
+  const normalizedPhone = (value: string) => value.replace(/\D/g, '').slice(0, 15);
   const hasValidPhone = (value: string) => normalizedPhone(value).length >= 10 && normalizedPhone(value).length <= 15;
 
   // Save cart via secure RPC
