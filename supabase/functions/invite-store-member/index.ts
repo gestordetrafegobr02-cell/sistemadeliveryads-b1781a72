@@ -76,7 +76,6 @@ Deno.serve(async (req) => {
     if (existingProfile?.id) {
       targetUserId = existingProfile.id
 
-      // Never reset credentials belonging to an existing account during a store invitation.
       if (targetUserId === store.owner_id) throw new Error('This user is already the owner')
 
       const { data: platformAdmin, error: roleError } = await supabaseAdmin
@@ -87,6 +86,34 @@ Deno.serve(async (req) => {
         .maybeSingle()
       if (roleError) throw new Error('Could not verify the invited account permissions')
       if (platformAdmin) throw new Error('Platform administrators cannot be invited as store members')
+
+      // Password regeneration is allowed only for a member who belongs exclusively
+      // to this store. A store owner must never reset another tenant's shared login.
+      const [
+        { data: currentMembership, error: currentMembershipError },
+        { data: allMemberships, error: allMembershipsError },
+        { data: ownedStores, error: ownedStoresError },
+      ] = await Promise.all([
+        supabaseAdmin.from('store_members').select('id').eq('store_id', storeId).eq('user_id', targetUserId).maybeSingle(),
+        supabaseAdmin.from('store_members').select('id').eq('user_id', targetUserId),
+        supabaseAdmin.from('stores').select('id').eq('owner_id', targetUserId),
+      ])
+      if (currentMembershipError || allMembershipsError || ownedStoresError) {
+        throw new Error('Could not verify the invited account membership')
+      }
+
+      const belongsOnlyToThisStore =
+        !!currentMembership &&
+        (allMemberships?.length ?? 0) === 1 &&
+        (ownedStores?.length ?? 0) === 0
+
+      if (belongsOnlyToThisStore) {
+        tempPassword = genPassword(12)
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+          password: tempPassword,
+        })
+        if (updateError) throw new Error(updateError.message)
+      }
     } else {
       tempPassword = genPassword(12)
       const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
