@@ -9,6 +9,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    })
+  }
 
   try {
     const supabaseAdmin = createClient(
@@ -29,8 +35,9 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) throw new Error('Unauthorized: Could not verify user')
 
-    const MASTER_EMAIL = 'igormoises.ads@gmail.com'
-    if (user.email !== MASTER_EMAIL) {
+    // Use the database role as the source of truth for platform-admin access.
+    const { data: isMasterAdmin, error: roleError } = await supabaseClient.rpc('is_master_admin')
+    if (roleError || isMasterAdmin !== true) {
       throw new Error('Unauthorized: Master admin access required')
     }
 
@@ -38,6 +45,9 @@ Deno.serve(async (req) => {
 
     if (!userId || !newEmail) {
       throw new Error('Missing required fields: userId and newEmail')
+    }
+    if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+      throw new Error('Invalid user ID')
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

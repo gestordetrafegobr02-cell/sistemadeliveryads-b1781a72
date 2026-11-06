@@ -10,6 +10,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    })
+  }
 
   try {
     // Create admin client with service role key
@@ -37,9 +43,9 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized: Could not verify user')
     }
 
-    // Check if user is master admin (hardcoded email check for security)
-    const MASTER_EMAIL = 'igormoises.ads@gmail.com'
-    if (user.email !== MASTER_EMAIL) {
+    // Use the database role as the source of truth for platform-admin access.
+    const { data: isMasterAdmin, error: roleError } = await supabaseClient.rpc('is_master_admin')
+    if (roleError || isMasterAdmin !== true) {
       throw new Error('Unauthorized: Master admin access required')
     }
 
@@ -50,8 +56,11 @@ Deno.serve(async (req) => {
       throw new Error('Missing required fields: userId and newPassword')
     }
 
-    if (newPassword.length < 6) {
-      throw new Error('Password must be at least 6 characters')
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) {
+      throw new Error('Password must contain between 8 and 128 characters')
+    }
+    if (typeof userId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+      throw new Error('Invalid user ID')
     }
 
     // Update user password using admin client

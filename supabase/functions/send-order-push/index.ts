@@ -100,10 +100,49 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
 }
 // ---------- end web push ----------
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const left = enc.encode(a);
+  const right = enc.encode(b);
+  if (left.length !== right.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < left.length; i++) mismatch |= left[i] ^ right[i];
+  return mismatch === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    });
+  }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+        status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const suppliedSecret = req.headers.get('x-internal-secret') ?? '';
+    const { data: secretRow, error: secretError } = await admin
+      .from('internal_function_secrets')
+      .select('secret')
+      .eq('key', 'send-order-push')
+      .maybeSingle();
+
+    if (secretError) throw new Error('Could not validate internal request');
+    const expectedSecret = secretRow?.secret ?? '';
+    if (!expectedSecret || !constantTimeEqual(suppliedSecret, expectedSecret)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await req.json();
     const { order_id, store_id, customer_name, total } = body;
     if (!order_id || !store_id) {
@@ -111,11 +150,6 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     // Verify order exists (prevents abuse)
     const { data: order } = await admin.from('orders').select('id, store_id, customer_name, total').eq('id', order_id).maybeSingle();
