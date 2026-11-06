@@ -17,58 +17,78 @@ function genPassword(len = 12) {
   return s
 }
 
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' },
+    })
+  }
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error('Missing authorization header')
+    if (!authHeader?.startsWith('Bearer ')) throw new Error('Unauthorized')
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error('Service unavailable')
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) throw new Error('Unauthorized')
 
     const body = await req.json()
-    const storeId: string = body.storeId
-    const emailRaw: string = (body.email || '').trim().toLowerCase()
-    const role: Role = body.role
+    const storeId = body.storeId
+    const emailRaw = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const role = body.role as Role
 
-    if (!storeId || !emailRaw || !role) throw new Error('Missing required fields')
+    if (!isUuid(storeId) || !emailRaw || emailRaw.length > 254 || !role) {
+      throw new Error('Missing or invalid required fields')
+    }
     if (!VALID_ROLES.includes(role)) throw new Error('Invalid role')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) throw new Error('Invalid email')
 
-    // Verify caller is store owner
     const { data: store, error: storeErr } = await supabaseAdmin
       .from('stores').select('id, owner_id, name').eq('id', storeId).maybeSingle()
     if (storeErr || !store) throw new Error('Store not found')
     if (store.owner_id !== user.id) throw new Error('Only the store owner can invite members')
 
-    // Find existing user by email — always (re)generate a temp password so
-    // the owner can share fresh credentials with the invited member.
-    let targetUserId: string | null = null
-    const tempPassword: string = genPassword(12)
-
-    const { data: existingProfile } = await supabaseAdmin
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from('profiles').select('id').eq('email', emailRaw).maybeSingle()
+    if (profileError) throw new Error('Could not verify the invited account')
+
+    let targetUserId: string
+    let tempPassword: string | null = null
+    const alreadyExisted = !!existingProfile?.id
 
     if (existingProfile?.id) {
       targetUserId = existingProfile.id
-      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
-        password: tempPassword,
-        email_confirm: true,
-      })
-      if (updErr) throw new Error(updErr.message)
+
+      // Never reset credentials belonging to an existing account during a store invitation.
+      if (targetUserId === store.owner_id) throw new Error('This user is already the owner')
+
+      const { data: platformAdmin, error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id')
+        .eq('user_id', targetUserId)
+        .eq('role', 'admin')
+        .maybeSingle()
+      if (roleError) throw new Error('Could not verify the invited account permissions')
+      if (platformAdmin) throw new Error('Platform administrators cannot be invited as store members')
     } else {
+      tempPassword = genPassword(12)
       const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email: emailRaw,
         password: tempPassword,
@@ -78,28 +98,32 @@ Deno.serve(async (req) => {
       targetUserId = created.user.id
     }
 
-    if (targetUserId === store.owner_id) throw new Error('This user is already the owner')
-
-    // Upsert membership
     const { error: memberErr } = await supabaseAdmin
       .from('store_members')
       .upsert({ store_id: storeId, user_id: targetUserId, role, email: emailRaw }, { onConflict: 'store_id,user_id' })
-    if (memberErr) throw new Error(memberErr.message)
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        userId: targetUserId,
-        tempPassword,
-        alreadyExisted: !!existingProfile?.id,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+    if (memberErr) {
+      if (!alreadyExisted) {
+        await supabaseAdmin.auth.admin.deleteUser(targetUserId)
+      }
+      throw new Error(memberErr.message)
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      userId: targetUserId,
+      alreadyExisted,
+      ...(tempPassword ? { tempPassword } : { credentialsRequired: false }),
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
     console.error('invite-store-member error:', msg)
     return new Response(JSON.stringify({ error: msg }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
     })
   }
 })
