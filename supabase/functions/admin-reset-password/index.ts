@@ -37,9 +37,9 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized: Could not verify user')
     }
 
-    // Check if user is master admin (hardcoded email check for security)
-    const MASTER_EMAIL = 'igormoises.ads@gmail.com'
-    if (user.email !== MASTER_EMAIL) {
+    // Use the database role as the source of truth for platform-admin access.
+    const { data: isMasterAdmin, error: roleError } = await supabaseClient.rpc('is_master_admin')
+    if (roleError || isMasterAdmin !== true) {
       throw new Error('Unauthorized: Master admin access required')
     }
 
