@@ -26,11 +26,21 @@ export function useAbandonedCartTracking(
   const lastSavedRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentCartIdRef = useRef<string | null>(null);
+  const lastPhoneRef = useRef<string | null>(null);
+
+  const normalizedPhone = (value: string) => value.replace(/\D/g, '').slice(0, 15);
+  const hasValidPhone = (value: string) => normalizedPhone(value).length >= 10 && normalizedPhone(value).length <= 15;
 
   // Save cart via secure RPC
   const saveAbandonedCart = useCallback(async (data: AbandonedCartData): Promise<string | null> => {
     if (!data.storeId || data.items.length === 0) return null;
-    if (!data.customerName.trim() && !data.customerPhone.trim()) return null;
+    const phone = normalizedPhone(data.customerPhone);
+    if (data.customerName.trim().length < 2 || !hasValidPhone(data.customerPhone)) return null;
+    if (lastPhoneRef.current !== phone) {
+      currentCartIdRef.current = null;
+      lastSavedRef.current = null;
+      lastPhoneRef.current = phone;
+    }
 
     const cartSignature = JSON.stringify({
       items: data.items.map(i => ({ id: i.id, qty: i.quantity })),
@@ -52,7 +62,7 @@ export function useAbandonedCartTracking(
         p_cart_id: currentCartIdRef.current || undefined,
         p_store_id: data.storeId,
         p_customer_name: data.customerName,
-        p_customer_phone: data.customerPhone || undefined,
+        p_customer_phone: phone,
         p_items: formattedItems as any,
         p_total: data.total,
       });
@@ -72,7 +82,7 @@ export function useAbandonedCartTracking(
   // Immediate save function (for blur/unload events)
   const saveImmediately = useCallback(async (): Promise<string | null> => {
     if (!storeId || items.length === 0) return null;
-    if (!customerName.trim() && !customerPhone.trim()) return null;
+    if (customerName.trim().length < 2 || !hasValidPhone(customerPhone)) return null;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -91,7 +101,7 @@ export function useAbandonedCartTracking(
   // Debounced save - triggers after user stops typing
   useEffect(() => {
     if (!storeId || items.length === 0) return;
-    if (!customerName.trim() && !customerPhone.trim()) return;
+    if (customerName.trim().length < 2 || !hasValidPhone(customerPhone)) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -117,7 +127,7 @@ export function useAbandonedCartTracking(
   // Save on page unload
   useEffect(() => {
     if (!storeId || items.length === 0) return;
-    if (!customerName.trim() && !customerPhone.trim()) return;
+    if (customerName.trim().length < 2 || !hasValidPhone(customerPhone)) return;
 
     const handleUnload = () => saveImmediately();
     const handleVisibilityChange = () => {
@@ -139,6 +149,7 @@ export function useAbandonedCartTracking(
   const clearCartSession = useCallback(() => {
     currentCartIdRef.current = null;
     lastSavedRef.current = null;
+    lastPhoneRef.current = null;
   }, []);
 
   // Conversion is performed atomically by create_public_order after it validates
