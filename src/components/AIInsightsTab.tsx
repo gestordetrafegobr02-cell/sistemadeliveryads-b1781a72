@@ -45,8 +45,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       }
       if (data?.error) throw new Error(data.error);
       setPayload(data);
-      const suggestions = Array.isArray(data?.result?.suggestions) ? data.result.suggestions : [];
-      setSelectedProductIds(suggestions.map((s: any) => s.product_id).filter((id: unknown): id is string => typeof id === 'string'));
+      setSelectedProductIds([]);
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível concluir a análise.';
       setErrorMessage(message.includes('alta demanda') || message.includes('sobrecarregado')
