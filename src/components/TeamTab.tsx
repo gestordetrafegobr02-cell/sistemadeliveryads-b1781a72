@@ -117,6 +117,7 @@ export function TeamTab({ storeId }: { storeId: string }) {
     if (!confirm(`Gerar nova senha para ${m.email}? A senha antiga deixará de funcionar.`)) return;
     const phoneInput = window.prompt('WhatsApp do membro (com DDD) para enviar o novo acesso:', '') || '';
     const cleanPhone = phoneInput.replace(/\D/g, '');
+    setTempCred(null);
     try {
       const { data, error } = await supabase.functions.invoke('invite-store-member', {
         body: { storeId, email: m.email, role: m.role === 'owner' ? 'attendant' : m.role },
@@ -127,6 +128,8 @@ export function TeamTab({ storeId }: { storeId: string }) {
         setTempCred({ email: m.email, password: data.tempPassword, phone: cleanPhone });
         toast.success('Nova senha gerada — envie no WhatsApp abaixo.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.info('A senha não foi alterada porque esta conta também tem acesso a outra loja. O membro deve continuar usando a senha atual.');
       }
     } catch (err: any) {
       toast.error(err.message || 'Erro ao regenerar acesso');
