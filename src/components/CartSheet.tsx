@@ -317,16 +317,8 @@ export function CartSheet({ storeId, storeName, storeSlug, whatsapp, deliveryFee
       }
 
       try { await markAsConverted(savedOrderId); } catch (e) { console.warn('[Cart] markAsConverted failed:', e); }
-      // Cashback remains processed by the existing server RPC; never treat a
-      // transport exception as proof that the ledger operation succeeded.
-      if (cashbackConfig.enabled && (phoneDigits || phone)) {
-        const { error: cashbackError } = await supabase.rpc('process_order_cashback', {
-          p_order_id: savedOrderId,
-          p_session_token: sessionToken,
-          p_redeem_amount: cashbackApplied,
-        });
-        if (cashbackError) console.error('[Cashback] server processing failed:', cashbackError.message);
-      }
+      // Guest-order cashback is credited server-side only after the store
+      // marks this order as completed. The browser never writes to the ledger.
 
       // ===== Build message =====
       const shortId = savedOrderId.slice(0, 8).toUpperCase();
