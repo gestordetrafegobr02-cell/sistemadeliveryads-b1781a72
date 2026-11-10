@@ -128,7 +128,7 @@ export default function Index() {
     setLoading(true);
     try {
       const context = getFunnelContext();
-      const { data: createdLead, error } = await supabase.from('sales_leads').insert({
+      const { data: createdLead, error } = await (supabase as any).from('sales_leads').insert({
         name: name.trim(),
         whatsapp: digits,
         business_name: businessName.trim(),
