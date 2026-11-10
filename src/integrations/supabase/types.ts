@@ -14,40 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      sales_leads: {
-        Row: {
-          id: string;
-          name: string;
-          whatsapp: string;
-          business_name: string;
-          segment: string;
-          source: string;
-          status: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          whatsapp: string;
-          business_name: string;
-          segment: string;
-          source?: string;
-          status?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          whatsapp?: string;
-          business_name?: string;
-          segment?: string;
-          source?: string;
-          status?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-
       abandoned_carts: {
         Row: {
           converted_to_order_id: string | null
@@ -1444,14 +1410,25 @@ export type Database = {
         }
         Returns: string
       }
-      process_order_cashback: {
-        Args: {
-          p_order_id: string
-          p_session_token: string
-          p_redeem_amount: number
-        }
-        Returns: number
-      }
+      process_order_cashback:
+        | {
+            Args: {
+              p_order_id: string
+              p_redeem_amount: number
+              p_session_token: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_customer_phone: string
+              p_earn_base: number
+              p_order_id: string
+              p_redeem_amount: number
+              p_store_id: string
+            }
+            Returns: number
+          }
       remove_library_group_from_product: {
         Args: { p_group_name: string; p_product_id: string }
         Returns: number

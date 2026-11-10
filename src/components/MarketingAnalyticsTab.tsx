@@ -12,7 +12,7 @@ export function MarketingAnalyticsTab() {
   async function load() {
     setLoading(true);
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
-    const { data, error } = await supabase.from('sales_funnel_events')
+    const { data, error } = await (supabase as any).from('sales_funnel_events')
       .select('event_name,session_id,utm_source,utm_campaign')
       .gte('created_at', since).limit(5000);
     if (error) console.error(error);

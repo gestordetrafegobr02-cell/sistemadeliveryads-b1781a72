@@ -36,8 +36,8 @@ export function LeadsManagementTab() {
   async function load() {
     setLoading(true);
     const [leadResult, draftResult] = await Promise.all([
-      supabase.from('sales_leads').select('id,name,whatsapp,business_name,segment,source,status,created_at,utm_source,utm_medium,utm_campaign,contacted_at').order('created_at', { ascending: false }).limit(500),
-      supabase.from('sales_lead_drafts').select('id,name,whatsapp,business_name,segment,last_seen_at,utm_source,utm_campaign').is('converted_lead_id', null).order('last_seen_at', { ascending: false }).limit(300),
+      (supabase as any).from('sales_leads').select('id,name,whatsapp,business_name,segment,source,status,created_at,utm_source,utm_medium,utm_campaign,contacted_at').order('created_at', { ascending: false }).limit(500),
+      (supabase as any).from('sales_lead_drafts').select('id,name,whatsapp,business_name,segment,last_seen_at,utm_source,utm_campaign').is('converted_lead_id', null).order('last_seen_at', { ascending: false }).limit(300),
     ]);
     if (leadResult.error) toast.error('Não foi possível carregar os leads: ' + leadResult.error.message);
     if (draftResult.error) toast.error('Não foi possível carregar os formulários incompletos: ' + draftResult.error.message);
@@ -54,7 +54,7 @@ export function LeadsManagementTab() {
 
   async function updateStatus(lead: Lead, status: string) {
     setSavingId(lead.id);
-    const { error } = await supabase.from('sales_leads').update({
+    const { error } = await (supabase as any).from('sales_leads').update({
       status, updated_at: new Date().toISOString(),
       contacted_at: status === 'contacted' && !lead.contacted_at ? new Date().toISOString() : lead.contacted_at,
     }).eq('id', lead.id);
