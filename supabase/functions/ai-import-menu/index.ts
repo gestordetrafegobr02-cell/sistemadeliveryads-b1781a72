@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
     const hasPdf = parsedFiles.some((file) => file.match?.[1] === 'application/pdf');
     const invalidFile = parsedFiles.some((file) => !file.match || file.image.length > MAX_FILE_DATA_URL_LENGTH);
     const totalDataUrlLength = parsedFiles.reduce((sum, file) => sum + file.image.length, 0);
-    if (invalidFile || (hasPdf && parsedFiles.length > 1) || totalDataUrlLength > 10_800_000) {
+    if (invalidFile || (hasPdf && parsedFiles.length > 1) || totalDataUrlLength > (hasPdf ? MAX_FILE_DATA_URL_LENGTH : 10_800_000)) {
       return new Response(JSON.stringify({ error: 'Arquivos inválidos ou acima do limite. Envie até 3 fotos (2,5MB cada; 7,5MB no total) ou um PDF de até 8MB.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
