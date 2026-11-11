@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45_000);
+      const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
       try {
         aiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
