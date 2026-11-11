@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Erro desconhecido';
-    await logUsage({ store_id: storeId, model: modelUsed, success: false, error_message: message });
+    await logUsage({ store_id: storeId, success: false, error_message: message });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
