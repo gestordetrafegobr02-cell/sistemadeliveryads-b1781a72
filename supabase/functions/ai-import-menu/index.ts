@@ -24,10 +24,11 @@ Regras estritas:
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
 const MODEL = 'gemini-3.8-flash';
+const FALLBACK_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash'] as const;
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const MAX_FILE_DATA_URL_LENGTH = 11_300_000;
-// Keep the upstream request below Supabase's 150s idle-response limit.
-const AI_REQUEST_TIMEOUT_MS = 105_000;
+// Bound each provider attempt so fallback models can be tried before Supabase's execution limit.
+const AI_MODEL_TIMEOUT_MS = 28_000;
 
 async function logUsage(payload: {
   store_id?: string | null;
@@ -36,6 +37,7 @@ async function logUsage(payload: {
   total_tokens?: number;
   success: boolean;
   error_message?: string | null;
+  model?: string;
 }) {
   try {
     const url = Deno.env.get('SUPABASE_URL');
@@ -44,7 +46,7 @@ async function logUsage(payload: {
     const admin = createClient(url, key);
     await admin.from('ai_usage_logs').insert({
       function_name: 'ai-import-menu',
-      model: MODEL,
+      model: payload.model ?? MODEL,
       store_id: payload.store_id ?? null,
       prompt_tokens: payload.prompt_tokens ?? 0,
       completion_tokens: payload.completion_tokens ?? 0,
@@ -223,13 +225,21 @@ Deno.serve(async (req) => {
     });
     let aiRes: Response | null = null;
     let lastProviderError = '';
-    const maxAttempts = 3;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let lastProviderStatus = 0;
+    let lastAttemptTimedOut = false;
+    let modelUsed = MODEL;
+    const modelsToTry = [MODEL, ...FALLBACK_MODELS];
+
+    for (let modelIndex = 0; modelIndex < modelsToTry.length; modelIndex++) {
+      const model = modelsToTry[modelIndex];
+      modelUsed = model;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+      const timeout = setTimeout(() => controller.abort(), AI_MODEL_TIMEOUT_MS);
+      const startedAt = Date.now();
+
       try {
         aiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           {
             method: 'POST',
             headers: {
@@ -241,34 +251,75 @@ Deno.serve(async (req) => {
           },
         );
       } catch (error) {
-        const message = error instanceof Error && error.name === 'AbortError'
-          ? 'A análise do cardápio demorou mais que o esperado. Tente novamente com arquivos menores.'
-          : 'Não foi possível conectar ao serviço de IA. Verifique sua conexão e tente novamente.';
-        await logUsage({ store_id: storeId, success: false, error_message: message });
-        return new Response(JSON.stringify({ error: message }), { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        lastAttemptTimedOut = error instanceof Error && error.name === 'AbortError';
+        lastProviderStatus = lastAttemptTimedOut ? 504 : 502;
+        console.warn(
+          `Gemini model ${model} ${lastAttemptTimedOut ? 'timed out' : 'network error'} after ${Date.now() - startedAt}ms.`,
+        );
+        aiRes = null;
+        if (modelIndex < modelsToTry.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * (modelIndex + 1)));
+          continue;
+        }
+        break;
       } finally {
         clearTimeout(timeout);
       }
 
-      if (aiRes.status !== 503 || attempt === maxAttempts) break;
-      lastProviderError = await aiRes.text();
-      console.warn(`Gemini returned 503; retrying import (${attempt}/${maxAttempts - 1}).`);
-      await new Promise((resolve) => setTimeout(resolve, attempt * 1200));
+      if (aiRes.ok) {
+        console.info(`Gemini model ${model} succeeded in ${Date.now() - startedAt}ms.`);
+        break;
+      }
+
+      lastProviderStatus = aiRes.status;
+      if ([400, 401, 403, 429].includes(aiRes.status)) break;
+
+      lastProviderError = (await aiRes.text()).slice(0, 500);
+      console.warn(`Gemini model ${model} returned HTTP ${aiRes.status} after ${Date.now() - startedAt}ms.`);
+      if (modelIndex < modelsToTry.length - 1 && (aiRes.status === 503 || aiRes.status >= 500)) {
+        aiRes = null;
+        await new Promise((resolve) => setTimeout(resolve, 500 * (modelIndex + 1)));
+        continue;
+      }
+      break;
     }
 
-    if (!aiRes) throw new Error('Não foi possível iniciar a análise com IA.');
+    if (!aiRes) {
+      const status = lastProviderStatus === 503 ? 503 : lastAttemptTimedOut ? 504 : 502;
+      const msg = status === 503
+        ? 'O Gemini está temporariamente sobrecarregado nos modelos disponíveis. Tente novamente em alguns instantes.'
+        : status === 504
+        ? 'Os modelos do Gemini não responderam dentro do tempo esperado. Tente novamente com um arquivo menor.'
+        : 'Não foi possível conectar aos modelos do Gemini. Verifique a conexão e tente novamente.';
+      await logUsage({
+        store_id: storeId,
+        model: modelUsed,
+        success: false,
+        error_message: `Gemini fallback failed (HTTP ${status}): ${msg}`,
+      });
+      return new Response(JSON.stringify({ error: msg }), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!aiRes.ok) {
-      const errText = aiRes.status === 503 && lastProviderError ? lastProviderError : await aiRes.text();
-      const status = aiRes.status === 429 ? 429 : aiRes.status === 503 ? 503 : 500;
+      const errText = lastProviderError || (await aiRes.text()).slice(0, 500);
+      const status = [400, 401, 403, 429, 503].includes(aiRes.status) ? aiRes.status : 500;
       const msg = aiRes.status === 429
         ? 'O serviço de IA atingiu o limite de uso da chave configurada. Aguarde a renovação da cota ou revise os limites da chave.'
         : aiRes.status === 503
-        ? 'O Gemini está com alta demanda neste momento. Fizemos novas tentativas automaticamente, mas não foi possível concluir. Aguarde alguns instantes e tente novamente.'
-        : aiRes.status === 400 || aiRes.status === 403
-        ? 'A configuração ou a permissão da chave do serviço de IA não foi aceita.'
+        ? 'O Gemini está temporariamente sobrecarregado nos modelos disponíveis. Tente novamente em alguns instantes.'
+        : [400, 401, 403].includes(aiRes.status)
+        ? 'A chave ou a permissão da API Gemini não foi aceita. Verifique a configuração GEMINI_API_KEY.'
         : 'O serviço de IA encontrou uma falha temporária. Tente novamente em instantes.';
-      console.error('AI provider error:', aiRes.status, errText.slice(0, 300));
-      await logUsage({ store_id: storeId, success: false, error_message: `Gemini HTTP ${aiRes.status}: ${msg}` });
+      console.error(`Gemini provider error on ${modelUsed}: HTTP ${aiRes.status} ${errText.slice(0, 300)}`);
+      await logUsage({
+        store_id: storeId,
+        model: modelUsed,
+        success: false,
+        error_message: `Gemini HTTP ${aiRes.status}: ${msg}`,
+      });
       return new Response(JSON.stringify({ error: msg }), {
         status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -314,6 +365,7 @@ Deno.serve(async (req) => {
 
     await logUsage({
       store_id: storeId,
+      model: modelUsed,
       prompt_tokens: Number(usage.promptTokenCount ?? 0),
       completion_tokens: Number(usage.candidatesTokenCount ?? 0),
       total_tokens: Number(usage.totalTokenCount ?? 0),
@@ -325,7 +377,7 @@ Deno.serve(async (req) => {
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Erro desconhecido';
-    await logUsage({ store_id: storeId, success: false, error_message: message });
+    await logUsage({ store_id: storeId, model: modelUsed, success: false, error_message: message });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
