@@ -69,8 +69,15 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
     try {
       const payload: { image?: string; text?: string; store_id: string } = { store_id: storeId };
       if (mode === 'photo' && file) {
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const isSupportedImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+        if (!isPdf && !isSupportedImage) {
+          toast.error('Formato não suportado. Envie JPG, PNG, WEBP ou PDF.');
+          setLoading(false);
+          return;
+        }
         if (file.size > 8 * 1024 * 1024) {
-          toast.error('Imagem muito grande (máx 8MB)');
+          toast.error('Arquivo muito grande (máx 8MB)');
           setLoading(false);
           return;
         }
@@ -178,10 +185,10 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
               </TabsList>
 
               <TabsContent value="photo" className="space-y-3 pt-4">
-                <Label>Envie uma foto ou flyer do cardápio (JPG/PNG, até 8MB)</Label>
+                <Label>Envie uma foto ou PDF do cardápio (JPG/PNG/WEBP/PDF, até 8MB)</Label>
                 <Input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
                 {file && (
@@ -190,7 +197,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  A IA vai identificar nome, descrição, preço e categoria de cada item. Você revisa antes de publicar.
+                  A IA vai identificar nome, descrição, preço e categoria. Envie arquivos de até 8MB; a análise pode levar um pouco mais de tempo em cardápios extensos. Você revisa tudo antes de publicar.
                 </p>
               </TabsContent>
 
