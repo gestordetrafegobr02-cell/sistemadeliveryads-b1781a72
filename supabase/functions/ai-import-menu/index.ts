@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
 
     if (!aiRes) throw new Error('Não foi possível iniciar a análise com IA.');
     if (!aiRes.ok) {
-      const errText = lastProviderError || await aiRes.text();
+      const errText = aiRes.status === 503 && lastProviderError ? lastProviderError : await aiRes.text();
       const status = aiRes.status === 429 ? 429 : aiRes.status === 503 ? 503 : 500;
       const msg = aiRes.status === 429
         ? 'O serviço de IA atingiu o limite de uso da chave configurada. Aguarde a renovação da cota ou revise os limites da chave.'
