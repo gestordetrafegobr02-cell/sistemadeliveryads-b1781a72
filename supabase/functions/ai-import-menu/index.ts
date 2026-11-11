@@ -3,7 +3,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SYSTEM_PROMPT = `Você é um extrator de cardápios de delivery brasileiros.
-Receba uma imagem (foto de cardápio/flyer) OU um texto solto de menu e retorne SOMENTE JSON válido no formato:
+Receba uma imagem, um documento PDF (foto, flyer ou arquivo digital de cardápio) OU um texto solto de menu e retorne SOMENTE JSON válido no formato:
 {
   "items": [
     {
@@ -24,6 +24,10 @@ Regras estritas:
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
 const MODEL = 'gemini-3.8-flash';
+const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
+const MAX_FILE_DATA_URL_LENGTH = 11_300_000;
+// Keep the upstream request below Supabase's 150s idle-response limit.
+const AI_REQUEST_TIMEOUT_MS = 105_000;
 
 async function logUsage(payload: {
   store_id?: string | null;
@@ -100,16 +104,15 @@ Deno.serve(async (req) => {
     }
 
     const contentLength = Number(req.headers.get('content-length') || 0);
-    const maxBodyBytes = 11 * 1024 * 1024;
-    if (contentLength > maxBodyBytes) {
-      return new Response(JSON.stringify({ error: 'Requisição muito grande (limite de 11MB)' }), {
+    if (contentLength > MAX_REQUEST_BYTES) {
+      return new Response(JSON.stringify({ error: 'Requisição muito grande (limite de 12MB)' }), {
         status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     const rawBody = await req.text();
-    if (!rawBody || new TextEncoder().encode(rawBody).byteLength > maxBodyBytes) {
-      return new Response(JSON.stringify({ error: 'Requisição vazia ou acima do limite de 11MB' }), {
+    if (!rawBody || new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
+      return new Response(JSON.stringify({ error: 'Requisição vazia ou acima do limite de 12MB' }), {
         status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -167,9 +170,11 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (image && (image.length > 10_800_000 ||
-        !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image))) {
-      return new Response(JSON.stringify({ error: 'Imagem inválida ou acima do limite permitido' }), {
+    const fileMatch = image
+      ? image.match(/^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/)
+      : null;
+    if (image && (!fileMatch || image.length > MAX_FILE_DATA_URL_LENGTH)) {
+      return new Response(JSON.stringify({ error: 'Arquivo inválido. Envie JPG, PNG, WEBP ou PDF de até 8MB.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -178,16 +183,15 @@ Deno.serve(async (req) => {
     const parts: Array<Record<string, unknown>> = [
       { text: menuText
         ? `Extraia os produtos deste cardápio:\n\n${menuText}`
-        : 'Extraia todos os produtos visíveis nesta foto de cardápio.' },
+        : 'Extraia todos os produtos visíveis nesta imagem ou documento PDF de cardápio.' },
     ];
     if (image) {
-      const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
-      if (!match) throw new Error('Imagem inválida');
-      parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+      if (!fileMatch) throw new Error('Arquivo inválido');
+      parts.push({ inline_data: { mime_type: fileMatch[1], data: fileMatch[2] } });
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
     let aiRes: Response;
     try {
       aiRes = await fetch(
@@ -210,7 +214,7 @@ Deno.serve(async (req) => {
       });
     } catch (error) {
       const message = error instanceof Error && error.name === 'AbortError'
-        ? 'A análise do cardápio excedeu o tempo limite. Tente novamente.'
+        ? 'A análise do cardápio demorou mais que o esperado. Tente novamente com um arquivo menor ou mais simples.'
         : 'Não foi possível conectar ao serviço de IA. Tente novamente.';
       await logUsage({ store_id: storeId, success: false, error_message: message });
       return new Response(JSON.stringify({ error: message }), { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
