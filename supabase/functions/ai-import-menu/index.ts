@@ -272,9 +272,8 @@ Deno.serve(async (req) => {
       }
 
       lastProviderStatus = aiRes.status;
-      if ([400, 401, 403, 429].includes(aiRes.status)) break;
-
       lastProviderError = (await aiRes.text()).slice(0, 500);
+      if ([400, 401, 403, 429].includes(aiRes.status)) break;
       console.warn(`Gemini model ${model} returned HTTP ${aiRes.status} after ${Date.now() - startedAt}ms.`);
       if (modelIndex < modelsToTry.length - 1 && (aiRes.status === 503 || aiRes.status >= 500)) {
         aiRes = null;
