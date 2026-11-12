@@ -87,8 +87,8 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
 
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('store-assets')
-        .upload(fileName, file, {
-          cacheControl: '0', // Disable caching to ensure fresh images
+        .upload(fileName, uploadFile, {
+          cacheControl: '31536000', // Unique object names are safe to cache for one year
           upsert: false,
         });
 
