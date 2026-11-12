@@ -14,6 +14,8 @@ type ExtractedItem = {
   name: string;
   description: string;
   price: number;
+  itemType: 'product' | 'modifier';
+  modifierGroup: string;
 };
 
 type Props = {
@@ -118,7 +120,11 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         } catch { /* Keep the original request error. */ }
         throw new Error(message);
       }
-      const extracted = (data?.items ?? []) as ExtractedItem[];
+      const extracted = ((data?.items ?? []) as Omit<ExtractedItem, 'itemType' | 'modifierGroup'>[]).map((item) => ({
+        ...item,
+        itemType: 'product' as const,
+        modifierGroup: 'Acompanhamentos',
+      }));
       if (!extracted.length) {
         toast.error('Nenhum produto identificado. Tente outra foto ou texto mais claro.');
       } else {
@@ -145,7 +151,9 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
     setSaving(true);
     try {
       // 1. Ensure categories exist
-      const uniqueCats = Array.from(new Set(valid.map((i) => i.category.trim() || 'Cardápio')));
+      const productItems = valid.filter((item) => item.itemType === 'product');
+      const modifierItems = valid.filter((item) => item.itemType === 'modifier');
+      const uniqueCats = Array.from(new Set(productItems.map((i) => i.category.trim() || 'Cardápio')));
       const nameToId = new Map(existingCategories.map((c) => [c.name.toLowerCase(), c.id]));
       const toCreate = uniqueCats.filter((n) => !nameToId.has(n.toLowerCase()));
 
@@ -159,7 +167,52 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
       }
 
       // 2. Insert products
-      const rows = valid.map((it, idx) => ({
+      const { data: existingModifiers, error: existingModifiersError } = await supabase
+        .from('modifier_library')
+        .select('name, group_name, group_sort, sort_order')
+        .eq('store_id', storeId);
+      if (existingModifiersError) throw existingModifiersError;
+
+      const existingModifierKeys = new Set(
+        (existingModifiers ?? []).map((item: { name: string; group_name: string }) =>
+          `${item.group_name.toLowerCase()}::${item.name.toLowerCase()}`
+        )
+      );
+      const groupSorts = new Map<string, number>();
+      const nextSortOrders = new Map<string, number>();
+      (existingModifiers ?? []).forEach((item: { group_name: string; group_sort: number; sort_order: number }) => {
+        groupSorts.set(item.group_name, Math.max(groupSorts.get(item.group_name) ?? 0, item.group_sort ?? 0));
+        nextSortOrders.set(item.group_name, Math.max(nextSortOrders.get(item.group_name) ?? 0, (item.sort_order ?? -1) + 1));
+      });
+      const modifierRows = modifierItems
+        .filter((item) => !existingModifierKeys.has(`${(item.modifierGroup.trim() || 'Acompanhamentos').toLowerCase()}::${item.name.trim().toLowerCase()}`))
+        .map((item) => {
+          const groupName = item.modifierGroup.trim() || 'Acompanhamentos';
+          if (!groupSorts.has(groupName)) {
+            groupSorts.set(groupName, Math.max(-1, ...Array.from(groupSorts.values())) + 1);
+          }
+          const sortOrder = nextSortOrders.get(groupName) ?? 0;
+          nextSortOrders.set(groupName, sortOrder + 1);
+          return {
+            store_id: storeId,
+            group_name: groupName,
+            name: item.name.trim(),
+            price: Math.max(0, Number(item.price) || 0),
+            is_available: true,
+            group_min: 0,
+            group_max: null,
+            is_default: false,
+            group_sort: groupSorts.get(groupName)!,
+            sort_order: sortOrder,
+          };
+        });
+
+      if (modifierRows.length) {
+        const { error: modifierErr } = await supabase.from('modifier_library').insert(modifierRows);
+        if (modifierErr) throw modifierErr;
+      }
+
+      const rows = productItems.map((it, idx) => ({
         store_id: storeId,
         category_id: nameToId.get((it.category.trim() || 'Cardápio').toLowerCase())!,
         name: it.name.trim(),
@@ -168,10 +221,12 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         is_available: true,
         sort_order: idx,
       }));
-      const { error: prodErr } = await supabase.from('products').insert(rows);
-      if (prodErr) throw prodErr;
+      if (rows.length) {
+        const { error: prodErr } = await supabase.from('products').insert(rows);
+        if (prodErr) throw prodErr;
+      }
 
-      toast.success(`${rows.length} produtos publicados!`);
+      toast.success(`${rows.length} produtos publicados e ${modifierRows.length} acompanhamentos adicionados à biblioteca!`);
       reset();
       onOpenChange(false);
       onImported();
@@ -249,7 +304,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                <strong>{items.length}</strong> produtos identificados. Revise e edite antes de publicar.
+                <strong>{items.length}</strong> itens identificados. Classifique cada um como produto ou acompanhamento antes de publicar.
               </p>
               <Button variant="ghost" size="sm" onClick={reset} disabled={saving}>
                 Recomeçar
@@ -257,8 +312,9 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
             </div>
 
             <div className="border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-[1fr_1fr_2fr_100px_40px] gap-2 p-2 bg-muted text-xs font-semibold">
-                <div>Categoria</div>
+              <div className="grid grid-cols-[110px_1fr_1fr_1.5fr_90px_40px] gap-2 p-2 bg-muted text-xs font-semibold">
+                <div>Tipo</div>
+                <div>Categoria / Grupo</div>
                 <div>Nome</div>
                 <div>Descrição</div>
                 <div>Preço (R$)</div>
@@ -266,16 +322,35 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
               </div>
               <div className="max-h-[50vh] overflow-y-auto divide-y">
                 {items.map((it, idx) => (
-                  <div key={idx} className="grid grid-cols-[1fr_1fr_2fr_100px_40px] gap-2 p-2 items-center">
-                    <Input
-                      list={`ai-cats-${idx}`}
-                      value={it.category}
-                      onChange={(e) => updateItem(idx, { category: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                    <datalist id={`ai-cats-${idx}`}>
-                      {categoryOptions.map((c) => <option key={c} value={c} />)}
-                    </datalist>
+                  <div key={idx} className="grid grid-cols-[110px_1fr_1fr_1.5fr_90px_40px] gap-2 p-2 items-center">
+                    <select
+                      value={it.itemType}
+                      onChange={(e) => updateItem(idx, { itemType: e.target.value as 'product' | 'modifier' })}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="product">Produto</option>
+                      <option value="modifier">Acompanhamento</option>
+                    </select>
+                    {it.itemType === 'product' ? (
+                      <>
+                        <Input
+                          list={`ai-cats-${idx}`}
+                          value={it.category}
+                          onChange={(e) => updateItem(idx, { category: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                        <datalist id={`ai-cats-${idx}`}>
+                          {categoryOptions.map((c) => <option key={c} value={c} />)}
+                        </datalist>
+                      </>
+                    ) : (
+                      <Input
+                        value={it.modifierGroup}
+                        onChange={(e) => updateItem(idx, { modifierGroup: e.target.value })}
+                        placeholder="Acompanhamentos"
+                        className="h-8 text-sm"
+                      />
+                    )}
                     <Input
                       value={it.name}
                       onChange={(e) => updateItem(idx, { name: e.target.value })}
@@ -310,7 +385,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
                 {saving ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Publicando...</>
                 ) : (
-                  <>Publicar {items.length} produtos</>
+                  <>Publicar {items.filter((item) => item.itemType === 'product').length} produtos e {items.filter((item) => item.itemType === 'modifier').length} acompanhamentos</>
                 )}
               </Button>
             </DialogFooter>
