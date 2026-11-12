@@ -18,7 +18,14 @@ interface Modifier {
   sort_order?: number | null;
 }
 
-interface AiSuggestion {\n  modifier_id: string;\n  name: string;\n  reason: string;\n  confidence: 'high' | 'medium';\n}\n\ninterface LibraryGroup {
+interface AiSuggestion {
+  modifier_id: string;
+  name: string;
+  reason: string;
+  confidence: 'high' | 'medium';
+}
+
+interface LibraryGroup {
   group_name: string;
   items: number;
 }
