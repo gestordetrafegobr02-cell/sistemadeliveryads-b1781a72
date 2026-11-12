@@ -2,26 +2,31 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const SYSTEM_PROMPT = `Você é um extrator de cardápios de delivery brasileiros.
-Receba uma imagem, um documento PDF (foto, flyer ou arquivo digital de cardápio) OU um texto solto de menu e retorne SOMENTE JSON válido no formato:
+const SYSTEM_PROMPT = `Você extrai cardápios e analisa composição de produtos de delivery brasileiros.
+Retorne SOMENTE JSON válido:
 {
-  "items": [
-    {
-      "category": "Categoria (ex: Hambúrgueres, Bebidas, Açaí)",
-      "name": "Nome do produto",
-      "description": "Descrição curta (pode ser vazia)",
-      "price": 25.90
-    }
-  ]
+  "items": [{
+    "category": "Categoria",
+    "name": "Nome do produto",
+    "description": "Descrição curta",
+    "price": 25.90,
+    "existing_modifiers": [{"modifier_id":"UUID_EXATO_DA_BIBLIOTECA","status":"included|optional","reason":"trecho explícito da descrição"}],
+    "new_modifiers": [{"name":"Nome do acompanhamento","group_name":"Acompanhamentos","status":"included|optional","reason":"trecho explícito da descrição"}]
+  }]
 }
-
-Regras estritas:
-- Preços em número decimal (não string), interpretando R$, vírgula ou ponto como decimal.
-- Se um item tiver múltiplos tamanhos (300ml, 500ml, 700ml) crie UM produto por tamanho, incluindo o tamanho no nome (ex: "Açaí 500ml").
-- Categorize agrupando por seção do cardápio; se não houver seção clara, use "Cardápio".
-- NÃO invente produtos. Extraia apenas o que está visível/escrito.
-- Ignore endereços, telefones, horários, condições de entrega.
-- Nunca retorne markdown, comentários ou texto fora do JSON.`;
+Regras:
+- Extraia somente produtos e preços visíveis/escritos. Não invente nada.
+- Se houver múltiplos tamanhos, crie um produto por tamanho.
+- Para existing_modifiers, use somente IDs fornecidos na biblioteca. Nunca invente IDs.
+- Marque included somente quando a descrição disser claramente que acompanha, vem com, incluso ou composição equivalente.
+- Marque optional somente quando disser claramente que pode adicionar, adicional, opcional ou disponível à parte.
+- Só sugira new_modifiers quando um ingrediente/acompanhamento estiver explicitamente descrito e não existir na biblioteca fornecida.
+- Não classifique ingredientes vagos, inferidos ou comuns ao tipo de produto. "Açaí tradicional" não autoriza sugerir banana, granola ou qualquer outro item.
+- Não transforme ingrediente apenas citado em adicional pago sem evidência explícita.
+- Não sugira item que já exista na biblioteca; priorize correspondência semântica clara com um item existente.
+- reason deve citar resumidamente a evidência textual, sem inventar.
+- Não retorne preço para acompanhamentos novos. O preço será preenchido pelo lojista.
+- Ignore endereços, telefones, horários e condições de entrega. Sem markdown ou texto fora do JSON.`;
 
 const MODEL = 'gemini-3.8-flash';
 const FALLBACK_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash'] as const;
@@ -203,12 +208,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: libraryRows, error: libraryError } = await admin
+      .from('modifier_library')
+      .select('id, name, group_name')
+      .eq('store_id', storeId)
+      .eq('is_available', true)
+      .limit(300);
+    if (libraryError) throw new Error('Não foi possível consultar a biblioteca de acompanhamentos.');
+
+    const libraryForAi = (libraryRows ?? []).map((row: { id: string; name: string; group_name: string }) => ({
+      id: row.id, name: row.name, group: row.group_name,
+    }));
+    const libraryContext = JSON.stringify(libraryForAi);
     const parts: Array<Record<string, unknown>> = [
-      { text: menuText
-        ? `Extraia os produtos deste cardápio:\n\n${menuText}`
+      { text: `Biblioteca atual de acompanhamentos da loja (use apenas IDs exatos desta lista):\n${libraryContext}\n\n${menuText
+        ? `Extraia os produtos deste cardápio e analise suas descrições:\n\n${menuText}`
         : parsedFiles.length > 1
-        ? 'As imagens anexadas são páginas do mesmo cardápio. Analise todas em conjunto, mantenha as categorias e não repita produtos que apareçam em mais de uma página. Extraia todos os produtos visíveis em todas as imagens.'
-        : 'Extraia todos os produtos visíveis nesta imagem ou documento PDF de cardápio.' },
+        ? 'As imagens anexadas são páginas do mesmo cardápio. Analise todas em conjunto, mantenha as categorias e não repita produtos que apareçam em mais de uma página. Extraia todos os produtos e analise as descrições em lote.'
+        : 'Extraia todos os produtos visíveis nesta imagem ou documento PDF e analise suas descrições.'} ` },
     ];
     for (const file of parsedFiles) {
       if (!file.match) throw new Error('Arquivo inválido');
@@ -358,6 +375,22 @@ Deno.serve(async (req) => {
           name: String(it.name ?? '').trim().slice(0, 200),
           description: String(it.description ?? '').trim().slice(0, 500),
           price: Number.isFinite(price) ? Math.max(0, Math.min(price, 1000000)) : 0,
+          existing_modifiers: Array.isArray(it.existing_modifiers) ? it.existing_modifiers
+            .filter((m: any) => m && libraryForAi.some((lib: any) => lib.id === m.modifier_id))
+            .map((m: any) => ({
+              modifier_id: String(m.modifier_id),
+              status: m.status === 'included' ? 'included' : m.status === 'optional' ? 'optional' : null,
+              reason: String(m.reason ?? '').slice(0, 200),
+            })).filter((m: any) => m.status) : [],
+          new_modifiers: Array.isArray(it.new_modifiers) ? it.new_modifiers
+            .filter((m: any) => m && typeof m.name === 'string' && m.name.trim())
+            .filter((m: any) => !libraryForAi.some((lib: any) => lib.name.trim().toLowerCase() === m.name.trim().toLowerCase()))
+            .map((m: any) => ({
+              name: String(m.name).trim().slice(0, 100),
+              group_name: String(m.group_name ?? 'Acompanhamentos').trim().slice(0, 80) || 'Acompanhamentos',
+              status: m.status === 'included' ? 'included' : m.status === 'optional' ? 'optional' : null,
+              reason: String(m.reason ?? '').slice(0, 200),
+            })).filter((m: any) => m.status) : [],
         };
       })
       .filter((item) => item.name.length > 0);
