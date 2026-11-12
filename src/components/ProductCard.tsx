@@ -60,4 +60,92 @@ function ProductCardImpl({ id, name, description, price, image_url, hasModifiers
   return (
     <>
       <motion.div
- ...[truncated]
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="bg-card rounded-3xl overflow-hidden transition-all duration-300"
+        style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
+      >
+        {/* Large image on top */}
+        {showImage ? (
+          <div className="relative w-full aspect-[16/10] overflow-hidden bg-muted/30">
+            <img
+              src={image_url}
+              alt={name}
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+              onError={() => setImgError(true)}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        ) : (
+          <div className="w-full aspect-[16/10] bg-muted/20 flex items-center justify-center">
+            <ImageOff className="w-8 h-8 text-muted-foreground/40" />
+          </div>
+        )}
+
+        {/* Product info */}
+        <div className="p-4 space-y-2">
+          <h3 className="font-semibold text-foreground text-base leading-tight line-clamp-1">
+            {name}
+          </h3>
+          {description && (
+            <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed">
+              {description}
+            </p>
+          )}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-emerald font-bold text-lg">
+              R$ {price.toFixed(2).replace('.', ',')}
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleAdd}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                added
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-primary text-primary-foreground hover:opacity-90'
+              }`}
+              aria-label="Adicionar ao carrinho"
+            >
+              <AnimatePresence mode="wait">
+                {added ? (
+                  <motion.span
+                    key="check"
+                    initial={{ scale: 0, rotate: -90 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    exit={{ scale: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Check className="w-5 h-5" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="plus"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+
+      <ProductModifierSelect
+        open={modifierModalOpen}
+        onOpenChange={setModifierModalOpen}
+        product={{ id, name, price, description, image_url, has_addons: hasModifiers, has_free_addons, free_addons_limit }}
+      />
+    </>
+  );
+}
+
+// Memoized to avoid re-rendering every card when unrelated Shop state changes
+// (e.g. activeCategory toggle, cart mutations). Props are primitives so the
+// default shallow comparison is enough.
+export const ProductCard = memo(ProductCardImpl);
