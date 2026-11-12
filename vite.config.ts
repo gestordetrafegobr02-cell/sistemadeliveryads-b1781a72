@@ -108,11 +108,24 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (!id.includes("node_modules")) return;
-            if (/node_modules\\/(?:react|react-dom|scheduler|react-router|@remix-run)\\//.test(id)) return "vendor-react";
-            if (/node_modules\\/(?:@supabase|@tanstack\\/react-query)\\//.test(id)) return "vendor-data";
-            if (/node_modules\\/(?:recharts|d3-[^/]+)\\//.test(id)) return "vendor-charts";
-            if (/node_modules\\/framer-motion\\//.test(id)) return "vendor-motion";
+            const modulePath = id.replace(/\\\\/g, "/");
+            if (!modulePath.includes("/node_modules/")) return;
+            if (
+              modulePath.includes("/node_modules/react/") ||
+              modulePath.includes("/node_modules/react-dom/") ||
+              modulePath.includes("/node_modules/scheduler/") ||
+              modulePath.includes("/node_modules/react-router/") ||
+              modulePath.includes("/node_modules/@remix-run/")
+            ) return "vendor-react";
+            if (
+              modulePath.includes("/node_modules/@supabase/") ||
+              modulePath.includes("/node_modules/@tanstack/react-query/")
+            ) return "vendor-data";
+            if (
+              modulePath.includes("/node_modules/recharts/") ||
+              modulePath.includes("/node_modules/d3-")
+            ) return "vendor-charts";
+            if (modulePath.includes("/node_modules/framer-motion/")) return "vendor-motion";
           },
         },
       },
