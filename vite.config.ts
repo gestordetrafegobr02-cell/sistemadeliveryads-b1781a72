@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // Keep installation lightweight: do not precache every lazy-loaded JS chunk.
           // Route chunks are cached on demand after the visitor actually opens them.
-          globPatterns: ["**/*.{css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}"],
+          globPatterns: ["**/*.{css,html,ico,svg,woff,woff2}"],
           runtimeCaching: [
             {
               urlPattern: /\/assets\/.*\.(?:js|css)$/i,
@@ -47,6 +47,17 @@ export default defineConfig(({ mode }) => {
                 expiration: {
                   maxEntries: 100,
                   maxAgeSeconds: 60 * 60 * 24 * 14,
+                },
+              },
+            },
+            {
+              urlPattern: /\/assets\/.*\.(?:png|jpe?g|webp|svg)$/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "deliverypro-static-images",
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
                 },
               },
             },
