@@ -145,7 +145,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       </CardContent>
     </Card>
     {usage && <Card>
-      <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-4 w-4" /> Uso de IA desta loja</CardTitle><CardDescription>O consumo é separado por loja e não é compartilhado com outras lojas da plataforma.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-4 w-4" /> Uso de IA da sua loja</CardTitle></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Última hora</p><p className="text-lg font-semibold">{number(usage.used_last_hour)} / {number(usage.hourly_limit)}</p><p className="text-xs text-muted-foreground">{number(usage.remaining_last_hour)} análises disponíveis</p></div>
         <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Análises no mês</p><p className="text-lg font-semibold">{number(usage.used_this_month)}</p><p className="text-xs text-muted-foreground">Desde {usage.period}</p></div>
