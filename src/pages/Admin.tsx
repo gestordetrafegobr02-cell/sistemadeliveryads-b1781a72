@@ -1316,10 +1316,6 @@ export default function Admin() {
                             <Flame className={`w-4 h-4 ${product.is_featured ? 'text-orange-500' : 'text-muted-foreground'}`} />
                           </div>
                           <div className="flex gap-2">
-                            <ProductModifiersEditor
-                              productId={product.id}
-                              productName={product.name}
-                            />
                             <Button
                               size="icon"
                               variant="ghost"
@@ -1658,6 +1654,17 @@ export default function Admin() {
                   </SelectContent>
                 </Select>
               </div>
+              {editingProduct && store ? (
+                <ProductModifiersEditor
+                  productId={editingProduct.id}
+                  productName={editingProduct.name}
+                  storeId={store.id}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-border p-3">
+                  Salve o produto primeiro para configurar os acompanhamentos inclusos e adicionais.
+                </p>
+              )}
               <div className="space-y-4 p-4 glass-card rounded-lg border border-border/40">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
