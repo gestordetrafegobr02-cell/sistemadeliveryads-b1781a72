@@ -53,4 +53,85 @@ export default defineConfig(({ mode }) => {
               handler: "CacheFirst",
               options: {
                 cacheName: "deliverypro-static-images",
-               ...[truncated]
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/(?:object|render)\/public\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "supabase-images",
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-stylesheets",
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-webfonts",
+                expiration: {
+                  maxEntries: 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ].filter(Boolean),
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const modulePath = id;
+            if (!modulePath.includes("/node_modules/")) return;
+            if (
+              modulePath.includes("/node_modules/react/") ||
+              modulePath.includes("/node_modules/react-dom/") ||
+              modulePath.includes("/node_modules/scheduler/") ||
+              modulePath.includes("/node_modules/react-router/") ||
+              modulePath.includes("/node_modules/@remix-run/")
+            ) return "vendor-react";
+            if (
+              modulePath.includes("/node_modules/@supabase/") ||
+              modulePath.includes("/node_modules/@tanstack/react-query/")
+            ) return "vendor-data";
+            if (
+              modulePath.includes("/node_modules/recharts/") ||
+              modulePath.includes("/node_modules/d3-")
+            ) return "vendor-charts";
+            if (modulePath.includes("/node_modules/framer-motion/")) return "vendor-motion";
+          },
+        },
+      },
+    },
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "./src"),
+      },
+    },
+  };
+});
