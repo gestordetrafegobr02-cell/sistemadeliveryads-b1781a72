@@ -44,7 +44,10 @@ export function ProductModifiersEditor({ productId, productName, storeId }: Prod
   const [libraryGroups, setLibraryGroups] = useState<LibraryGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);\n  const [analyzing, setAnalyzing] = useState(false);\n  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);\n  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) void fetchData();
