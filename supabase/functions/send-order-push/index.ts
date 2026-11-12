@@ -80,12 +80,13 @@ async function encryptPayload(payload: string, p256dhB64: string, authB64: strin
 }
 
 async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string, vapidPubB64: string, privJwk: JsonWebKey, subject: string) {
-  const url = new URL(sub.endpoint);
+  const url = getTrustedPushEndpoint(sub.endpoint);
+  if (!url) throw new Error('Unsupported push endpoint');
   const audience = `${url.protocol}//${url.host}`;
   const jwt = await makeVapidJWT(audience, subject, privJwk, vapidPubB64);
   const body = await encryptPayload(payload, sub.p256dh, sub.auth);
 
-  const res = await fetch(sub.endpoint, {
+  const res = await fetch(url.toString(), {
     method: 'POST',
     headers: {
       'TTL': '60',
@@ -95,9 +96,36 @@ async function sendPush(sub: { endpoint: string; p256dh: string; auth: string },
       'Urgency': 'high',
     },
     body,
+    signal: AbortSignal.timeout(8000),
   });
   return res;
 }
+
+function getTrustedPushEndpoint(value: unknown): URL | null {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const trustedHost =
+      host === 'fcm.googleapis.com' ||
+      host === 'updates.push.services.mozilla.com' ||
+      host === 'push.services.mozilla.com' ||
+      host === 'web.push.apple.com' ||
+      host.endsWith('.notify.windows.com');
+    if (
+      url.protocol !== 'https:' ||
+      url.username !== '' ||
+      url.password !== '' ||
+      url.port !== '' ||
+      !trustedHost ||
+      url.pathname.length <= 1
+    ) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 // ---------- end web push ----------
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -143,10 +171,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { order_id, store_id, customer_name, total } = body;
-    if (!order_id || !store_id) {
-      return new Response(JSON.stringify({ error: 'missing fields' }), {
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > 8192) {
+      return new Response(JSON.stringify({ error: 'Payload too large' }), {
+        status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const rawBody = await req.text();
+    if (rawBody.length > 8192) {
+      return new Response(JSON.stringify({ error: 'Payload too large' }), {
+        status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const body = JSON.parse(rawBody);
+    const { order_id, store_id } = body;
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (
+      typeof order_id !== 'string' || !uuidPattern.test(order_id) ||
+      typeof store_id !== 'string' || !uuidPattern.test(store_id)
+    ) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -160,21 +204,30 @@ Deno.serve(async (req) => {
     }
 
     const { data: store } = await admin.from('stores').select('name').eq('id', store_id).maybeSingle();
-    const { data: subs } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('store_id', store_id);
+    const { data: subs } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('store_id', store_id).limit(100);
 
     const vapidPub = Deno.env.get('VAPID_PUBLIC_KEY')!;
     const vapidJwk = JSON.parse(Deno.env.get('VAPID_PRIVATE_JWK')!) as JsonWebKey;
     const subject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@deliverypro.site';
 
-    const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.total || total || 0));
+    const totalFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(order.total || 0));
     const payload = JSON.stringify({
       title: `🔔 Novo pedido! ${totalFmt}`,
-      body: `${order.customer_name || customer_name || 'Cliente'} — ${store?.name || 'sua loja'}`,
+      body: `${order.customer_name || 'Cliente'} — ${store?.name || 'sua loja'}`,
       tag: `order-${order_id}`,
       url: '/admin',
     });
 
     const results = await Promise.allSettled((subs || []).map(async (s) => {
+      const endpoint = getTrustedPushEndpoint(s.endpoint);
+      const validKeys =
+        typeof s.p256dh === 'string' && /^[A-Za-z0-9_-]{80,128}$/.test(s.p256dh) &&
+        typeof s.auth === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(s.auth);
+      if (!endpoint || !validKeys) {
+        await admin.from('push_subscriptions').delete().eq('id', s.id);
+        return { id: s.id, status: 0, reason: 'invalid_subscription' };
+      }
+
       const res = await sendPush(s, payload, vapidPub, vapidJwk, subject);
       if (res.status === 404 || res.status === 410) {
         await admin.from('push_subscriptions').delete().eq('id', s.id);
@@ -182,12 +235,19 @@ Deno.serve(async (req) => {
       return { id: s.id, status: res.status };
     }));
 
-    return new Response(JSON.stringify({ ok: true, sent: results.length, results }), {
+    const deliveryResults = results.map((result) =>
+      result.status === 'fulfilled'
+        ? result.value
+        : { id: null, status: 0, reason: 'delivery_failed' }
+    );
+    const sent = deliveryResults.filter((result) => result.status >= 200 && result.status < 300).length;
+
+    return new Response(JSON.stringify({ ok: true, sent, attempted: deliveryResults.length, results: deliveryResults }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
     console.error('send-order-push error:', err);
-    return new Response(JSON.stringify({ error: String((err as Error).message || err) }), {
+    return new Response(JSON.stringify({ error: 'Push delivery failed' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
