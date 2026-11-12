@@ -13,9 +13,10 @@ interface Product {
 
 interface FeaturedProductsProps {
   products: Product[];
+  productsWithModifiers?: Set<string>;
 }
 
-export function FeaturedProducts({ products }: FeaturedProductsProps) {
+export function FeaturedProducts({ products, productsWithModifiers }: FeaturedProductsProps) {
   if (products.length === 0) return null;
 
   return (
@@ -38,6 +39,7 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
             description={product.description || undefined}
             price={product.price}
             image_url={product.image_url || undefined}
+            hasModifiers={productsWithModifiers?.has(product.id) ?? false}
             has_free_addons={product.has_free_addons}
             free_addons_limit={product.free_addons_limit}
           />
