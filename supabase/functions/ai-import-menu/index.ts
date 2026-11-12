@@ -379,6 +379,8 @@ Deno.serve(async (req) => {
             .filter((m: any) => m && libraryForAi.some((lib: any) => lib.id === m.modifier_id))
             .map((m: any) => ({
               modifier_id: String(m.modifier_id),
+              name: libraryForAi.find((lib: any) => lib.id === m.modifier_id)?.name ?? '',
+              group_name: libraryForAi.find((lib: any) => lib.id === m.modifier_id)?.group ?? 'Acompanhamentos',
               status: m.status === 'included' ? 'included' : m.status === 'optional' ? 'optional' : null,
               reason: String(m.reason ?? '').slice(0, 200),
             })).filter((m: any) => m.status) : [],
