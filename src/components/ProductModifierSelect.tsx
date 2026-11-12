@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, ImageOff, Sparkles } from 'lucide-react';
+import { Loader2, Plus, ImageOff, Sparkles, Check } from 'lucide-react';
 import { useCart, CartItemModifier } from '@/lib/cart';
 import { hapticClick } from '@/lib/haptics';
 import { toast } from 'sonner';
@@ -109,6 +109,8 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
   }
 
   function toggleModifier(m: Modifier, groupItems: Modifier[], max: number | null) {
+    // Items marked as included/fixed by the store are mandatory in this product.
+    if (m.is_default) return;
     const isSelected = selectedModifiers.has(m.id);
     if (isSelected) {
       setSelectedModifiers((prev) => {
@@ -175,8 +177,10 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
 
   const totalPrice = product.price + modifiersTotal;
 
-  // Included items the customer removed → informed to the store
-  const removedDefaults = modifiers.filter((m) => m.is_default && !selectedModifiers.has(m.id));
+  const includedModifiers = modifiers.filter((modifier) => modifier.is_default);
+  const optionalGroups = groups
+    .map((group) => ({ ...group, items: group.items.filter((modifier) => !modifier.is_default) }))
+    .filter((group) => group.items.length > 0);
 
   const missingGroup = groups.find((g) => g.min > 0 && countSelectedInGroup(g.items) < g.min);
 
@@ -193,10 +197,7 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
       name: m.name,
       price: freeIds.has(m.id) ? 0 : Number(m.price),
     }));
-    const removalNote = removedDefaults.length
-      ? `Sem ${removedDefaults.map((m) => m.name).join(', sem ')}`
-      : '';
-    const note = [removalNote, observation.trim()].filter(Boolean).join(' • ');
+    const note = observation.trim();
     addItem({
       id: product.id,
       name: product.name,
@@ -240,6 +241,26 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
             </div>
           ) : (groups.length > 0 && allowsAddons) ? (
             <div className="space-y-5">
+              {includedModifiers.length > 0 && (
+                <section className="space-y-2 rounded-xl border border-emerald/25 bg-emerald/5 p-3">
+                  <div>
+                    <Label className="text-foreground font-semibold text-base">Já acompanha este produto</Label>
+                    <p className="text-xs text-muted-foreground">Itens inclusos no preço e mantidos como parte fixa do produto.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {includedModifiers.map((modifier) => (
+                      <div key={modifier.id} className="flex items-center justify-between gap-3 rounded-lg bg-background/70 p-3">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-emerald" />
+                          <span className="text-sm font-medium">{modifier.name}</span>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-emerald">Incluso</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {hasFreeAddons && freeLimit > 0 && (
                 <div className="bg-emerald/10 border border-emerald/20 p-3 rounded-xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500">
                   <div className="h-8 w-8 rounded-full bg-emerald/20 flex items-center justify-center flex-shrink-0">
@@ -252,8 +273,14 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                   </p>
                 </div>
               )}
-              {groups.map((group) => {
-                const count = countSelectedInGroup(group.items);
+              {optionalGroups.length > 0 && (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-foreground font-semibold text-base">Adicione mais acompanhamentos</Label>
+                    <p className="text-xs text-muted-foreground">Escolha os itens extras; os valores serão somados ao produto.</p>
+                  </div>
+                  {optionalGroups.map((group) => {
+                const count = countSelectedInGroup(groups.find((original) => original.name === group.name)?.items || group.items);
                 const required = group.min > 0;
                 const incomplete = required && count < group.min;
                 return (
@@ -294,10 +321,11 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                       {group.items.map((modifier) => {
                         const isSelected = selectedModifiers.has(modifier.id);
                         const disabled =
-                          !isSelected &&
+                          modifier.is_default ||
+                          (!isSelected &&
                           group.max != null &&
                           group.max !== 1 &&
-                          count >= group.max;
+                          count >= group.max);
                         
                         // Calculate price to display
                         let displayPrice = Number(modifier.price);
@@ -360,15 +388,11 @@ export function ProductModifierSelect({ open, onOpenChange, product }: ProductMo
                     </div>
                   </div>
                 );
-              })}
+                  })}
+                </div>
+              )}
             </div>
           ) : null}
-
-          {removedDefaults.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Sem: {removedDefaults.map((m) => m.name).join(', ')}
-            </p>
-          )}
 
           <div className="space-y-2">
             <Label className="text-foreground font-medium">Observações (opcional)</Label>
