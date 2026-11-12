@@ -559,7 +559,7 @@ export default function Admin() {
       .in('id', productsToDelete);
     setDeletingProducts(false);
     if (error) {
-      toast.error(getErrorMessage(error, 'Não foi possível excluir os produtos selecionados.'));
+      toast.error(getErrorMessage(error));
       return;
     }
     const deletedCount = productsToDelete.length;
