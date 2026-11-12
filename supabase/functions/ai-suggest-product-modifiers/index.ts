@@ -2,6 +2,8 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = 'gemini-3.8-flash';
+const FALLBACK_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'] as const;
+const AI_MODEL_TIMEOUT_MS = 12_000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -97,25 +99,39 @@ Descrição: ${product.description}
 Candidatos JSON: ${JSON.stringify(candidates.filter((item) => !item.is_default).map((item) => ({ id: item.id, name: item.name })))}
 `;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 22000);
-    let aiResponse: Response;
-    try {
-      aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
+    const requestBody = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
+    });
+    let aiResponse: Response | null = null;
+    let lastStatus = 0;
+    let lastError = '';
+    for (const model of [MODEL, ...FALLBACK_MODELS]) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), AI_MODEL_TIMEOUT_MS);
+      try {
+        aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: requestBody,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        lastError = error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'network';
+        aiResponse = null;
+      } finally {
+        clearTimeout(timeout);
+      }
+      if (aiResponse?.ok) break;
+      lastStatus = aiResponse?.status || 0;
+      if (aiResponse) lastError = (await aiResponse.text()).slice(0, 300);
+      console.warn(`AI modifier model ${model} failed with status ${lastStatus || lastError}.`);
+      if (aiResponse && [400, 401, 403, 429].includes(lastStatus)) break;
+      aiResponse = null;
     }
-    if (!aiResponse.ok) {
-      console.error('AI modifier analysis failed:', aiResponse.status);
-      return new Response(JSON.stringify({ error: 'A análise por IA falhou temporariamente. Tente novamente.' }), {
+    if (!aiResponse?.ok) {
+      console.error('AI modifier analysis failed after fallback models:', lastStatus, lastError);
+      return new Response(JSON.stringify({ error: 'O serviço de IA está temporariamente indisponível. Tente novamente em instantes.' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
