@@ -303,8 +303,8 @@ export default function SuperAdmin() {
         {isMasterAdmin && <DefaultTrialSettings />}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList className="bg-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <TabsList className="bg-secondary flex h-auto max-w-full flex-wrap justify-start gap-1">
               <TabsTrigger value="stores" className="gap-2">
                 <Store className="w-4 h-4" />
                 Lojas ({stores.length})
