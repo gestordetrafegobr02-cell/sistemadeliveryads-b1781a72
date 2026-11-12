@@ -9,7 +9,7 @@ import { Sparkles, Utensils, TrendingUp, Lightbulb, CalendarDays, Loader2, Check
 
 type Action = 'menu' | 'combos' | 'sales' | 'forecast';
 type Usage = { hourly_limit: number; used_last_hour: number; remaining_last_hour: number; used_this_month: number; prompt_tokens: number; completion_tokens: number; total_tokens: number; period: string };
-type Props = { storeId: string; products: { id: string; name: string; description: string | null }[]; onApplied: () => void };
+type Props = { storeId: string; storeName?: string; products: { id: string; name: string; description: string | null }[]; onApplied: () => void };
 const tools: { id: Action; label: string; title: string; description: string; icon: typeof Sparkles }[] = [
   { id: 'menu', label: 'Cardápio', title: 'Cardápio inteligente', description: 'Compare as descrições atuais com as melhorias propostas antes de aprovar qualquer alteração.', icon: Utensils },
   { id: 'combos', label: 'Combos', title: 'Combos e oportunidades', description: 'Combinações sugeridas a partir dos produtos que aparecem juntos nos pedidos.', icon: Lightbulb },
@@ -20,7 +20,7 @@ const tools: { id: Action; label: string; title: string; description: string; ic
 const number = (value: unknown) => Number(value ?? 0).toLocaleString('pt-BR');
 const tokenCount = (value: unknown) => number(value);
 
-export function AIInsightsTab({ storeId, products, onApplied }: Props) {
+export function AIInsightsTab({ storeId, storeName, products, onApplied }: Props) {
   const [action, setAction] = useState<Action>('menu');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -48,9 +48,9 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
     return () => { active = false; };
   }, [storeId]);
 
-  const requestExtraCredits = () => {
+  const requestExtraCredits = (packageSize: number) => {
     if (!creditsWhatsapp) { setErrorMessage('O WhatsApp de atendimento para créditos ainda não foi configurado.'); return; }
-    const message = `Olá! Gostaria de comprar créditos extras de IA para minha loja. Loja: ${storeId}. Pacote desejado: 10 créditos.`;
+    const message = `Olá! Gostaria de comprar créditos extras de IA. Loja: ${storeName || storeId}. Pacote desejado: ${packageSize} créditos.`;
     window.open(`https://wa.me/${creditsWhatsapp}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -127,7 +127,7 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
         </Button>
         {creditStatus && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
           <div><p className="flex items-center gap-2 text-sm font-semibold"><Coins className="h-4 w-4"/> Créditos de IA da sua loja</p><p className="text-xs text-muted-foreground">{Number(creditStatus.monthly_remaining ?? 0)} análises mensais disponíveis • {Number(creditStatus.extra_credits ?? 0)} créditos extras</p></div>
-          <Button type="button" variant="outline" size="sm" className="gap-2" onClick={requestExtraCredits}><MessageCircle className="h-4 w-4"/>Adicionar créditos</Button>
+          <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" className="gap-1" onClick={()=>requestExtraCredits(10)}><MessageCircle className="h-3.5 w-3.5"/>10 créditos</Button><Button type="button" variant="outline" size="sm" onClick={()=>requestExtraCredits(30)}>30 créditos</Button><Button type="button" variant="outline" size="sm" onClick={()=>requestExtraCredits(50)}>50 créditos</Button></div>
         </div>}
         {loading && <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm" role="status" aria-live="polite">
           <div className="flex items-center gap-2 font-medium"><Loader2 className="h-4 w-4 animate-spin" /> Estamos trabalhando na sua análise.</div>
