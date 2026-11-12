@@ -66,13 +66,6 @@ interface Product {
   free_addons_limit?: number;
 }
 
-interface ModifierLibraryItem {
-  id: string;
-  name: string;
-  price: number;
-  sort_order: number;
-}
-
 // Helper: returns valid URL or undefined (rejects base64 or long blobs)
 function sanitizeImageUrl(url: string | null | undefined): string | undefined {
   return resolveCdnAssetUrl(url);
@@ -251,17 +244,11 @@ export default function Shop() {
         setStore(mappedStore);
         setError(null);
 
-        const [paymentResponse, pixelResponse, categoriesResponse, productsResponse, libraryResponse] = await Promise.all([
+        const [paymentResponse, pixelResponse, categoriesResponse, productsResponse] = await Promise.all([
           supabase.rpc('get_store_payment_data', { store_slug: normalizedSlug }),
           supabase.rpc('get_store_pixel_by_slug', { store_slug: normalizedSlug }),
           supabase.from('categories').select('*').eq('store_id', mappedStore.id).order('sort_order'),
           supabase.from('products').select('*').eq('store_id', mappedStore.id).eq('is_available', true).order('sort_order'),
-          supabase
-            .from('modifier_library')
-            .select('id, name, price, sort_order')
-            .eq('store_id', mappedStore.id)
-            .eq('is_available', true)
-            .order('sort_order'),
         ]);
 
         if (paymentResponse.error) {
@@ -314,32 +301,9 @@ export default function Shop() {
           free_addons_limit: p.free_addons_limit ?? 0,
         }));
 
-        if (libraryResponse.error) {
-          console.error('[Shop] Modifier library query failed', {
-            storeId: mappedStore.id,
-            error: libraryResponse.error,
-          });
-        }
-
-        // The admin keeps extras in modifier_library, but the public menu also
-        // presents them as standalone purchasable items under "Adicionais".
-        const additionsCategory = (categoriesResponse.data ?? []).find((category) =>
-          category.name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === 'adicionais'
-        );
-        const libraryProducts: Product[] = additionsCategory
-          ? ((libraryResponse.data ?? []) as ModifierLibraryItem[]).map((item) => ({
-              id: item.id,
-              name: item.name,
-              description: 'Adicional',
-              price: Number(item.price),
-              image_url: null,
-              category_id: additionsCategory.id,
-              is_featured: false,
-            }))
-          : [];
-        const visibleProducts = [...sanitizedProducts, ...libraryProducts];
-
-        setProducts(visibleProducts);
+        // A biblioteca de acompanhamentos é usada somente na personalização dos produtos.
+        // Itens da modifier_library nunca devem ser exibidos como produtos independentes.
+        setProducts(sanitizedProducts);
 
         // Batch fetch: single query for all modifiers instead of N per card
         if (sanitizedProducts.length > 0) {

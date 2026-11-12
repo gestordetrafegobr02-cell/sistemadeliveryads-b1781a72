@@ -369,7 +369,7 @@ export function ModifierLibraryTab({ storeId, products }: Props) {
               <div>
                 <Label htmlFor="default-switch">Já vem incluso</Label>
                 <p className="text-xs text-muted-foreground">
-                  Vem marcado e o cliente pode remover
+                  É aplicado como incluso/fixo ao vincular o grupo; pode ser ajustado em cada produto
                 </p>
               </div>
               <Switch id="default-switch" checked={fDefault} onCheckedChange={setFDefault} />

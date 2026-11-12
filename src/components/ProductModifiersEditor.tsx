@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Trash2, Settings2, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Layers, Loader2, Settings2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Modifier {
@@ -14,223 +13,206 @@ interface Modifier {
   price: number;
   is_available: boolean;
   is_default: boolean;
-  sort_order: number;
+  group_name: string | null;
+  group_sort?: number | null;
+  sort_order?: number | null;
+}
+
+interface LibraryGroup {
+  group_name: string;
+  items: number;
 }
 
 interface ProductModifiersEditorProps {
   productId: string;
   productName: string;
+  storeId: string;
 }
 
-export function ProductModifiersEditor({ productId, productName }: ProductModifiersEditorProps) {
+const db = supabase as any;
+
+export function ProductModifiersEditor({ productId, productName, storeId }: ProductModifiersEditorProps) {
   const [open, setOpen] = useState(false);
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [libraryGroups, setLibraryGroups] = useState<LibraryGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // New modifier form
-  const [newName, setNewName] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-  const [newIsDefault, setNewIsDefault] = useState(false);
-
   useEffect(() => {
-    if (open) {
-      fetchModifiers();
-    }
-  }, [open, productId]);
+    if (open) void fetchData();
+  }, [open, productId, storeId]);
 
-  async function fetchModifiers() {
+  async function fetchData() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('product_modifiers')
-      .select('*')
-      .eq('product_id', productId)
-      .order('sort_order');
+    const [linkedResponse, libraryResponse] = await Promise.all([
+      db.from('product_modifiers').select('*').eq('product_id', productId)
+        .order('group_sort', { ascending: true, nullsFirst: false })
+        .order('sort_order', { ascending: true }),
+      db.from('modifier_library').select('group_name')
+        .eq('store_id', storeId).eq('is_available', true)
+        .order('group_sort', { ascending: true }),
+    ]);
 
-    if (error) {
-      toast.error('Erro ao carregar adicionais');
+    if (linkedResponse.error) {
+      toast.error('Não foi possível carregar os acompanhamentos do produto.');
+      setModifiers([]);
     } else {
-      setModifiers(data || []);
+      setModifiers((linkedResponse.data || []) as Modifier[]);
+    }
+
+    if (libraryResponse.error) {
+      toast.error('Não foi possível carregar os grupos da biblioteca.');
+      setLibraryGroups([]);
+    } else {
+      const counts = new Map<string, number>();
+      (libraryResponse.data || []).forEach((item: { group_name: string }) => {
+        counts.set(item.group_name, (counts.get(item.group_name) || 0) + 1);
+      });
+      setLibraryGroups(Array.from(counts, ([group_name, items]) => ({ group_name, items })));
     }
     setLoading(false);
   }
 
-  async function handleAddModifier() {
-    if (!newName.trim() || !newPrice.trim()) {
-      toast.error('Preencha nome e preço');
-      return;
-    }
+  const linkedGroups = useMemo(
+    () => Array.from(new Set(modifiers.map((item) => item.group_name?.trim()).filter((name): name is string => Boolean(name)))),
+    [modifiers]
+  );
 
+  const availableGroups = libraryGroups.filter((group) => !linkedGroups.includes(group.group_name));
+
+  async function handleApplyGroup() {
+    if (!selectedGroup || saving) return;
     setSaving(true);
-    const price = parseFloat(newPrice.replace(',', '.'));
-
-    const { error } = await supabase.from('product_modifiers').insert({
-      product_id: productId,
-      name: newName.trim(),
-      price: price,
-      is_default: newIsDefault,
-      sort_order: modifiers.length,
+    const { error } = await db.rpc('apply_library_group_to_product', {
+      p_product_id: productId,
+      p_group_name: selectedGroup,
     });
-
     if (error) {
-      toast.error('Erro ao adicionar adicional');
+      toast.error('Não foi possível vincular o grupo: ' + error.message);
     } else {
-      toast.success('Adicional criado!');
-      setNewName('');
-      setNewPrice('');
-      setNewIsDefault(false);
-      fetchModifiers();
+      toast.success('Acompanhamentos vinculados ao produto!');
+      setSelectedGroup('');
+      await fetchData();
     }
     setSaving(false);
   }
 
-  async function handleDeleteModifier(id: string) {
-    const { error } = await supabase.from('product_modifiers').delete().eq('id', id);
+  async function handleRemoveGroup(groupName: string) {
+    if (saving) return;
+    if (!confirm(`Remover o grupo "${groupName}" deste produto?`)) return;
+    setSaving(true);
+    const { error } = await db.rpc('remove_library_group_from_product', {
+      p_product_id: productId,
+      p_group_name: groupName,
+    });
+    if (error) toast.error('Não foi possível remover o grupo: ' + error.message);
+    else {
+      toast.success('Grupo removido deste produto.');
+      await fetchData();
+    }
+    setSaving(false);
+  }
 
+  async function handleToggleIncluded(modifier: Modifier, included: boolean) {
+    const { error } = await db.from('product_modifiers')
+      .update({ is_default: included })
+      .eq('id', modifier.id)
+      .eq('product_id', productId);
     if (error) {
-      toast.error('Erro ao excluir');
+      toast.error('Não foi possível atualizar o acompanhamento.');
     } else {
-      toast.success('Adicional excluído');
-      setModifiers((prev) => prev.filter((m) => m.id !== id));
+      setModifiers((current) => current.map((item) =>
+        item.id === modifier.id ? { ...item, is_default: included } : item
+      ));
     }
   }
 
-  async function handleToggleAvailable(id: string, isAvailable: boolean) {
-    const { error } = await supabase
-      .from('product_modifiers')
-      .update({ is_available: isAvailable })
-      .eq('id', id);
-
-    if (error) {
-      toast.error('Erro ao atualizar');
-    } else {
-      setModifiers((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, is_available: isAvailable } : m))
-      );
-    }
-  }
-
-  async function handleToggleDefault(id: string, isDefault: boolean) {
-    const { error } = await supabase
-      .from('product_modifiers')
-      .update({ is_default: isDefault })
-      .eq('id', id);
-
-    if (error) {
-      toast.error('Erro ao atualizar');
-    } else {
-      setModifiers((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, is_default: isDefault } : m))
-      );
-    }
-  }
+  const groupedModifiers = useMemo(() => {
+    const groups = new Map<string, Modifier[]>();
+    modifiers.forEach((item) => {
+      const name = item.group_name?.trim() || 'Acompanhamentos';
+      groups.set(name, [...(groups.get(name) || []), item]);
+    });
+    return Array.from(groups.entries());
+  }, [modifiers]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" title="Gerenciar adicionais">
-          <Settings2 className="w-4 h-4" />
+        <Button type="button" variant="outline" className="w-full justify-start gap-2">
+          <Settings2 className="h-4 w-4" />
+          Configurar acompanhamentos
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-card border-border max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-card border-border max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">
-            Adicionais: {productName}
-          </DialogTitle>
+          <DialogTitle className="font-display">Acompanhamentos: {productName}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          {/* Add new modifier */}
-          <div className="p-4 glass-card rounded-lg space-y-3">
-            <Label className="text-foreground font-medium">Novo Adicional</Label>
-            <div className="grid grid-cols-6 gap-2 items-end">
-              <div className="col-span-3 space-y-1">
-                <Label className="text-xs">Nome</Label>
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ex: Bacon Extra"
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="col-span-1 space-y-1">
-                <Label className="text-xs">Preço</Label>
-                <Input
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(e.target.value)}
-                  placeholder="3,00"
-                  className="bg-secondary border-border"
-                />
-              </div>
-              <div className="col-span-1 flex flex-col items-center gap-1 mb-2">
-                <Label className="text-[10px] text-muted-foreground">Incluso</Label>
-                <Switch
-                  checked={newIsDefault}
-                  onCheckedChange={setNewIsDefault}
-                />
-              </div>
-              <Button
-                onClick={handleAddModifier}
-                disabled={saving}
-                className="bg-primary text-primary-foreground mb-1"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              </Button>
+        <div className="space-y-4 mt-2">
+          <div className="rounded-lg border border-border p-3 space-y-3">
+            <div>
+              <p className="font-medium text-sm">Adicionar da biblioteca</p>
+              <p className="text-xs text-muted-foreground">Vincule um grupo de acompanhamentos a este produto.</p>
             </div>
+            {availableGroups.length > 0 ? (
+              <div className="flex gap-2">
+                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione um grupo" /></SelectTrigger>
+                  <SelectContent>
+                    {availableGroups.map((group) => (
+                      <SelectItem key={group.group_name} value={group.group_name}>
+                        {group.group_name} ({group.items})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" onClick={handleApplyGroup} disabled={!selectedGroup || saving}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+                  <span className="ml-2">Vincular</span>
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Todos os grupos disponíveis já estão vinculados. Cadastre novos itens na aba Adicionais.</p>
+            )}
           </div>
 
-          {/* List of existing modifiers */}
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : modifiers.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhum adicional cadastrado.
-            </p>
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : groupedModifiers.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhum acompanhamento vinculado. Escolha um grupo da biblioteca acima.</p>
           ) : (
-            <div className="space-y-2">
-              {modifiers.map((modifier) => (
-                <div
-                  key={modifier.id}
-                  className="flex items-center justify-between p-3 glass-card"
-                >
-                  <div className="flex-1">
-                    <p className={`font-medium ${!modifier.is_available ? 'text-muted-foreground line-through' : ''}`}>
-                      {modifier.name}
-                    </p>
-                    <p className="text-sm text-primary">
-                      + R$ {Number(modifier.price).toFixed(2).replace('.', ',')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground uppercase">Disp.</span>
-                      <Switch
-                        checked={modifier.is_available}
-                        onCheckedChange={(checked) => handleToggleAvailable(modifier.id, checked)}
-                      />
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground uppercase">Incl.</span>
-                      <Switch
-                        checked={modifier.is_default}
-                        onCheckedChange={(checked) => handleToggleDefault(modifier.id, checked)}
-                      />
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteModifier(modifier.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
+            <div className="space-y-4">
+              {groupedModifiers.map(([groupName, items]) => (
+                <section key={groupName} className="rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-semibold text-sm">{groupName}</h3>
+                    <Button type="button" variant="ghost" size="sm" className="text-destructive h-8" onClick={() => handleRemoveGroup(groupName)} disabled={saving}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover grupo
                     </Button>
                   </div>
-                </div>
+                  {items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-secondary/40 p-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {Number(item.price) > 0 ? `+ R$ ${Number(item.price).toFixed(2).replace('.', ',')}` : 'Grátis'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-muted-foreground">Incluso / fixo</span>
+                        <Switch checked={Boolean(item.is_default)} onCheckedChange={(checked) => handleToggleIncluded(item, checked)} />
+                      </div>
+                    </div>
+                  ))}
+                </section>
               ))}
             </div>
           )}
+          <p className="text-xs text-muted-foreground">
+            Itens marcados como inclusos aparecem selecionados e não podem ser retirados pelo cliente. Os demais ficam disponíveis para adicionar e o preço é somado automaticamente.
+          </p>
         </div>
       </DialogContent>
     </Dialog>
