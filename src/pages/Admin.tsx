@@ -761,8 +761,8 @@ export default function Admin() {
 
 
         <Tabs defaultValue="orders" className="space-y-6">
-          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
-            <TabsList className="bg-secondary inline-flex w-max min-w-full">
+          <div className="w-full">
+            <TabsList className="bg-secondary flex h-auto w-full min-w-0 flex-wrap gap-1 p-1">
               {canSeeOrders && (
                 <TabsTrigger value="orders" className="gap-2">
                   <ClipboardList className="w-4 h-4" />
@@ -799,6 +799,12 @@ export default function Admin() {
                   Inteligência IA
                 </TabsTrigger>
               )}
+              {canSeeStoreSettings && (
+                <TabsTrigger value="store" className="gap-2 whitespace-nowrap">
+                  <Store className="w-4 h-4" />
+                  Configurações
+                </TabsTrigger>
+              )}
               {canSeeReports && (
                 <TabsTrigger value="reports" className="gap-2">
                   <BarChart3 className="w-4 h-4" />
@@ -816,12 +822,7 @@ export default function Admin() {
                   )}
                 </TabsTrigger>
               )}
-              {canSeeStoreSettings && (
-                <TabsTrigger value="store" className="gap-2">
-                  <Store className="w-4 h-4" />
-                  Loja
-                </TabsTrigger>
-              )}
+
               {canSeeTeam && (
                 <TabsTrigger value="team" className="gap-2">
                   <Users className="w-4 h-4" />
