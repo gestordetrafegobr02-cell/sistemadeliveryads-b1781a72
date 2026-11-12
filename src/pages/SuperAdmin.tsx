@@ -53,9 +53,10 @@ import { GlobalSettingsTab } from '@/components/GlobalSettingsTab';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
 import { ChangeEmailDialog } from '@/components/ChangeEmailDialog';
 import { AIUsageTab } from '@/components/AIUsageTab';
-import { Sparkles, Contact, ChartNoAxesCombined } from 'lucide-react';
+import { Sparkles, Contact, ChartNoAxesCombined, Coins } from 'lucide-react';
 import { LeadsManagementTab } from '@/components/LeadsManagementTab';
 import { MarketingAnalyticsTab } from '@/components/MarketingAnalyticsTab';
+import { AICreditsAdminTab } from '@/components/AICreditsAdminTab';
 
 const MASTER_EMAIL = 'igormoises.ads@gmail.com';
 
@@ -332,6 +333,12 @@ export default function SuperAdmin() {
                 <TabsTrigger value="ai" className="gap-2">
                   <Sparkles className="w-4 h-4" />
                   IA
+                </TabsTrigger>
+              )}
+              {isMasterAdmin && (
+                <TabsTrigger value="ai-credits" className="gap-2">
+                  <Coins className="w-4 h-4" />
+                  Créditos IA
                 </TabsTrigger>
               )}
               {isMasterAdmin && (
@@ -638,6 +645,7 @@ export default function SuperAdmin() {
 
           {isMasterAdmin && <TabsContent value="leads"><LeadsManagementTab /></TabsContent>}
           {isMasterAdmin && <TabsContent value="marketing"><MarketingAnalyticsTab /></TabsContent>}
+          {isMasterAdmin && <TabsContent value="ai-credits"><AICreditsAdminTab /></TabsContent>}
 
           {/* Settings Tab - Master Admin Only */}
           {isMasterAdmin && (
