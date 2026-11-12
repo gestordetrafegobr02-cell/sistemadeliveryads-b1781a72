@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.idx_push_subscriptions_store_id;
