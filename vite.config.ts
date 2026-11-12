@@ -108,7 +108,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            const modulePath = id.replace(/\\\\/g, "/");
+            const modulePath = id;
             if (!modulePath.includes("/node_modules/")) return;
             if (
               modulePath.includes("/node_modules/react/") ||
