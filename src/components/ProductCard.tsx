@@ -18,6 +18,21 @@ interface ProductCardProps {
   free_addons_limit?: number;
 }
 
+function optimizedProductImage(url: string | undefined, width = 480): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (!/\.supabase\.co$/i.test(parsed.hostname) || !parsed.pathname.includes('/storage/v1/object/public/')) return url;
+    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', '72');
+    parsed.searchParams.set('resize', 'cover');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function ProductCardImpl({ id, name, description, price, image_url, hasModifiers: hasModifiersProp, has_free_addons, free_addons_limit }: ProductCardProps) {
   const { addItem } = useCart();
   const [imgError, setImgError] = useState(false);
