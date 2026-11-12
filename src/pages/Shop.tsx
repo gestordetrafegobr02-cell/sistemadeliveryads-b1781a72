@@ -580,13 +580,8 @@ export default function Shop() {
     return <TrialExpiredBanner storeName={store.name} />;
   }
 
-  // Grouped products by category (only when no active filter)
-  const productsByCategory = categories.map((cat) => ({
-    ...cat,
-    products: products.filter((p) => p.category_id === cat.id),
-  }));
-
-  const uncategorizedProducts = products.filter((p) => !p.category_id);
+  // One unified catalog grid prevents categories with a single product
+  // from forcing the storefront into a single narrow column.
   const showCategorySections = activeCategory === null;
 
   const categorySummary = categories
@@ -646,7 +641,7 @@ export default function Shop() {
           </div>
 
           {/* Logo Avatar - overlapping cover */}
-          <div className="relative max-w-2xl mx-auto px-4">
+          <div className="relative max-w-7xl mx-auto px-4">
             <div className="flex flex-col items-center -mt-12 sm:-mt-14">
               {store.logo_url ? (
                 <img
@@ -693,7 +688,7 @@ export default function Shop() {
         )}
 
         {/* Product List */}
-        <main className="max-w-6xl mx-auto px-4 py-6 space-y-10">
+        <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-10">
           {/* Featured Products Section */}
           {showCategorySections && featuredProducts.length > 0 && (
             <FeaturedProducts products={featuredProducts} />
@@ -722,44 +717,25 @@ export default function Shop() {
               );
             };
 
-            if (showCategorySections) {
-              return (
-                <>
-                  {productsByCategory.map((category) => {
-                    if (category.products.length === 0) return null;
-                    const entries = groupProductsBySize(category.products);
-                    return (
-                      <section key={category.id}>
-                        <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
-                          <span className="w-2 h-6 bg-primary rounded-full" />
-                          {category.name}
-                        </h2>
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                          {entries.map(renderEntry)}
-                        </div>
-                      </section>
-                    );
-                  })}
-
-                  {uncategorizedProducts.length > 0 && (
-                    <section>
-                      <h2 className="font-display text-2xl text-foreground mb-4 flex items-center gap-2">
-                        <span className="w-2 h-6 bg-primary rounded-full" />
-                        Geral
-                      </h2>
-                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        {groupProductsBySize(uncategorizedProducts).map(renderEntry)}
-                      </div>
-                    </section>
-                  )}
-                </>
-              );
-            }
-
             return (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {groupProductsBySize(filteredProducts).map(renderEntry)}
-              </div>
+              <section className="space-y-5">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                      {activeCategory ? categories.find((category) => category.id === activeCategory)?.name : 'Explore nosso cardápio'}
+                    </p>
+                    <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      {activeCategory ? 'Produtos' : 'Todos os produtos'}
+                    </h2>
+                  </div>
+                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                    {filteredProducts.length} {filteredProducts.length === 1 ? 'opção' : 'opções'}
+                  </span>
+                </div>
+                <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+                  {groupProductsBySize(filteredProducts).map(renderEntry)}
+                </div>
+              </section>
             );
           })()}
 
