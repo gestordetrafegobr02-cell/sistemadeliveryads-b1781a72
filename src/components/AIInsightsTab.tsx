@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Utensils, TrendingUp, Lightbulb, CalendarDays, Loader2, Check, RefreshCw, Clock3, AlertCircle } from 'lucide-react';
+import { Sparkles, Utensils, TrendingUp, Lightbulb, CalendarDays, Loader2, Check, RefreshCw, Clock3, AlertCircle, Coins, MessageCircle } from 'lucide-react';
 
 type Action = 'menu' | 'combos' | 'sales' | 'forecast';
 type Usage = { hourly_limit: number; used_last_hour: number; remaining_last_hour: number; used_this_month: number; prompt_tokens: number; completion_tokens: number; total_tokens: number; period: string };
@@ -27,6 +27,32 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
   const [payload, setPayload] = useState<any>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [creditStatus, setCreditStatus] = useState<any>(null);
+  const [creditsWhatsapp, setCreditsWhatsapp] = useState('');
+  const [creditLoading, setCreditLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const loadCredits = async () => {
+      setCreditLoading(true);
+      const [{ data: status }, { data: phone }] = await Promise.all([
+        (supabase as any).rpc('get_ai_credit_status', { p_store_id: storeId }),
+        supabase.rpc('get_global_setting', { setting_key: 'ai_credits_whatsapp' }),
+      ]);
+      if (!active) return;
+      setCreditStatus(status ?? null);
+      setCreditsWhatsapp(typeof phone === 'string' ? phone.replace(/\\D/g, '') : '');
+      setCreditLoading(false);
+    };
+    void loadCredits();
+    return () => { active = false; };
+  }, [storeId]);
+
+  const requestExtraCredits = () => {
+    if (!creditsWhatsapp) { setErrorMessage('O WhatsApp de atendimento para créditos ainda não foi configurado.'); return; }
+    const message = `Olá! Gostaria de comprar créditos extras de IA para minha loja. Loja: ${storeId}. Pacote desejado: 10 créditos.`;
+    window.open(`https://wa.me/${creditsWhatsapp}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
 
   const run = async () => {
     setLoading(true); setPayload(null); setSelectedProductIds([]); setErrorMessage('');
@@ -46,6 +72,8 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
       if (data?.error) throw new Error(data.error);
       setPayload(data);
       setSelectedProductIds([]);
+      const { data: refreshedCredits } = await (supabase as any).rpc('get_ai_credit_status', { p_store_id: storeId });
+      if (refreshedCredits) setCreditStatus(refreshedCredits);
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível concluir a análise.';
       setErrorMessage(message.includes('alta demanda') || message.includes('sobrecarregado')
@@ -94,13 +122,18 @@ export function AIInsightsTab({ storeId, products, onApplied }: Props) {
             </div>
           </TabsContent>)}
         </Tabs>
-        <Button onClick={run} disabled={loading || applying} className="w-full gap-2">
+        <Button onClick={run} disabled={loading || applying || creditLoading || (creditStatus && Number(creditStatus.total_available ?? 0) <= 0)} className="w-full gap-2">
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> A IA está analisando — aguarde um instante...</> : <><Sparkles className="h-4 w-4" /> {payload ? 'Atualizar análise' : 'Executar análise'}</>}
         </Button>
+        {creditStatus && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+          <div><p className="flex items-center gap-2 text-sm font-semibold"><Coins className="h-4 w-4"/> Créditos de IA da sua loja</p><p className="text-xs text-muted-foreground">{Number(creditStatus.monthly_remaining ?? 0)} análises mensais disponíveis • {Number(creditStatus.extra_credits ?? 0)} créditos extras</p></div>
+          <Button type="button" variant="outline" size="sm" className="gap-2" onClick={requestExtraCredits}><MessageCircle className="h-4 w-4"/>Adicionar créditos</Button>
+        </div>}
         {loading && <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm" role="status" aria-live="polite">
           <div className="flex items-center gap-2 font-medium"><Loader2 className="h-4 w-4 animate-spin" /> Estamos trabalhando na sua análise.</div>
           <p className="mt-1 text-muted-foreground">Estamos consultando os dados da loja e aguardando o processamento da IA. Isso pode levar alguns instantes. Não feche esta tela; você verá o resultado aqui.</p>
         </div>}
+        {creditStatus && Number(creditStatus.total_available ?? 0) <= 0 && <p className="text-xs text-amber-600">Sua franquia mensal e seus créditos extras foram utilizados. Solicite créditos adicionais pelo WhatsApp.</p>}
         {errorMessage && <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm" role="alert">
           <div className="flex items-start gap-2"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-medium">Não foi possível concluir agora</p><p className="mt-1 text-muted-foreground">{errorMessage}</p><Button variant="outline" size="sm" className="mt-3 gap-2" onClick={run} disabled={loading}><RefreshCw className="h-3.5 w-3.5" /> Tentar novamente</Button></div></div>
         </div>}
