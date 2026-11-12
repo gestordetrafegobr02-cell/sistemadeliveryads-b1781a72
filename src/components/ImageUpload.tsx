@@ -16,6 +16,44 @@ interface ImageUploadProps {
   className?: string;
 }
 
+async function prepareImageForUpload(file: File): Promise<File> {
+  // Keep animated GIFs unchanged and avoid unnecessary work for already-small WebP files.
+  if (file.type === 'image/gif' || file.type === 'image/webp' || typeof createImageBitmap === 'undefined') {
+    return file;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) {
+      bitmap.close();
+      return file;
+    }
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', 0.82);
+    });
+    if (!blob || blob.size >= file.size) return file;
+
+    const baseName = file.name.replace(/\.[^.]+$/, '');
+    return new File([blob], `${baseName}.webp`, {
+      type: 'image/webp',
+      lastModified: Date.now(),
+    });
+  } catch {
+    // Upload the original if the browser cannot decode or encode the image.
+    return file;
+  }
+}
+
 export function ImageUpload({ value, onChange, folder, storeId, label, className }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,8 +78,10 @@ export function ImageUpload({ value, onChange, folder, storeId, label, className
     setUploading(true);
 
     try {
-      // Generate unique filename with store_id prefix + timestamp for cache busting
-      const fileExt = file.name.split('.').pop();
+      // Resize/re-encode large photos in the browser before sending them to Storage.
+      // Unique filenames allow long-lived CDN/browser caching without stale replacements.
+      const uploadFile = await prepareImageForUpload(file);
+      const fileExt = uploadFile.name.split('.').pop();
       const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       const fileName = `${storeId}/${folder}/${uniqueId}.${fileExt}`;
 
