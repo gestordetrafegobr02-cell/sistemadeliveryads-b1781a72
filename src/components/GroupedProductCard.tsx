@@ -11,20 +11,6 @@ interface Props {
   group: GroupedProductEntry;
 }
 
-function optimizedProductImage(url: string | undefined, width = 480): string | undefined {
-  if (!url) return undefined;
-  try {
-    const parsed = new URL(url);
-    if (!/\.supabase\.co$/i.test(parsed.hostname) || !parsed.pathname.includes('/storage/v1/object/public/')) return url;
-    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-    parsed.searchParams.set('width', String(width));
-    parsed.searchParams.set('quality', '72');
-    parsed.searchParams.set('resize', 'cover');
-    return parsed.toString();
-  } catch {
-    return url;
-  }
-}
 
 function formatBRL(n: number) {
   return `R$ ${n.toFixed(2).replace('.', ',')}`;
@@ -78,6 +64,7 @@ function GroupedProductCardImpl({ group }: Props) {
               className="w-full h-full object-cover"
               onError={() => setImgError(true)}
               loading="lazy"
+              decoding="async"
             />
             <span className="absolute top-2 right-2 bg-primary/95 text-primary-foreground text-[11px] font-semibold px-2 py-1 rounded-full shadow">
               {group.variants.length} tamanhos
