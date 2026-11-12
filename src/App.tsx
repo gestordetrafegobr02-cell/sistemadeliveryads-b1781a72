@@ -1,22 +1,31 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import InstallPWA from "@/components/InstallPWA";
-import Index from "./pages/Index";
-import Shop from "./pages/Shop";
-import Demo from "./pages/Demo";
-import DemoDashboard from "./pages/DemoDashboard";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import SuperAdmin from "./pages/SuperAdmin";
-import Onboarding from "./pages/Onboarding";
-import NotFound from "./pages/NotFound";
-import OrderStatus from "./pages/OrderStatus";
+
+const Index = lazy(() => import("./pages/Index"));
+const Shop = lazy(() => import("./pages/Shop"));
+const Demo = lazy(() => import("./pages/Demo"));
+const DemoDashboard = lazy(() => import("./pages/DemoDashboard"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const OrderStatus = lazy(() => import("./pages/OrderStatus"));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="flex min-h-[40vh] items-center justify-center" role="status" aria-live="polite">
+    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    <span className="sr-only">Carregando página...</span>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,22 +34,24 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/super-admin" element={<SuperAdmin />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/demo/:slug" element={<Demo />} />
-            <Route path="/demo-painel" element={<DemoDashboard />} />
-            <Route path="/order-status/:id" element={<OrderStatus />} />
-            <Route path="/pedido/:id" element={<OrderStatus />} />
-            <Route path="/loja/:storeSlug" element={<Shop />} />
-            <Route path="/shop/:storeSlug" element={<Shop />} />
-            {/* Public store menu — catch-all root slug. MUST remain last before 404 */}
-            <Route path="/:slug" element={<Shop />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/super-admin" element={<SuperAdmin />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/demo/:slug" element={<Demo />} />
+              <Route path="/demo-painel" element={<DemoDashboard />} />
+              <Route path="/order-status/:id" element={<OrderStatus />} />
+              <Route path="/pedido/:id" element={<OrderStatus />} />
+              <Route path="/loja/:storeSlug" element={<Shop />} />
+              <Route path="/shop/:storeSlug" element={<Shop />} />
+              {/* Public store menu — catch-all root slug. MUST remain last before 404 */}
+              <Route path="/:slug" element={<Shop />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
           <InstallPWA />
         </BrowserRouter>
       </TooltipProvider>
