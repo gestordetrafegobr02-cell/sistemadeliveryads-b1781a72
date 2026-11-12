@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface LeadNotification {
@@ -12,117 +13,100 @@ interface LeadNotification {
   segment?: string;
 }
 
+const jsonResponse = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { status: 204, headers: corsHeaders });
+  if (req.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
-    );
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > 8192) return jsonResponse({ error: 'Request body too large' }, 413);
 
-    const body: LeadNotification = await req.json();
-    const { storeName, email, phone, segment } = body;
-
-    // Validate required fields
-    if (!storeName || !email) {
-      return new Response(
-        JSON.stringify({ error: 'storeName and email are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const rawBody = await req.text();
+    if (!rawBody || new TextEncoder().encode(rawBody).byteLength > 8192) {
+      return jsonResponse({ error: 'Invalid request body size' }, 413);
     }
 
-    // Enforce length limits
-    if (storeName.length > 100 || email.length > 200 ||
-        (phone && phone.length > 20) || (segment && segment.length > 50)) {
-      return new Response(
-        JSON.stringify({ error: 'Input exceeds maximum length' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let body: LeadNotification;
+    try {
+      body = JSON.parse(rawBody) as LeadNotification;
+    } catch {
+      return jsonResponse({ error: 'Invalid JSON body' }, 400);
     }
 
-    // Validate email format
+    const storeName = typeof body?.storeName === 'string' ? body.storeName.trim() : '';
+    const email = typeof body?.email === 'string' ? body.email.trim() : '';
+    const phone = typeof body?.phone === 'string' ? body.phone.trim() : '';
+    const segment = typeof body?.segment === 'string' ? body.segment.trim() : 'Hamburgueria';
+
+    if (!storeName || !email) return jsonResponse({ error: 'storeName and email are required' }, 400);
+    if (storeName.length > 100 || email.length > 200 || phone.length > 20 || segment.length > 50) {
+      return jsonResponse({ error: 'Input exceeds maximum length' }, 400);
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'Invalid email format' }, 400);
     }
 
-    // Sanitize control characters
-    const sanitize = (str: string) => str.replace(/[\x00-\x1F\x7F]/g, '');
+    const sanitize = (value: string) =>
+      Array.from(value).filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 31 && code !== 127;
+      }).join('');
+
     const cleanStoreName = sanitize(storeName);
     const cleanEmail = sanitize(email);
-    const cleanPhone = phone ? sanitize(phone) : undefined;
-    const cleanSegment = segment ? sanitize(segment) : 'Hamburgueria';
+    const cleanPhone = phone ? sanitize(phone) : '';
+    const cleanSegment = sanitize(segment) || 'Hamburgueria';
 
-    console.log('[notify-lead] Received lead notification request:', { storeName: cleanStoreName, email: cleanEmail, segment: cleanSegment });
-
-    // Get the owner WhatsApp number from global settings
-    const { data: ownerWhatsApp, error: settingsError } = await supabase.rpc('get_global_setting', {
-      setting_key: 'owner_whatsapp'
-    });
-
-    if (settingsError) {
-      console.error('[notify-lead] Error fetching owner WhatsApp:', settingsError);
+    // This public endpoint must not call an authenticated-only RPC with the anon key.
+    // Read only the one allow-listed notification setting with the server-side key.
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('[notify-lead] Server configuration is incomplete.');
+      return jsonResponse({ error: 'Lead notification is temporarily unavailable' }, 503);
     }
 
-    const targetWhatsApp = ownerWhatsApp || '5511999999999';
-    console.log('[notify-lead] Target WhatsApp:', targetWhatsApp);
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: setting, error: settingError } = await admin
+      .from('global_settings')
+      .select('value')
+      .eq('key', 'owner_whatsapp')
+      .maybeSingle();
 
-    // Format the notification message
-    const message = `🔔 *NOVO LEAD CADASTRADO!*
+    if (settingError) {
+      console.error('[notify-lead] Could not read notification destination.');
+      return jsonResponse({ error: 'Lead notification is temporarily unavailable' }, 503);
+    }
 
-📍 *Loja:* ${cleanStoreName}
-📧 *E-mail:* ${cleanEmail}
-📱 *Telefone:* ${cleanPhone || 'Não informado'}
-🏪 *Segmento:* ${cleanSegment}
+    const targetWhatsApp = String(setting?.value ?? '').replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(targetWhatsApp)) {
+      return jsonResponse({ error: 'Lead notification is not configured' }, 503);
+    }
 
----
-_Notificação automática do DeliveryPro_`;
+    const message = [
+      '🔔 *NOVO LEAD CADASTRADO!*',
+      '',
+      `📍 *Loja:* ${cleanStoreName}`,
+      `📧 *E-mail:* ${cleanEmail}`,
+      `📱 *Telefone:* ${cleanPhone || 'Não informado'}`,
+      `🏪 *Segmento:* ${cleanSegment}`,
+      '',
+      '---',
+      '_Notificação automática do DeliveryPro_',
+    ].join('\n');
 
-    // Create WhatsApp link (for logging/reference)
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${targetWhatsApp}?text=${encodedMessage}`;
-
-    console.log('[notify-lead] Lead notification prepared:', {
-      targetWhatsApp,
-      storeName: cleanStoreName,
-      email: cleanEmail,
-      whatsappUrl: whatsappUrl.substring(0, 100) + '...'
-    });
-
-    // Log the lead for analytics/tracking
-    console.log('[notify-lead] SUCCESS - Lead ready for notification:', {
-      storeName: cleanStoreName,
-      email: cleanEmail,
-      phone: cleanPhone || 'N/A',
-      segment: cleanSegment,
-      timestamp: new Date().toISOString()
-    });
-
-    // Return the WhatsApp URL for the frontend to open
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        whatsappUrl,
-        message: 'Lead notification prepared successfully'
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[notify-lead] Error processing request:', errorMessage);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const whatsappUrl = `https://wa.me/${targetWhatsApp}?text=${encodeURIComponent(message)}`;
+    return jsonResponse({ success: true, whatsappUrl, message: 'Lead notification prepared successfully' });
+  } catch {
+    console.error('[notify-lead] Unexpected request processing failure.');
+    return jsonResponse({ error: 'Internal server error' }, 500);
   }
 });
