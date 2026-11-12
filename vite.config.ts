@@ -93,6 +93,19 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ].filter(Boolean),
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return;
+            if (/node_modules\\/(?:react|react-dom|scheduler|react-router|@remix-run)\\//.test(id)) return "vendor-react";
+            if (/node_modules\\/(?:@supabase|@tanstack\\/react-query)\\//.test(id)) return "vendor-data";
+            if (/node_modules\\/(?:recharts|d3-[^/]+)\\//.test(id)) return "vendor-charts";
+            if (/node_modules\\/framer-motion\\//.test(id)) return "vendor-motion";
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
