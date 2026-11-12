@@ -169,7 +169,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
       // 2. Insert products
       const { data: existingModifiers, error: existingModifiersError } = await supabase
         .from('modifier_library')
-        .select('name, group_name')
+        .select('name, group_name, group_sort, sort_order')
         .eq('store_id', storeId);
       if (existingModifiersError) throw existingModifiersError;
 
@@ -179,11 +179,20 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         )
       );
       const groupSorts = new Map<string, number>();
+      const nextSortOrders = new Map<string, number>();
+      (existingModifiers ?? []).forEach((item: { group_name: string; group_sort: number; sort_order: number }) => {
+        groupSorts.set(item.group_name, Math.max(groupSorts.get(item.group_name) ?? 0, item.group_sort ?? 0));
+        nextSortOrders.set(item.group_name, Math.max(nextSortOrders.get(item.group_name) ?? 0, (item.sort_order ?? -1) + 1));
+      });
       const modifierRows = modifierItems
         .filter((item) => !existingModifierKeys.has(`${(item.modifierGroup.trim() || 'Acompanhamentos').toLowerCase()}::${item.name.trim().toLowerCase()}`))
         .map((item) => {
           const groupName = item.modifierGroup.trim() || 'Acompanhamentos';
-          if (!groupSorts.has(groupName)) groupSorts.set(groupName, groupSorts.size);
+          if (!groupSorts.has(groupName)) {
+            groupSorts.set(groupName, Math.max(-1, ...Array.from(groupSorts.values())) + 1);
+          }
+          const sortOrder = nextSortOrders.get(groupName) ?? 0;
+          nextSortOrders.set(groupName, sortOrder + 1);
           return {
             store_id: storeId,
             group_name: groupName,
@@ -194,7 +203,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
             group_max: null,
             is_default: false,
             group_sort: groupSorts.get(groupName)!,
-            sort_order: 0,
+            sort_order: sortOrder,
           };
         });
 
