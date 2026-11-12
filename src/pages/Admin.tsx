@@ -1100,6 +1100,7 @@ export default function Admin() {
             {store && canManage ? (
               <AIInsightsTab
                 storeId={store.id}
+                storeName={store.name}
                 products={products.map((p) => ({ id: p.id, name: p.name, description: p.description }))}
                 onApplied={fetchData}
               />
