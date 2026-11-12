@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers, Sparkles, ArrowRightLeft } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
 import { AccountSettingsDialog } from '@/components/AccountSettingsDialog';
@@ -119,6 +119,9 @@ export default function Admin() {
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [convertModifiersOpen, setConvertModifiersOpen] = useState(false);
+  const [modifierGroupName, setModifierGroupName] = useState('Acompanhamentos');
+  const [convertingModifiers, setConvertingModifiers] = useState(false);
   const [productsToDelete, setProductsToDelete] = useState<string[]>([]);
   const [deleteProductsDialogOpen, setDeleteProductsDialogOpen] = useState(false);
   const [deletingProducts, setDeletingProducts] = useState(false);
@@ -540,6 +543,82 @@ export default function Admin() {
 
     setProductDialogOpen(false);
     fetchData();
+  }
+
+  async function handleConvertSelectedToModifiers() {
+    if (!store || selectedProductIds.length === 0 || convertingModifiers) return;
+    const selected = products.filter((product) => selectedProductIds.includes(product.id));
+    const groupName = modifierGroupName.trim();
+    if (!selected.length || !groupName) {
+      toast.error('Selecione produtos e informe o grupo de adicionais.');
+      return;
+    }
+
+    setConvertingModifiers(true);
+    try {
+      const db = supabase as any;
+      const { data: existingItems, error: readError } = await db
+        .from('modifier_library')
+        .select('name, group_name, group_sort, sort_order')
+        .eq('store_id', store.id);
+      if (readError) throw readError;
+
+      const existingKeys = new Set(
+        (existingItems || []).map((item: { name: string; group_name: string }) =>
+          `${item.group_name.trim().toLocaleLowerCase()}::${item.name.trim().toLocaleLowerCase()}`
+        )
+      );
+      const groupItems = (existingItems || []).filter((item: { group_name: string }) => item.group_name === groupName);
+      const groupSort = groupItems.length
+        ? Math.min(...groupItems.map((item: { group_sort?: number }) => item.group_sort ?? 0))
+        : Math.max(0, ...(existingItems || []).map((item: { group_sort?: number }) => item.group_sort ?? 0)) + 1;
+      let nextSort = groupItems.length
+        ? Math.max(...groupItems.map((item: { sort_order?: number }) => item.sort_order ?? 0)) + 1
+        : 0;
+
+      const rows = selected
+        .filter((product) => {
+          const key = `${groupName.toLocaleLowerCase()}::${product.name.trim().toLocaleLowerCase()}`;
+          if (existingKeys.has(key)) return false;
+          existingKeys.add(key);
+          return true;
+        })
+        .map((product) => ({
+          store_id: store.id,
+          group_name: groupName,
+          name: product.name.trim(),
+          price: Number(product.price) || 0,
+          is_available: product.is_available,
+          group_min: 0,
+          group_max: null,
+          is_default: false,
+          group_sort: groupSort,
+          sort_order: nextSort++,
+        }));
+
+      if (rows.length > 0) {
+        const { error: insertError } = await db.from('modifier_library').insert(rows);
+        if (insertError) throw insertError;
+      }
+
+      const { error: deleteError } = await supabase
+        .from('products')
+        .delete()
+        .eq('store_id', store.id)
+        .in('id', selected.map((product) => product.id));
+      if (deleteError) {
+        throw new Error(`Os adicionais foram copiados para a biblioteca, mas não foi possível retirar os produtos da vitrine: ${deleteError.message}. Você pode tentar novamente sem duplicar os adicionais.`);
+      }
+
+      setSelectedProductIds((current) => current.filter((id) => !selected.some((product) => product.id === id)));
+      setConvertModifiersOpen(false);
+      toast.success(`${selected.length} item(ns) movido(s) para “${groupName}”. ${rows.length} novo(s) adicional(is) cadastrado(s).`);
+      await fetchData();
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível converter os produtos em adicionais.');
+    } finally {
+      setConvertingModifiers(false);
+    }
   }
 
   function requestDeleteProducts(ids: string[]) {
@@ -1125,6 +1204,12 @@ export default function Admin() {
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {selectedProductIds.length > 0 && (
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setConvertModifiersOpen(true)}>
+                      <ArrowRightLeft className="w-4 h-4" />
+                      Mover para adicionais ({selectedProductIds.length})
+                    </Button>
+                  )}
+                  {selectedProductIds.length > 0 && (
                     <Button size="sm" variant="destructive" className="gap-2" onClick={() => requestDeleteProducts(selectedProductIds)}>
                       <Trash2 className="w-4 h-4" />
                       Excluir selecionados ({selectedProductIds.length})
@@ -1626,6 +1711,39 @@ export default function Admin() {
               >
                 {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={convertModifiersOpen} onOpenChange={(open) => { if (!convertingModifiers) setConvertModifiersOpen(open); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Mover produtos para adicionais</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Os {selectedProductIds.length} item(ns) selecionado(s) serão cadastrados na biblioteca de adicionais e removidos da vitrine como produtos.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="modifier-group-name">Grupo de adicionais</Label>
+                <Input
+                  id="modifier-group-name"
+                  value={modifierGroupName}
+                  onChange={(event) => setModifierGroupName(event.target.value)}
+                  placeholder="Ex.: Acompanhamentos, Cremes, Frutas"
+                  maxLength={80}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O preço e a disponibilidade atuais serão preservados. Itens já existentes no mesmo grupo não serão duplicados. Depois, você poderá vincular o grupo aos produtos na aba Adicionais.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setConvertModifiersOpen(false)} disabled={convertingModifiers}>Cancelar</Button>
+                <Button type="button" onClick={handleConvertSelectedToModifiers} disabled={convertingModifiers || !modifierGroupName.trim() || selectedProductIds.length === 0}>
+                  {convertingModifiers ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
+                  {convertingModifiers ? 'Movendo...' : 'Confirmar movimentação'}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
