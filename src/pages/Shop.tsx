@@ -693,7 +693,7 @@ export default function Shop() {
         )}
 
         {/* Product List */}
-        <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+        <main className="max-w-6xl mx-auto px-4 py-6 space-y-10">
           {/* Featured Products Section */}
           {showCategorySections && featuredProducts.length > 0 && (
             <FeaturedProducts products={featuredProducts} />
