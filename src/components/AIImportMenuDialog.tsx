@@ -16,6 +16,21 @@ type ExtractedItem = {
   price: number;
   itemType: 'product' | 'modifier';
   modifierGroup: string;
+  existing_modifiers?: { modifier_id: string; status: 'included' | 'optional'; reason: string }[];
+  new_modifiers?: { name: string; group_name: string; status: 'included' | 'optional'; reason: string }[];
+};
+
+type CompositionSuggestion = {
+  key: string;
+  productName: string;
+  modifierId?: string;
+  name: string;
+  groupName: string;
+  status: 'included' | 'optional';
+  reason: string;
+  isNew: boolean;
+  selected: boolean;
+  price: string;
 };
 
 type Props = {
@@ -42,6 +57,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<ExtractedItem[]>([]);
+  const [composition, setComposition] = useState<CompositionSuggestion[]>([]);
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -54,6 +70,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
     setFiles([]);
     setText('');
     setItems([]);
+    setComposition([]);
     setMode('photo');
   };
 
@@ -68,6 +85,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
 
     setLoading(true);
     setItems([]);
+    setComposition([]);
     try {
       const payload: { images?: string[]; image?: string; text?: string; store_id: string } = { store_id: storeId };
       if (mode === 'photo' && files.length) {
@@ -120,16 +138,49 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         } catch { /* Keep the original request error. */ }
         throw new Error(message);
       }
-      const extracted = ((data?.items ?? []) as Omit<ExtractedItem, 'itemType' | 'modifierGroup'>[]).map((item) => ({
+      const extracted = ((data?.items ?? []) as any[]).map((item) => ({
         ...item,
         itemType: 'product' as const,
         modifierGroup: 'Acompanhamentos',
-      }));
+        existing_modifiers: Array.isArray(item.existing_modifiers) ? item.existing_modifiers : [],
+        new_modifiers: Array.isArray(item.new_modifiers) ? item.new_modifiers : [],
+      })) as ExtractedItem[];
+      const suggestions: CompositionSuggestion[] = [];
+      extracted.forEach((product, productIndex) => {
+        (product.existing_modifiers ?? []).forEach((modifier) => {
+          suggestions.push({
+            key: `existing-${productIndex}-${modifier.modifier_id}`,
+            productName: product.name,
+            modifierId: modifier.modifier_id,
+            name: modifier.modifier_id,
+            groupName: 'Biblioteca',
+            status: modifier.status,
+            reason: modifier.reason,
+            isNew: false,
+            selected: true,
+            price: '',
+          });
+        });
+        (product.new_modifiers ?? []).forEach((modifier, modifierIndex) => {
+          suggestions.push({
+            key: `new-${productIndex}-${modifierIndex}-${modifier.name.toLowerCase()}`,
+            productName: product.name,
+            name: modifier.name,
+            groupName: modifier.group_name || 'Acompanhamentos',
+            status: modifier.status,
+            reason: modifier.reason,
+            isNew: true,
+            selected: true,
+            price: '',
+          });
+        });
+      });
+      setComposition(suggestions);
       if (!extracted.length) {
         toast.error('Nenhum produto identificado. Tente outra foto ou texto mais claro.');
       } else {
         setItems(extracted);
-        toast.success(`${extracted.length} produtos extraídos. Revise antes de publicar.`);
+        toast.success(`${extracted.length} produtos extraídos e composição analisada em lote. Revise antes de publicar.`);
       }
     } catch (e: any) {
       toast.error(e?.message ?? 'Falha ao processar cardápio');
@@ -169,7 +220,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
       // 2. Insert products
       const { data: existingModifiers, error: existingModifiersError } = await supabase
         .from('modifier_library')
-        .select('name, group_name, group_sort, sort_order')
+        .select('id, name, group_name, group_sort, sort_order, price')
         .eq('store_id', storeId);
       if (existingModifiersError) throw existingModifiersError;
 
@@ -212,6 +263,12 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         if (modifierErr) throw modifierErr;
       }
 
+      const selectedComposition = composition.filter((item) => item.selected);
+      const newSuggestions = selectedComposition.filter((item) => item.isNew);
+      if (newSuggestions.some((item) => item.price.trim() === '' || !Number.isFinite(Number(item.price)) || Number(item.price) < 0)) {
+        throw new Error('Informe um preço válido para cada novo acompanhamento selecionado. A IA não define preços.');
+      }
+
       const rows = productItems.map((it, idx) => ({
         store_id: storeId,
         category_id: nameToId.get((it.category.trim() || 'Cardápio').toLowerCase())!,
@@ -221,12 +278,61 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
         is_available: true,
         sort_order: idx,
       }));
+      let createdProducts: { id: string; name: string }[] = [];
       if (rows.length) {
-        const { error: prodErr } = await supabase.from('products').insert(rows);
+        const { data: insertedProducts, error: prodErr } = await supabase.from('products').insert(rows).select('id, name');
         if (prodErr) throw prodErr;
+        createdProducts = insertedProducts ?? [];
       }
 
-      toast.success(`${rows.length} produtos publicados e ${modifierRows.length} acompanhamentos adicionados à biblioteca!`);
+      const uniqueNew = new Map<string, CompositionSuggestion>();
+      newSuggestions.forEach((suggestion) => {
+        const key = `${suggestion.groupName.toLowerCase()}::${suggestion.name.toLowerCase()}`;
+        if (!existingModifierKeys.has(key) && !uniqueNew.has(key)) uniqueNew.set(key, suggestion);
+      });
+      const newLibraryRows = Array.from(uniqueNew.values()).map((item) => {
+        const groupName = item.groupName.trim() || 'Acompanhamentos';
+        if (!groupSorts.has(groupName)) groupSorts.set(groupName, Math.max(-1, ...Array.from(groupSorts.values())) + 1);
+        const sortOrder = nextSortOrders.get(groupName) ?? 0;
+        nextSortOrders.set(groupName, sortOrder + 1);
+        return {
+          store_id: storeId, group_name: groupName, name: item.name.trim(),
+          price: Number(item.price), is_available: true, group_min: 0, group_max: null,
+          is_default: false, group_sort: groupSorts.get(groupName)!, sort_order: sortOrder,
+        };
+      });
+      let insertedLibrary: { id: string; name: string; group_name: string; price: number }[] = [];
+      if (newLibraryRows.length) {
+        const { data, error } = await supabase.from('modifier_library').insert(newLibraryRows).select('id, name, group_name, price');
+        if (error) throw error;
+        insertedLibrary = data ?? [];
+      }
+
+      const linkRows: any[] = [];
+      createdProducts.forEach((product) => {
+        const productSuggestions = selectedComposition.filter((suggestion) => suggestion.productName.trim().toLowerCase() === product.name.trim().toLowerCase());
+        productSuggestions.forEach((suggestion) => {
+          const libraryItem = suggestion.isNew
+            ? insertedLibrary.find((item) => item.name.toLowerCase() === suggestion.name.toLowerCase() && item.group_name.toLowerCase() === suggestion.groupName.toLowerCase())
+            : (existingModifiers ?? []).find((item: any) => item.id === suggestion.modifierId);
+          if (!libraryItem) return;
+          linkRows.push({
+            product_id: product.id, library_item_id: libraryItem.id,
+            name: libraryItem.name, price: Number(libraryItem.price) || 0,
+            is_available: true, group_name: libraryItem.group_name,
+            group_min: 0, group_max: null,
+            is_default: suggestion.status === 'included',
+            group_sort: (libraryItem as any).group_sort ?? 0,
+            sort_order: (libraryItem as any).sort_order ?? 0,
+          });
+        });
+      });
+      if (linkRows.length) {
+        const { error } = await supabase.from('product_modifiers').insert(linkRows);
+        if (error) throw error;
+      }
+
+      toast.success(`${createdProducts.length} produtos publicados, ${newLibraryRows.length} novos acompanhamentos cadastrados e ${linkRows.length} vínculos criados.`);
       reset();
       onOpenChange(false);
       onImported();
@@ -376,6 +482,35 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
                 ))}
               </div>
             </div>
+
+            {composition.length > 0 && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">Composição identificada em uma única análise</p>
+                  <p className="text-xs text-muted-foreground">Confirme apenas o que estiver correto. Novos acompanhamentos exigem preço definido por você.</p>
+                </div>
+                {composition.map((suggestion) => (
+                  <div key={suggestion.key} className="rounded-md border bg-background p-2 space-y-2">
+                    <label className="flex items-start gap-2">
+                      <input type="checkbox" className="mt-1" checked={suggestion.selected}
+                        onChange={(event) => setComposition((current) => current.map((item) => item.key === suggestion.key ? { ...item, selected: event.target.checked } : item))} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{suggestion.name}</span>
+                        <span className="block text-xs text-muted-foreground">{suggestion.productName} · {suggestion.status === 'included' ? 'Identificado como incluso/fixo' : 'Identificado como opcional'}</span>
+                        <span className="block text-xs text-muted-foreground">{suggestion.reason}</span>
+                        <span className="block text-[10px] text-muted-foreground">{suggestion.isNew ? 'Novo item — será criado na biblioteca' : 'Item existente na biblioteca'}</span>
+                      </span>
+                    </label>
+                    {suggestion.isNew && suggestion.selected && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input value={suggestion.groupName} onChange={(e) => setComposition((current) => current.map((item) => item.key === suggestion.key ? { ...item, groupName: e.target.value } : item))} placeholder="Grupo" className="h-8 text-sm" />
+                        <Input type="number" min="0" step="0.01" value={suggestion.price} onChange={(e) => setComposition((current) => current.map((item) => item.key === suggestion.key ? { ...item, price: e.target.value } : item))} placeholder="Preço (R$) obrigatório" className="h-8 text-sm" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" onClick={() => handleClose(false)} disabled={saving}>
