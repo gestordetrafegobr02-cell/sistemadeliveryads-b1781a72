@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Plus, Pencil, Trash2, LogOut, Store, Package, Tag, ExternalLink, ClipboardList, Power, Shield, Flame, ShoppingCart, BarChart3, Copy, Link, BellRing, CreditCard, ArrowUp, ArrowDown, XCircle, ShieldCheck, Printer, Users, Utensils, Layers, Sparkles } from 'lucide-react';
 import { PrintCashbackSettings } from '@/components/PrintCashbackSettings';
 import { printOrderReceipt } from '@/lib/printReceipt';
@@ -117,6 +118,10 @@ export default function Admin() {
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [recoveryDelayMinutes, setRecoveryDelayMinutes] = useState(15);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productsToDelete, setProductsToDelete] = useState<string[]>([]);
+  const [deleteProductsDialogOpen, setDeleteProductsDialogOpen] = useState(false);
+  const [deletingProducts, setDeletingProducts] = useState(false);
 
   const isOwner = role === 'owner';
   const canManage = role === 'owner' || role === 'manager';
@@ -537,14 +542,32 @@ export default function Admin() {
     fetchData();
   }
 
-  async function handleDeleteProduct(id: string) {
-    const { error } = await supabase.from('products').delete().eq('id', id);
+  function requestDeleteProducts(ids: string[]) {
+    const uniqueIds = Array.from(new Set(ids)).filter((id) => products.some((product) => product.id === id));
+    if (!uniqueIds.length || !store) return;
+    setProductsToDelete(uniqueIds);
+    setDeleteProductsDialogOpen(true);
+  }
+
+  async function handleConfirmDeleteProducts() {
+    if (!store || productsToDelete.length === 0 || deletingProducts) return;
+    setDeletingProducts(true);
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('store_id', store.id)
+      .in('id', productsToDelete);
+    setDeletingProducts(false);
     if (error) {
-      toast.error('Erro ao excluir produto');
-    } else {
-      toast.success('Produto excluído');
-      fetchData();
+      toast.error(getErrorMessage(error, 'Não foi possível excluir os produtos selecionados.'));
+      return;
     }
+    const deletedCount = productsToDelete.length;
+    setSelectedProductIds((current) => current.filter((id) => !productsToDelete.includes(id)));
+    setProductsToDelete([]);
+    setDeleteProductsDialogOpen(false);
+    toast.success(deletedCount === products.length ? 'Cardápio limpo com sucesso!' : `${deletedCount} produto(s) excluído(s)!`);
+    await fetchData();
   }
 
   if (authLoading || loading) {
@@ -1087,8 +1110,32 @@ export default function Admin() {
           <TabsContent value="products">
             <Card className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-display text-xl">Produtos</CardTitle>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <CardTitle className="font-display text-xl">Produtos</CardTitle>
+                  {products.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Checkbox
+                        checked={selectedProductIds.length === products.length ? true : selectedProductIds.length > 0 ? 'indeterminate' : false}
+                        onCheckedChange={(checked) => setSelectedProductIds(checked === true ? products.map((product) => product.id) : [])}
+                        aria-label="Selecionar todos os produtos"
+                      />
+                      <span>Selecionar todos</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selectedProductIds.length > 0 && (
+                    <Button size="sm" variant="destructive" className="gap-2" onClick={() => requestDeleteProducts(selectedProductIds)}>
+                      <Trash2 className="w-4 h-4" />
+                      Excluir selecionados ({selectedProductIds.length})
+                    </Button>
+                  )}
+                  {store && products.length > 0 && (
+                    <Button size="sm" variant="outline" className="gap-2 text-destructive hover:text-destructive" onClick={() => requestDeleteProducts(products.map((product) => product.id))}>
+                      <Trash2 className="w-4 h-4" />
+                      Limpar cardápio
+                    </Button>
+                  )}
                   {store && products.length > 1 && (
                     <ProductReorder
                       products={products.map((p) => ({
@@ -1136,8 +1183,13 @@ export default function Admin() {
                     {products.map((product) => (
                       <div
                         key={product.id}
-                        className="flex items-center gap-4 p-3 glass-card"
+                        className={`flex items-center gap-4 p-3 glass-card ${selectedProductIds.includes(product.id) ? 'ring-1 ring-primary' : ''}`}
                       >
+                        <Checkbox
+                          checked={selectedProductIds.includes(product.id)}
+                          onCheckedChange={(checked) => setSelectedProductIds((current) => checked === true ? [...current, product.id] : current.filter((id) => id !== product.id))}
+                          aria-label={`Selecionar ${product.name}`}
+                        />
                         {product.image_url && (
                           <img
                             src={product.image_url}
@@ -1193,7 +1245,7 @@ export default function Admin() {
                               size="icon"
                               variant="ghost"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => requestDeleteProducts([product.id])}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -1574,6 +1626,29 @@ export default function Admin() {
               >
                 {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteProductsDialogOpen} onOpenChange={(open) => { if (!deletingProducts) { setDeleteProductsDialogOpen(open); if (!open) setProductsToDelete([]); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão de produtos</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {productsToDelete.length === products.length
+                  ? `Você está prestes a remover todos os ${productsToDelete.length} produtos deste cardápio.`
+                  : `Você está prestes a remover ${productsToDelete.length} produto(s) selecionado(s).`}
+              </p>
+              <p className="text-sm">Essa ação não pode ser desfeita. Os pedidos e o histórico de vendas serão preservados. As categorias também serão mantidas.</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => { setDeleteProductsDialogOpen(false); setProductsToDelete([]); }} disabled={deletingProducts}>Cancelar</Button>
+                <Button type="button" variant="destructive" onClick={handleConfirmDeleteProducts} disabled={deletingProducts || productsToDelete.length === 0}>
+                  {deletingProducts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  {deletingProducts ? 'Excluindo...' : 'Confirmar exclusão'}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
