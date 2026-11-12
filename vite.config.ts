@@ -35,10 +35,23 @@ export default defineConfig(({ mode }) => {
         includeAssets: ["logo.png", "robots.txt"],
         manifest: false, // Using our own manifest.json
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}"],
+          // Keep installation lightweight: do not precache every lazy-loaded JS chunk.
+          // Route chunks are cached on demand after the visitor actually opens them.
+          globPatterns: ["**/*.{css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}"],
           runtimeCaching: [
             {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+              urlPattern: /\/assets\/.*\.(?:js|css)$/i,
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "deliverypro-app-assets",
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 14,
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/(?:object|render)\/public\/.*/i,
               handler: "CacheFirst",
               options: {
                 cacheName: "supabase-images",
