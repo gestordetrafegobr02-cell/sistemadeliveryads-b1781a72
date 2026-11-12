@@ -71,6 +71,23 @@ function sanitizeImageUrl(url: string | null | undefined): string | undefined {
   return resolveCdnAssetUrl(url);
 }
 
+function optimizeStoreImage(url: string | null | undefined, width: number, quality = 76): string | undefined {
+  const safeUrl = sanitizeImageUrl(url);
+  if (!safeUrl) return undefined;
+  try {
+    const parsed = new URL(safeUrl);
+    if (!/\.supabase\.co$/i.test(parsed.hostname)) return safeUrl;
+    if (!parsed.pathname.includes('/storage/v1/object/public/')) return safeUrl;
+    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', String(width));
+    parsed.searchParams.set('quality', String(quality));
+    parsed.searchParams.set('resize', 'contain');
+    return parsed.toString();
+  } catch {
+    return safeUrl;
+  }
+}
+
 declare global {
   interface Window {
     fbq: (...args: unknown[]) => void;
@@ -244,11 +261,17 @@ export default function Shop() {
         setStore(mappedStore);
         setError(null);
 
+        // Fetch only storefront fields and run independent requests concurrently.
+        // Narrow projections reduce payload size and improve cold-load latency.
         const [paymentResponse, pixelResponse, categoriesResponse, productsResponse] = await Promise.all([
           supabase.rpc('get_store_payment_data', { store_slug: normalizedSlug }),
           supabase.rpc('get_store_pixel_by_slug', { store_slug: normalizedSlug }),
-          supabase.from('categories').select('*').eq('store_id', mappedStore.id).order('sort_order'),
-          supabase.from('products').select('*').eq('store_id', mappedStore.id).eq('is_available', true).order('sort_order'),
+          supabase.from('categories').select('id,name,sort_order').eq('store_id', mappedStore.id).order('sort_order'),
+          supabase.from('products')
+            .select('id,name,description,price,image_url,category_id,is_featured,has_addons,has_free_addons,free_addons_limit,sort_order')
+            .eq('store_id', mappedStore.id)
+            .eq('is_available', true)
+            .order('sort_order'),
         ]);
 
         if (paymentResponse.error) {
