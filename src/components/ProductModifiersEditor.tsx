@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Layers, Loader2, Settings2, Trash2 } from 'lucide-react';
+import { Layers, Loader2, Settings2, Trash2, Sparkles, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Modifier {
@@ -18,7 +18,7 @@ interface Modifier {
   sort_order?: number | null;
 }
 
-interface LibraryGroup {
+interface AiSuggestion {\n  modifier_id: string;\n  name: string;\n  reason: string;\n  confidence: 'high' | 'medium';\n}\n\ninterface LibraryGroup {
   group_name: string;
   items: number;
 }
@@ -37,7 +37,7 @@ export function ProductModifiersEditor({ productId, productName, storeId }: Prod
   const [libraryGroups, setLibraryGroups] = useState<LibraryGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);\n  const [analyzing, setAnalyzing] = useState(false);\n  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);\n  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) void fetchData();
@@ -80,6 +80,53 @@ export function ProductModifiersEditor({ productId, productName, storeId }: Prod
   );
 
   const availableGroups = libraryGroups.filter((group) => !linkedGroups.includes(group.group_name));
+
+  async function handleAiAnalysis() {
+    if (analyzing || saving) return;
+    setAnalyzing(true);
+    setSuggestions([]);
+    setSelectedSuggestions(new Set());
+    const { data, error } = await db.functions.invoke('ai-suggest-product-modifiers', {
+      body: { product_id: productId, store_id: storeId },
+    });
+    setAnalyzing(false);
+    if (error || data?.error) {
+      toast.error(data?.error || 'Não foi possível analisar a composição com IA.');
+      return;
+    }
+    const validIds = new Set(modifiers.map((item) => item.id));
+    const safeSuggestions = (Array.isArray(data?.suggestions) ? data.suggestions : [])
+      .filter((item: AiSuggestion) => item && validIds.has(item.modifier_id))
+      .map((item: AiSuggestion) => ({
+        modifier_id: item.modifier_id,
+        name: String(item.name || '').slice(0, 100),
+        reason: String(item.reason || '').slice(0, 240),
+        confidence: item.confidence === 'high' ? 'high' as const : 'medium' as const,
+      }))
+      .filter((item: AiSuggestion) => !modifiers.find((m) => m.id === item.modifier_id)?.is_default);
+    setSuggestions(safeSuggestions);
+    setSelectedSuggestions(new Set(safeSuggestions.map((item) => item.modifier_id)));
+    if (!safeSuggestions.length) toast.info('A IA não encontrou correspondências seguras entre a descrição e os acompanhamentos vinculados.');
+  }
+
+  async function applyAiSuggestions() {
+    const ids = Array.from(selectedSuggestions);
+    if (!ids.length || saving) return;
+    setSaving(true);
+    const { error } = await db.from('product_modifiers')
+      .update({ is_default: true })
+      .eq('product_id', productId)
+      .in('id', ids);
+    setSaving(false);
+    if (error) {
+      toast.error('Não foi possível aplicar as sugestões da IA.');
+      return;
+    }
+    toast.success('Sugestões confirmadas e marcadas como inclusas.');
+    setSuggestions([]);
+    setSelectedSuggestions(new Set());
+    await fetchData();
+  }
 
   async function handleApplyGroup() {
     if (!selectedGroup || saving) return;
@@ -151,6 +198,45 @@ export function ProductModifiersEditor({ productId, productName, storeId }: Prod
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+            <div>
+              <p className="font-medium text-sm flex items-center gap-2"><Sparkles className="h-4 w-4" /> Identificar inclusos com IA</p>
+              <p className="text-xs text-muted-foreground">A IA compara a descrição do produto com os acompanhamentos já vinculados. Nada é alterado sem sua confirmação.</p>
+            </div>
+            <Button type="button" variant="outline" className="w-full" onClick={handleAiAnalysis} disabled={analyzing || loading || modifiers.length === 0}>
+              {analyzing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {analyzing ? 'Analisando composição...' : 'Analisar composição'}
+            </Button>
+            {suggestions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">Revise as sugestões antes de aplicar:</p>
+                {suggestions.map((suggestion) => (
+                  <label key={suggestion.modifier_id} className="flex items-start gap-2 rounded-md bg-background p-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={selectedSuggestions.has(suggestion.modifier_id)}
+                      onChange={(event) => setSelectedSuggestions((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(suggestion.modifier_id);
+                        else next.delete(suggestion.modifier_id);
+                        return next;
+                      })}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{suggestion.name}</span>
+                      <span className="block text-xs text-muted-foreground">{suggestion.reason}</span>
+                      <span className="block text-[10px] text-muted-foreground">Confiança {suggestion.confidence === 'high' ? 'alta' : 'média'}</span>
+                    </span>
+                  </label>
+                ))}
+                <Button type="button" className="w-full" onClick={applyAiSuggestions} disabled={saving || selectedSuggestions.size === 0}>
+                  <Check className="h-4 w-4 mr-2" /> Confirmar {selectedSuggestions.size} incluso(s)
+                </Button>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-lg border border-border p-3 space-y-3">
             <div>
               <p className="font-medium text-sm">Adicionar da biblioteca</p>
@@ -211,7 +297,7 @@ export function ProductModifiersEditor({ productId, productName, storeId }: Prod
             </div>
           )}
           <p className="text-xs text-muted-foreground">
-            Itens marcados como inclusos aparecem selecionados e não podem ser retirados pelo cliente. Os demais ficam disponíveis para adicionar e o preço é somado automaticamente.
+            A IA apenas sugere correspondências; revise antes de confirmar. Os itens inclusos são separados dos extras no cardápio do cliente.
           </p>
         </div>
       </DialogContent>
