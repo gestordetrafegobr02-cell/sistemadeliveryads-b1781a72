@@ -35,7 +35,7 @@ export function AICreditsAdminTab() {
   const [received,setReceived] = useState('');
   const [note,setNote] = useState('');
   const [whatsapp,setWhatsapp] = useState('');
-  const [usdBrl,setUsdBrl] = useState('5.80');
+  const [usdBrl,setUsdBrl] = useState('');
   const [pricing,setPricing] = useState<Pricing[]>([]);
 
   const refresh = useCallback(async () => {
@@ -46,7 +46,7 @@ export function AICreditsAdminTab() {
       const parsed = result as Dashboard;
       setData(parsed);
       setWhatsapp(parsed.whatsapp || '');
-      setUsdBrl(parsed.usd_brl || '5.80');
+      setUsdBrl(parsed.usd_brl || '');
       setPricing(parsed.pricing || []);
       if(!selectedStore && parsed.stores?.length) setSelectedStore(parsed.stores[0].store_id);
     } catch(e:any) { toast.error(e?.message || 'Não foi possível carregar os dados de IA.'); }
@@ -64,7 +64,7 @@ export function AICreditsAdminTab() {
       totalUsd += (row.prompt_tokens * Number(p.input_usd_per_million) + row.completion_tokens * Number(p.output_usd_per_million))/1_000_000;
     }
     const fx = Number(String(usdBrl).replace(',','.')) || 0;
-    return {usd:totalUsd,brl:totalUsd*fx,configured,fx};
+    return {usd:totalUsd,brl:totalUsd*fx,configured:configured && fx>0,fx};
   },[data,pricing,usdBrl]);
 
   const grant = async () => {
