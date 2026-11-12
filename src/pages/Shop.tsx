@@ -225,6 +225,11 @@ export default function Shop() {
         }
 
         const storeData = storeResult[0];
+        const publicStoreData = storeData as typeof storeData & {
+          store_template_style?: string | null;
+          bg_color?: string | null;
+          card_style?: string | null;
+        };
         const mappedStore: StorePublic = {
           id: storeData.id,
           name: storeData.name,
@@ -238,9 +243,9 @@ export default function Shop() {
           is_open_manual: storeData.is_open_manual ?? true,
           is_trial_expired: storeData.is_trial_expired ?? false,
           primary_color: storeData.primary_color ?? null,
-          store_template_style: (storeData as any).store_template_style ?? null,
-          bg_color: (storeData as any).bg_color ?? null,
-          card_style: (storeData as any).card_style ?? null,
+          store_template_style: publicStoreData.store_template_style ?? null,
+          bg_color: publicStoreData.bg_color ?? null,
+          card_style: publicStoreData.card_style ?? null,
         };
         setStore(mappedStore);
         setError(null);
