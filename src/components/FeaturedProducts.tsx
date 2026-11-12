@@ -29,7 +29,7 @@ export function FeaturedProducts({ products }: FeaturedProductsProps) {
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
         {products.map((product) => (
           <ProductCard
             key={product.id}

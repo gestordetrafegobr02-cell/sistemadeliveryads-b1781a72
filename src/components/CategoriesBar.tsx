@@ -89,7 +89,7 @@ export function CategoriesBar({ categories, activeCategory, onCategoryClick }: C
 
   return (
     <div className="sticky top-[73px] z-30 bg-background/80 backdrop-blur-md border-b border-border/30 py-3">
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center gap-2">
           {canScrollLeft && (
             <button
