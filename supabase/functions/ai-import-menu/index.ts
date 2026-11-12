@@ -24,10 +24,11 @@ Regras estritas:
 - Nunca retorne markdown, comentários ou texto fora do JSON.`;
 
 const MODEL = 'gemini-3.8-flash';
+const FALLBACK_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash'] as const;
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const MAX_FILE_DATA_URL_LENGTH = 11_300_000;
-// Keep the upstream request below Supabase's 150s idle-response limit.
-const AI_REQUEST_TIMEOUT_MS = 105_000;
+// Bound each provider attempt so fallback models can be tried before Supabase's execution limit.
+const AI_MODEL_TIMEOUT_MS = 28_000;
 
 async function logUsage(payload: {
   store_id?: string | null;
@@ -36,6 +37,7 @@ async function logUsage(payload: {
   total_tokens?: number;
   success: boolean;
   error_message?: string | null;
+  model?: string;
 }) {
   try {
     const url = Deno.env.get('SUPABASE_URL');
@@ -44,7 +46,7 @@ async function logUsage(payload: {
     const admin = createClient(url, key);
     await admin.from('ai_usage_logs').insert({
       function_name: 'ai-import-menu',
-      model: MODEL,
+      model: payload.model ?? MODEL,
       store_id: payload.store_id ?? null,
       prompt_tokens: payload.prompt_tokens ?? 0,
       completion_tokens: payload.completion_tokens ?? 0,
@@ -118,7 +120,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    let body: { image?: unknown; text?: unknown; store_id?: unknown };
+    let body: { image?: unknown; images?: unknown; text?: unknown; store_id?: unknown };
     try {
       body = JSON.parse(rawBody);
     } catch {
@@ -156,10 +158,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const image = typeof body.image === 'string' ? body.image : '';
+    const imageInputs = Array.isArray(body.images)
+      ? body.images
+      : typeof body.image === 'string'
+      ? [body.image]
+      : [];
+    const images = imageInputs.filter((value): value is string => typeof value === 'string');
     const menuText = typeof body.text === 'string' ? body.text.trim() : '';
-    if (!image && !menuText) {
-      return new Response(JSON.stringify({ error: 'Envie uma imagem ou o texto do cardápio' }), {
+    if (images.length !== imageInputs.length || images.length > 3) {
+      return new Response(JSON.stringify({ error: 'Envie no máximo 3 imagens por importação.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!images.length && !menuText) {
+      return new Response(JSON.stringify({ error: 'Envie uma imagem, um PDF ou o texto do cardápio' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -170,11 +183,21 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const fileMatch = image
-      ? image.match(/^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/)
-      : null;
-    if (image && (!fileMatch || image.length > MAX_FILE_DATA_URL_LENGTH)) {
-      return new Response(JSON.stringify({ error: 'Arquivo inválido. Envie JPG, PNG, WEBP ou PDF de até 8MB.' }), {
+    const parsedFiles = images.map((image) => ({
+      image,
+      match: image.match(/^data:(image\/(?:jpeg|png|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/),
+    }));
+    const hasPdf = parsedFiles.some((file) => file.match?.[1] === 'application/pdf');
+    const invalidFile = parsedFiles.some((file) => !file.match || file.image.length > MAX_FILE_DATA_URL_LENGTH);
+    const totalDataUrlLength = parsedFiles.reduce((sum, file) => sum + file.image.length, 0);
+    if (invalidFile || (hasPdf && parsedFiles.length > 1) || totalDataUrlLength > (hasPdf ? MAX_FILE_DATA_URL_LENGTH : 10_800_000)) {
+      return new Response(JSON.stringify({ error: 'Arquivos inválidos ou acima do limite. Envie até 3 fotos (2,5MB cada; 7,5MB no total) ou um PDF de até 8MB.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (parsedFiles.some((file) => file.match?.[1] === 'application/pdf' && parsedFiles.length !== 1)) {
+      return new Response(JSON.stringify({ error: 'Envie o PDF sozinho, sem combinar com outras imagens.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -183,53 +206,119 @@ Deno.serve(async (req) => {
     const parts: Array<Record<string, unknown>> = [
       { text: menuText
         ? `Extraia os produtos deste cardápio:\n\n${menuText}`
+        : parsedFiles.length > 1
+        ? 'As imagens anexadas são páginas do mesmo cardápio. Analise todas em conjunto, mantenha as categorias e não repita produtos que apareçam em mais de uma página. Extraia todos os produtos visíveis em todas as imagens.'
         : 'Extraia todos os produtos visíveis nesta imagem ou documento PDF de cardápio.' },
     ];
-    if (image) {
-      if (!fileMatch) throw new Error('Arquivo inválido');
-      parts.push({ inline_data: { mime_type: fileMatch[1], data: fileMatch[2] } });
+    for (const file of parsedFiles) {
+      if (!file.match) throw new Error('Arquivo inválido');
+      parts.push({ inline_data: { mime_type: file.match[1], data: file.match[2] } });
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-    let aiRes: Response;
-    try {
-      aiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ role: 'user', parts }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.1,
+    const requestBody = JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1,
+      },
+    });
+    let aiRes: Response | null = null;
+    let lastProviderError = '';
+    let lastProviderStatus = 0;
+    let lastAttemptTimedOut = false;
+    let modelUsed = MODEL;
+    const modelsToTry = [MODEL, ...FALLBACK_MODELS];
+
+    for (let modelIndex = 0; modelIndex < modelsToTry.length; modelIndex++) {
+      const model = modelsToTry[modelIndex];
+      modelUsed = model;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), AI_MODEL_TIMEOUT_MS);
+      const startedAt = Date.now();
+
+      try {
+        aiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: requestBody,
+            signal: controller.signal,
           },
-        }),
-        signal: controller.signal,
+        );
+      } catch (error) {
+        lastAttemptTimedOut = error instanceof Error && error.name === 'AbortError';
+        lastProviderStatus = lastAttemptTimedOut ? 504 : 502;
+        console.warn(
+          `Gemini model ${model} ${lastAttemptTimedOut ? 'timed out' : 'network error'} after ${Date.now() - startedAt}ms.`,
+        );
+        aiRes = null;
+        if (modelIndex < modelsToTry.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * (modelIndex + 1)));
+          continue;
+        }
+        break;
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (aiRes.ok) {
+        console.info(`Gemini model ${model} succeeded in ${Date.now() - startedAt}ms.`);
+        break;
+      }
+
+      lastProviderStatus = aiRes.status;
+      lastProviderError = (await aiRes.text()).slice(0, 500);
+      if ([400, 401, 403, 429].includes(aiRes.status)) break;
+      console.warn(`Gemini model ${model} returned HTTP ${aiRes.status} after ${Date.now() - startedAt}ms.`);
+      if (modelIndex < modelsToTry.length - 1 && (aiRes.status === 503 || aiRes.status >= 500)) {
+        aiRes = null;
+        await new Promise((resolve) => setTimeout(resolve, 500 * (modelIndex + 1)));
+        continue;
+      }
+      break;
+    }
+
+    if (!aiRes) {
+      const status = lastProviderStatus === 503 ? 503 : lastAttemptTimedOut ? 504 : 502;
+      const msg = status === 503
+        ? 'O Gemini está temporariamente sobrecarregado nos modelos disponíveis. Tente novamente em alguns instantes.'
+        : status === 504
+        ? 'Os modelos do Gemini não responderam dentro do tempo esperado. Tente novamente com um arquivo menor.'
+        : 'Não foi possível conectar aos modelos do Gemini. Verifique a conexão e tente novamente.';
+      await logUsage({
+        store_id: storeId,
+        model: modelUsed,
+        success: false,
+        error_message: `Gemini fallback failed (HTTP ${status}): ${msg}`,
       });
-    } catch (error) {
-      const message = error instanceof Error && error.name === 'AbortError'
-        ? 'A análise do cardápio demorou mais que o esperado. Tente novamente com um arquivo menor ou mais simples.'
-        : 'Não foi possível conectar ao serviço de IA. Tente novamente.';
-      await logUsage({ store_id: storeId, success: false, error_message: message });
-      return new Response(JSON.stringify({ error: message }), { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    } finally { clearTimeout(timeout); }
+      return new Response(JSON.stringify({ error: msg }), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      const status = aiRes.status === 429 ? 429 : 500;
+      const errText = lastProviderError || (await aiRes.text()).slice(0, 500);
+      const status = [400, 401, 403, 429, 503].includes(aiRes.status) ? aiRes.status : 500;
       const msg = aiRes.status === 429
-        ? 'O serviço de IA atingiu temporariamente o limite de uso da chave configurada. Aguarde a renovação da cota ou revise o limite da chave.'
-        : aiRes.status === 400 || aiRes.status === 403
-        ? 'A configuração do serviço de IA não foi aceita.'
-        : 'O serviço de IA está temporariamente indisponível.';
-      console.error('AI provider error:', aiRes.status, errText.slice(0, 300));
-      await logUsage({ store_id: storeId, success: false, error_message: msg });
+        ? 'O serviço de IA atingiu o limite de uso da chave configurada. Aguarde a renovação da cota ou revise os limites da chave.'
+        : aiRes.status === 503
+        ? 'O Gemini está temporariamente sobrecarregado nos modelos disponíveis. Tente novamente em alguns instantes.'
+        : [400, 401, 403].includes(aiRes.status)
+        ? 'A chave ou a permissão da API Gemini não foi aceita. Verifique a configuração GEMINI_API_KEY.'
+        : 'O serviço de IA encontrou uma falha temporária. Tente novamente em instantes.';
+      console.error(`Gemini provider error on ${modelUsed}: HTTP ${aiRes.status} ${errText.slice(0, 300)}`);
+      await logUsage({
+        store_id: storeId,
+        model: modelUsed,
+        success: false,
+        error_message: `Gemini HTTP ${aiRes.status}: ${msg}`,
+      });
       return new Response(JSON.stringify({ error: msg }), {
         status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -275,6 +364,7 @@ Deno.serve(async (req) => {
 
     await logUsage({
       store_id: storeId,
+      model: modelUsed,
       prompt_tokens: Number(usage.promptTokenCount ?? 0),
       completion_tokens: Number(usage.candidatesTokenCount ?? 0),
       total_tokens: Number(usage.totalTokenCount ?? 0),

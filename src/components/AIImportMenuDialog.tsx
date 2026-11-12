@@ -35,7 +35,7 @@ async function fileToDataUrl(file: File): Promise<string> {
 
 export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCategories, onImported }: Props) {
   const [mode, setMode] = useState<'photo' | 'text'>('photo');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,7 +49,7 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
   }, [existingCategories, items]);
 
   const reset = () => {
-    setFile(null);
+    setFiles([]);
     setText('');
     setItems([]);
     setMode('photo');
@@ -61,27 +61,47 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
   };
 
   const runExtraction = async () => {
-    if (mode === 'photo' && !file) return toast.error('Selecione uma foto do cardápio');
+    if (mode === 'photo' && files.length === 0) return toast.error('Selecione pelo menos uma foto do cardápio');
     if (mode === 'text' && !text.trim()) return toast.error('Cole o texto do cardápio');
 
     setLoading(true);
     setItems([]);
     try {
-      const payload: { image?: string; text?: string; store_id: string } = { store_id: storeId };
-      if (mode === 'photo' && file) {
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-        const isSupportedImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
-        if (!isPdf && !isSupportedImage) {
-          toast.error('Formato não suportado. Envie JPG, PNG, WEBP ou PDF.');
+      const payload: { images?: string[]; image?: string; text?: string; store_id: string } = { store_id: storeId };
+      if (mode === 'photo' && files.length) {
+        const isPdfFile = (candidate: File) => candidate.type === 'application/pdf' || candidate.name.toLowerCase().endsWith('.pdf');
+        const isSupportedImage = (candidate: File) => ['image/jpeg', 'image/png', 'image/webp'].includes(candidate.type);
+        if (files.length > 3) {
+          toast.error('Selecione no máximo 3 fotos por importação.');
           setLoading(false);
           return;
         }
-        if (file.size > 8 * 1024 * 1024) {
-          toast.error('Arquivo muito grande (máx 8MB)');
+        if (files.some(isPdfFile) && files.length > 1) {
+          toast.error('Para PDF, envie somente um arquivo por vez. Para três páginas separadas, envie as três como fotos.');
           setLoading(false);
           return;
         }
-        payload.image = await fileToDataUrl(file);
+        if (files.some((candidate) => !isPdfFile(candidate) && !isSupportedImage(candidate))) {
+          toast.error('Formato não suportado. Envie JPG, PNG, WEBP ou um PDF.');
+          setLoading(false);
+          return;
+        }
+        const isPdf = isPdfFile(files[0]);
+        const maxPerFile = isPdf ? 8 * 1024 * 1024 : 2.5 * 1024 * 1024;
+        if (files.some((candidate) => candidate.size > maxPerFile)) {
+          toast.error(isPdf ? 'O PDF deve ter no máximo 8MB.' : 'Cada foto deve ter no máximo 2,5MB.');
+          setLoading(false);
+          return;
+        }
+        const totalBytes = files.reduce((sum, candidate) => sum + candidate.size, 0);
+        if (totalBytes > (isPdf ? 8 : 7.5) * 1024 * 1024) {
+          toast.error('O tamanho total das fotos deve ser de até 7,5MB.');
+          setLoading(false);
+          return;
+        }
+        const dataUrls = await Promise.all(files.map(fileToDataUrl));
+        if (isPdf) payload.image = dataUrls[0];
+        else payload.images = dataUrls;
       } else {
         payload.text = text.trim();
       }
@@ -185,19 +205,24 @@ export function AIImportMenuDialog({ open, onOpenChange, storeId, existingCatego
               </TabsList>
 
               <TabsContent value="photo" className="space-y-3 pt-4">
-                <Label>Envie uma foto ou PDF do cardápio (JPG/PNG/WEBP/PDF, até 8MB)</Label>
+                <Label>Envie até 3 fotos do cardápio (JPG/PNG/WEBP, até 2,5MB cada) ou um PDF de até 8MB</Label>
                 <Input
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
                 />
-                {file && (
-                  <div className="text-sm text-muted-foreground">
-                    Selecionado: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(0)}KB)
+                {files.length > 0 && (
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    {files.map((selectedFile) => (
+                      <div key={`${selectedFile.name}-${selectedFile.lastModified}`}>
+                        Selecionado: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(0)}KB)
+                      </div>
+                    ))}
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  A IA vai identificar nome, descrição, preço e categoria. Envie arquivos de até 8MB; a análise pode levar um pouco mais de tempo em cardápios extensos. Você revisa tudo antes de publicar.
+                  Você pode selecionar as três fotos de uma vez. A IA analisa as imagens em conjunto e identifica nome, descrição, preço e categoria. Para PDF, envie um arquivo por vez. Revise tudo antes de publicar.
                 </p>
               </TabsContent>
 
