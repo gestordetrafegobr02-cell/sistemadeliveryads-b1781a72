@@ -71,22 +71,6 @@ function sanitizeImageUrl(url: string | null | undefined): string | undefined {
   return resolveCdnAssetUrl(url);
 }
 
-function optimizeStoreImage(url: string | null | undefined, width: number, quality = 76): string | undefined {
-  const safeUrl = sanitizeImageUrl(url);
-  if (!safeUrl) return undefined;
-  try {
-    const parsed = new URL(safeUrl);
-    if (!/\.supabase\.co$/i.test(parsed.hostname)) return safeUrl;
-    if (!parsed.pathname.includes('/storage/v1/object/public/')) return safeUrl;
-    parsed.pathname = parsed.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-    parsed.searchParams.set('width', String(width));
-    parsed.searchParams.set('quality', String(quality));
-    parsed.searchParams.set('resize', 'contain');
-    return parsed.toString();
-  } catch {
-    return safeUrl;
-  }
-}
 
 declare global {
   interface Window {
